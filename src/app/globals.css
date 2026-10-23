@@ -111,6 +111,46 @@
 
   /* Layout */
   --container-phone: 430px; /* app column; centered on wider screens */
+
+  /* Bottom sheet enter and exit (keyframes below). Use them behind
+     motion-safe: so reduced-motion users get no animation. */
+  --animate-sheet-in: sheet-in 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-sheet-out: sheet-out 180ms ease-in forwards;
+  --animate-fade-in: fade-in 260ms ease-out;
+  --animate-fade-out: fade-out 180ms ease-in forwards;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * Bottom padding that also clears the iPhone home indicator: the larger of
+ * the spacing value and the safe-area inset (pb-safe-6 = max(24px, inset)).
+ * Needs viewport-fit=cover, which the root layout sets.
+ */
+@utility pb-safe-* {
+  padding-bottom: max(--spacing(--value(number)), env(safe-area-inset-bottom));
 }
 
 @theme inline {

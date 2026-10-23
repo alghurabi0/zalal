@@ -109,7 +109,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
-Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons.
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4.
 
 **PWA and caching (Phase 0).** Serwist runs in its "configurator mode": `pnpm build` runs `next build && serwist build`, and the CLI bundles `src/app/sw.ts` into `public/sw.js` (git-ignored) outside the Next.js bundler. The Turbopack integration (`@serwist/turbopack`) is not used, because its route handler exports `dynamic` and `revalidate`, which Next.js rejects when `cacheComponents` is on. The worker is registered in the root layout and is off in `pnpm dev`. Caching policy:
 
@@ -193,6 +193,30 @@ All tokens live in `@theme` in `src/app/globals.css`. Tailwind's default colors,
 - **Shadows**, by where the canvas uses them: `card`, `float` (controls over the map), `sheet`, `fab` (tab bar Book button), `pin` (crew pin), `segment` (active segmented tab), `knob` (switch), `logo`.
 - **Layout:** `max-w-phone` is 430px, so phones up to the largest common width (430) are full width and wider screens get a centered column. The canvas artboards are 390 wide.
 - **Spacing:** Tailwind's 4px scale already covers every canvas value (`p-5.5` = 22px), so there are no spacing tokens.
+- **Animations:** `animate-sheet-in` / `sheet-out` and `animate-fade-in` / `fade-out` for the bottom sheet and its overlay, always behind `motion-safe:`.
+- **Safe area:** `pb-safe-*` pads by the larger of the spacing value and the iPhone home-indicator inset (`pb-safe-6` = max(24px, inset)). The root layout sets `viewport-fit=cover` so the inset is known. The tab bar, sheets and full-screen footers use it instead of a plain `pb-*`.
+- **Class merging:** components join classes with `cn()` (`src/lib/cn.ts`, tailwind-merge configured with the tokens above), so a `className` passed by a screen overrides the component's default for the same property. `tests/unit/cn.test.ts` checks that its token lists match `globals.css`.
+
+### UI kit (`src/components/ui/`)
+
+Built in Phase 0 from the canvas. Screens compose these before writing new markup. `/kit` shows every component in its states (a 404 in production); `tests/e2e/kit.spec.ts` checks focus, keyboard and 44px touch targets there.
+
+| Component | Variants (canvas source) |
+| --- | --- |
+| `Button` | `primary`, `accent` (aqua on navy), `secondary` (white + border), `ghost` (white text on navy), `link` (teal text); sizes `lg` 56, `footer` 54, `md` 52, `card` 48, `sm` 44; `loading`; `href` renders a link |
+| `IconButton`, `BackButton` | 44px circle: `surface`, `floating` (map), `dark` (navy header), `soft`, `primary`; optional unread dot; `label` (aria-label) is required |
+| `Chip`, `ChipGroup`, `ChipButton` | `option` (tile), `pill` (filter), `tag` (rating); real radio/checkbox inputs in a `<fieldset>`. `ChipButton` = chat quick reply |
+| `Card` | `outline`, `raised` (shadow), `dark` (navy); `href` renders a link |
+| `Input`, `Textarea`, `Field` | `default` 56px, `compact` 46px (sheet forms); `Field` wires label, hint and error |
+| `Sheet` (modal), `SheetPanel` (in-page, under a map) | 26px top corners, handle, safe-area padding. No drag-to-dismiss |
+| `TabBar` | 4 tabs + raised احجز; `active`, `chatUnread` |
+| `Stepper` | Quantity − / + with min/max |
+| `StepProgress` | Booking's plain bars (`steps={3}`) or Tracking's labelled steps (`steps={[…]}`) |
+| `Skeleton`, `SkeletonGroup` | Loading placeholders; the group announces "جاري التحميل" |
+| `EmptyState`, `ErrorState` | Icon, title, text, CTA; tones `neutral`, `success`, `danger`. `ErrorState` adds "اعد المحاولة" (pass Next's `retry` in `error.tsx`) |
+| `OfflineBanner` | "ماكو انترنيت" bar; rendered once in the root layout for every surface |
+
+Departures from the canvas, made for accessibility: chips drawn 36–40px tall get an invisible strip that makes their touch target 44px; the tab bar's احجز link is named by its visible text instead of the canvas's aria-label "حجز جديد"; modal sheets have a close button that appears only on keyboard focus.
 
 ## 5. Customer app screens
 
@@ -202,6 +226,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 
 ### 5.1 Welcome — `Main.dc.html`
 
+- Route `/welcome`. Customer URLs are kept in `src/lib/routes.ts`: Home `/`, Login `/login`, Orders `/orders`, Booking `/book`, Chat `/chat`, Profile `/profile`. Until Phase 1 builds Home, `/` redirects to `/welcome` (`next.config.ts`).
 - Shown on first open only. A logged-in user goes straight to Home.
 - "ابدأ الآن" opens Login. "تصفح بدون تسجيل" opens Home in guest mode.
 
@@ -652,7 +677,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 - [x] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
 - [x] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
 - [x] PWA manifest + Serwist; icons from the extracted logo
-- [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState
+- [x] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState (see §4 "UI kit"); Welcome screen built on it
 - [ ] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests
 - [ ] Claude Code setup from `docs/claude-code-setup.md`: SessionStart hook, `.claude/settings.json` hooks, guard scripts (no raw hex, no left/right), project skills; fill in the Commands section of CLAUDE.md
 
