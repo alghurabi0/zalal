@@ -1,0 +1,10 @@
+# Read-only design exports and hand-written docs
+design/
+docs/
+*.md
+
+pnpm-lock.yaml
+.next/
+coverage/
+playwright-report/
+test-results/

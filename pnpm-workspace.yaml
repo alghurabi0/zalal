@@ -1,0 +1,8 @@
+# Install scripts these packages don't need here: sharp and unrs-resolver ship
+# prebuilt binaries; @parcel/watcher and @swc/core are only used by next-intl's
+# optional message extractor, which this app doesn't use.
+ignoredBuiltDependencies:
+  - "@parcel/watcher"
+  - "@swc/core"
+  - sharp
+  - unrs-resolver
