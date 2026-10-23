@@ -6,7 +6,7 @@ Oct 22, 2026 · @Alghurabi
 
 Zalal (زلال) v1 is an Arabic, mobile-first PWA for booking water-tank cleaning and sterilization in Karbala, run by one company with its own crews. It ships as one codebase with three surfaces: the customer app (designed), a crew app and an admin dashboard (specified here, not yet designed).
 
-Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb) (17 screens + TabBar, 390×844, RTL, Cairo font). The spec refers to each screen by its artboard file, e.g. `Booking.dc.html`.
+Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb) (17 screens + TabBar, 390×844, RTL, Cairo font). The spec refers to each screen by its artboard file, e.g. `Booking.dc.html`. Each artboard also has an exported image at `design/png/<Name>.png` for visual comparison.
 
 ### In scope for v1
 
@@ -64,7 +64,8 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 49 | Rating | Skippable, rates the company; 3 stars or fewer opens a support ticket |
 | 53 | Notifications | Push + in-app only |
 | 54–55 | Content | Articles and categories managed by admin, seeded at launch |
-| 59 | Stack | Next.js + Supabase + Vercel (section 3) |
+| 59 | Stack | Next.js 16 + Supabase + Vercel (section 3) |
+| 60 | Environments | Local (Docker), dev and prod Supabase projects in separate orgs; Claude never holds prod credentials; CI deploys migrations (`docs/supabase-setup.md`) |
 
 ## 2. Roles and surfaces
 
@@ -89,7 +90,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 | Layer | Choice | Notes |
 | --- | --- | --- |
-| Framework | Next.js 15 (App Router), TypeScript strict | Route groups `(customer)`, `crew`, `admin`; Server Actions for writes |
+| Framework | Next.js 16 (App Router), TypeScript strict | Route groups `(customer)`, `crew`, `admin`; Server Actions for writes |
 | UI | Tailwind CSS v4, Radix primitives, Cairo font via `next/font` | `dir="rtl"` at the root; use logical properties only (`ms-`, `pe-`, `start-`) |
 | PWA | Serwist (service worker), web app manifest | Installable; offline shell + "you're offline" state |
 | Database | Supabase Postgres + Row Level Security | Migrations in `supabase/migrations`; generated TS types |
@@ -105,7 +106,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | Monitoring | Sentry (errors), PostHog (product analytics) | Free tiers |
 | Hosting | Vercel (region `fra1`), Supabase (region Frankfurt) | Closest supported regions to Iraq |
 
-Versions: the version numbers above were current when this spec was written. In Phase 0, use the current stable release of each tool (for example Next.js 16 if it is stable and supported by Serwist and Sentry) and pin it in `package.json`. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
+Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
@@ -613,7 +614,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 **Phase 0 — Foundation**
 
-- [ ] Next.js 15 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
+- [ ] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
 - [ ] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
 - [ ] PWA manifest + Serwist; icons from the extracted logo
 - [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState
