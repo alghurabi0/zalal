@@ -1,0 +1,36 @@
+# Fails a PR that changes design/ or a migration already on the base branch
+# (CLAUDE.md). For a deliberate design update, the owner adds the
+# "protected-change" label, which re-runs this check and lets it pass.
+# Separate from ci.yml so a label change re-runs only this, not the whole CI.
+name: Protected paths
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: protected-paths-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  protected:
+    name: Protected paths unchanged
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The PR's merge commit and its first parent, the base branch tip.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: design/ and merged migrations unchanged
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'protected-change') }}
+        run: node scripts/protected-paths.ts HEAD^1
+      - name: Skipped by the protected-change label
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'protected-change') }}
+        run: echo "::notice::protected-change label set; design/ and migration edits allowed."

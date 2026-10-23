@@ -1,6 +1,6 @@
 # Claude Code setup and workflow for Zalal
 
-This guide covers the tools, repo config and working loop for building Zalal with Claude Code. The plugins below can be installed now. Everything in sections 3 and 4 is done in Phase 0, once `package.json` exists.
+This guide covers the tools, repo config and working loop for building Zalal with Claude Code. The plugins below can be installed now. Section 3 describes the repo config set up in Phase 0; section 4 is the working loop.
 
 ## 1. Decisions before Phase 0
 
@@ -39,58 +39,68 @@ Skip the community Supabase plugins: they overlap with the official one. There i
 - `design:accessibility-review`, `design:ux-copy`: QA passes and empty/error-state copy. Review any Arabic copy yourself.
 - `session-start-hook`: generates the cloud SessionStart hook (section 3.1).
 
-## 3. Repo configuration (Phase 0)
+## 3. Repo configuration
+
+Sections 3.1–3.4 were set up in Phase 0. Sections 3.5 and 3.6 come later, with the work they serve.
 
 ### 3.1 SessionStart hook (cloud sessions)
 
-Cloud sessions start from a fresh clone, so `.claude/hooks/session-start.sh` must prepare everything the checks need:
+Cloud sessions start from a fresh clone, so `.claude/hooks/session-start.sh` prepares everything the checks need. It runs only when `CLAUDE_CODE_REMOTE=true`:
 
 - `pnpm install --frozen-lockfile`
-- Start Docker if it isn't running. Cloud containers have Docker installed but the daemon stopped, so start `dockerd` in the background and wait for `docker info` to succeed. Local Supabase and the pgTAP RLS tests need it.
-- `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io pnpm exec supabase start -x studio,imgproxy,logflare,vector,supavisor`. The Supabase CLI is a pinned dev dependency. Excluding services that tests don't need saves pull time; keep `edge-runtime` from Phase 1, when the OTP hook needs it. Run it in the background so the session doesn't wait on the image pull.
-
-Ask Claude: "use the session-start-hook skill to set this up".
+- Starts `dockerd` if it isn't running (cloud containers have Docker installed but the daemon stopped) and waits for `docker info`. Local Supabase and the pgTAP tests need it.
+- Starts `pnpm db:start` in the background (`.claude/hooks/start-supabase.sh`, log in `/tmp/supabase-start.log`), so the session doesn't wait on the image pull, then writes `.env.local` from the local keys. It exports `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` and `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium` for the session.
+- `db:start` excludes services tests don't need, `edge-runtime` included. Phase 1 drops `edge-runtime` from that list, when the OTP hook needs it.
 
 ### 3.2 `.claude/settings.json` (committed)
 
-- **Permissions, allow:** `pnpm lint|typecheck|test|test:e2e|db:reset|db:test|db:types`, `git status|diff|log`, `supabase migration new`.
-- **Permissions, deny or ask:** reading `.env*`, `supabase db push`, anything with `--linked` or a prod project ref.
-- **PostToolUse hook** on Edit/Write: run Prettier and `eslint --fix` on the changed file, so formatting never costs a review round.
-- **PreToolUse hook** on Edit/Write: refuse edits under `design/` and to any migration already on `main` (a new migration is required instead).
+- **Allowed without a prompt:** `pnpm lint|guards|typecheck|test|test:e2e|format|format:check|db:start|db:stop|db:reset|db:test|db:types`, `git status|diff|log`, `pnpm exec supabase migration new`.
+- **Denied:** reading `.env`, `.env*.local` and `supabase/.env`; editing `design/`; `supabase link`, `db push`, `functions deploy`, `secrets set`, and any `supabase` command with `--linked` or `--project-ref`. Bash deny rules match the command text, so they stop the normal form of a command but aren't a sandbox. A command that merely mentions one of those flags (a commit message, a grep) is refused too; write the message to a file and use `git commit -F`.
+- **PreToolUse hook** (`.claude/hooks/protect-files.ts`) on Edit, Write and NotebookEdit: refuses edits to `design/`, to `src/lib/database.types.ts` (run `pnpm db:types`) and to any migration already on `origin/main` (create a new migration instead).
+- **PostToolUse hook** (`.claude/hooks/after-edit.ts`) on the same tools: runs Prettier and `eslint --fix` on the changed file, then the guards. Whatever is still wrong goes back to Claude straight away. It takes about 2 seconds per edit.
+- Both hooks are TypeScript that Node 22.18+ runs directly, so they work on macOS, Linux and Windows. `tests/unit/claude-hooks.test.ts` covers them.
 
 ### 3.3 Guard scripts (enforce the rules in CLAUDE.md)
 
-Rules in prose get missed; rules that fail `pnpm lint` don't. Add a small `scripts/guards.ts` and run it from `pnpm lint`, so both CI and Claude hit it:
+Rules in prose get missed; rules that fail `pnpm lint` don't. `scripts/guards.ts` runs at the end of `pnpm lint`, so CI, the edit hook and Claude all hit it. `pnpm guards <files>` checks only those files. The rules:
 
-- No physical direction classes or properties in `src/` (`ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-`, `text-left`, `text-right`, `rounded-l`, `rounded-r`, `margin-left`, …).
-- No hex colors or `rgb(` in `src/`, except the theme CSS and files under `src/components/illustrations/`.
-- No Arabic characters (`\p{Script=Arabic}`) in `.tsx` files; strings belong in `messages/ar.json`.
-- Every `create table` in `supabase/migrations/` has a matching `enable row level security`.
+| Rule | Checks |
+| --- | --- |
+| `no-physical-direction` | `src/`: no `ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-`, `text-left/right`, `rounded-l/r/tl/…`, `border-l/r`, `float-`, `scroll-m/p-l/r`, `origin-/bg-/object-left/right` classes (with any variant), no `margin-left`-style CSS properties, no `marginLeft`-style inline styles |
+| `no-raw-color` | `src/`: no hex, `rgb(`, `hsl(`, `oklch(`… except `globals.css`, `src/components/illustrations/` and `src/lib/brand.ts` (the manifest colors; a unit test keeps them equal to the tokens) |
+| `no-arbitrary-value` | `src/`: no `bg-[#…]`, `rounded-[13px]`, `bg-(--x)` or `[prop:value]` classes. Arbitrary variants like `data-[state=open]:` are fine |
+| `no-arabic` | `src/**/*.ts(x)`: no Arabic outside comments; strings belong in `messages/ar.json` |
+| `rls-enabled` | `supabase/migrations/`: each `create table` has `enable row level security` in the same file, so a table never ships without RLS |
+| `definer-search-path` | `supabase/migrations/`: each `security definer` function sets `search_path = ''` |
+
+Comments are skipped, and `src/lib/database.types.ts` is generated, so it isn't checked. For a justified exception, comment `guard-allow <rule>: <reason>` on the line or the line above. The reason is required. `tests/unit/guards.test.ts` covers each rule.
+
+**Protected paths in CI.** The edit hook can't see changes made from the shell, so `.github/workflows/protected-paths.yml` runs `scripts/protected-paths.ts` on every PR. It fails when the PR changes or deletes a file in `design/` or a migration already on `main`; new files are fine. For a deliberate design update, the owner adds the `protected-change` label to the PR (`docs/deploy-setup.md` §4).
 
 ### 3.4 Project skills (`.claude/skills/`)
 
-Write each one after the first time its workflow is done by hand, then refine it.
+Each skill is written after its workflow has been done by hand once, then refined.
 
-- **`build-screen <Name>`**: read `design/<Name>.dc.html`, its PNG and the spec §5 entry. List the "Change:" items first, then build with the UI kit, put strings in `ar.json` and add all 4 states. Finish by taking a Playwright screenshot at 390×844 and listing differences from the design.
-- **`db-change`**: create the migration, the RLS policies and the pgTAP tests (allow and deny for each role), regenerate types, and update spec §7 if the design departs from it.
-- **`ship-task`**: run lint, typecheck and tests, then `db:test`, then `/code-review`, then commit and open the PR with the "why" for any new library.
+- **`/build-screen <Name>`**: reads `design/<Name>.dc.html`, its PNG and the spec §5 entry; lists the "Change:" items, kit components, missing tokens and strings first; builds with the UI kit, `ar.json` and all 4 states; ends with a Playwright screenshot at 390×844 compared with the PNG, and a list of departures.
+- **`/ship-task`**: runs format, lint, typecheck and unit tests, the protected-paths check, `db:test` and types when SQL changed, and e2e when the UI changed; then `/code-review` (plus `/security-review` where relevant), the doc updates, commits, push and the PR. Only you start it; Claude doesn't load it on its own.
+- **`db-change`** (Phase 1, first schema task): create the migration, the RLS policies and the pgTAP tests (allow and deny for each role), regenerate types, and update spec §7 if the design departs from it. It waits until that workflow has been done by hand once.
 
-### 3.5 Subagents (`.claude/agents/`)
+### 3.5 Subagents (`.claude/agents/`, from Phase 1)
 
-- **`rls-auditor`**: read-only. Given a migration, tries to find ways one customer could read or write another customer's data, or a crew could see orders it isn't assigned to. Writes failing pgTAP tests for what it finds.
+- **`rls-auditor`**: read-only. Given a migration, tries to find ways one customer could read or write another customer's data, or a crew could see orders it isn't assigned to. Writes failing pgTAP tests for what it finds. Add it with the first RLS policies.
 - **`design-checker`**: read-only. Compares a screenshot with the design file and its PNG and reports differences (spacing, tokens, copy, RTL mistakes).
 
-### 3.6 Nested CLAUDE.md files
+### 3.6 Nested CLAUDE.md files (when the folders exist)
 
 These load only when Claude works in that folder, which keeps the root file short:
 
-- `supabase/CLAUDE.md`: SQL conventions. `security definer` functions must `set search_path = ''`, plus naming, `transition_order` rules and pgTAP helpers.
-- `src/app/crew/CLAUDE.md`: mobile, one big action button, GPS and Wake Lock rules, the upload retry queue.
-- `src/app/admin/CLAUDE.md`: desktop-first, every write goes to the audit log, sound and push alerts.
+- `supabase/CLAUDE.md` (Phase 1): SQL conventions. `security definer` functions must `set search_path = ''` (the guards check this), plus naming, `transition_order` rules and pgTAP helpers.
+- `src/app/crew/CLAUDE.md` (Phase 3): mobile, one big action button, GPS and Wake Lock rules, the upload retry queue.
+- `src/app/admin/CLAUDE.md` (Phase 3): desktop-first, every write goes to the audit log, sound and push alerts.
 
 ### 3.7 GitHub
 
-- CI (GitHub Actions): lint, typecheck, unit tests, `supabase start` + `supabase test db`, then Playwright smoke tests. Block merges on red.
+- CI (GitHub Actions): format, lint (with the guards), typecheck, unit tests, `supabase start` + `supabase test db` + a generated-types check, then Playwright. The protected-paths workflow runs alongside. Block merges on red (`docs/deploy-setup.md` §4).
 - Install the Claude GitHub App (`/install-github-app`) so `@claude` can answer review comments and fix CI on PRs.
 
 ## 4. The working loop

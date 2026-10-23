@@ -72,7 +72,9 @@ Events go through the app's own domain (`/zl-a`), so ad blockers don't drop them
 2. **Settings → Rules → Rulesets → New branch ruleset**, named `main`:
    - Enforcement: **Active**. Target: the default branch.
    - **Require a pull request before merging.**
-   - **Require status checks to pass**: add `Lint, types and unit tests` and `Database and end-to-end tests`. They appear in the list after CI has run once, on the PR that adds them.
+   - **Require status checks to pass**: add `Lint, types and unit tests`, `Database and end-to-end tests` and `Protected paths unchanged`. They appear in the list after they have run once, on the PR that adds them.
+
+   `Protected paths unchanged` fails a PR that edits `design/` or a migration already on `main`. When you update the designs on purpose, add the label `protected-change` to that PR (create the label once under **Issues → Labels**); the check re-runs and passes. Claude never adds that label.
    - **Block force pushes.**
 
    This is the "block merges on red" rule (`docs/claude-code-setup.md` §3.7).

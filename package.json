@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build && serwist build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/guards.ts",
+    "guards": "node scripts/guards.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
