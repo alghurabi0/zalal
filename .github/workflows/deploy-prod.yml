@@ -1,0 +1,45 @@
+# Releases main to production: migrations and Edge Functions to the prod
+# Supabase project first, then the app to Vercel Production, so the live app
+# never runs ahead of its database. Started by hand from main (Actions →
+# Deploy prod → Run workflow), then waits for the owner's approval in the
+# `production` environment, which alone holds the prod secrets
+# (docs/supabase-setup.md step 5, docs/deploy-setup.md). vercel.json turns
+# off Vercel's own deploys of main, so this is the only way to production.
+name: Deploy prod
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Supabase prod
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/supabase-deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      - name: Deploy the app to Vercel Production
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::VERCEL_DEPLOY_HOOK_URL is not set, so only the database was deployed (docs/deploy-setup.md step 3)."
+            exit 0
+          fi
+          # The hook builds the latest commit on main.
+          curl --fail --silent --show-error -X POST "$VERCEL_DEPLOY_HOOK_URL"
+          echo "Vercel is building main for Production; follow it in the Vercel dashboard."

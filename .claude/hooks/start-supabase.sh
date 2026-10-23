@@ -13,16 +13,6 @@ fi
 
 pnpm db:start
 
-if [ ! -f .env.local ]; then
-  pnpm exec supabase status -o json 2> /dev/null | node -e '
-    const s = JSON.parse(require("fs").readFileSync(0, "utf8"));
-    process.stdout.write(
-      `NEXT_PUBLIC_SUPABASE_URL=${s.API_URL}\n` +
-      `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${s.PUBLISHABLE_KEY}\n` +
-      `SUPABASE_SECRET_KEY=${s.SECRET_KEY}\n`,
-    );
-  ' > .env.local
-  echo "Wrote .env.local from local Supabase."
-fi
+node scripts/write-env-local.mjs
 
 echo "Supabase is ready."
