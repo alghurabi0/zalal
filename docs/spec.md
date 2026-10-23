@@ -109,7 +109,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
-Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on.
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on.
 
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
@@ -431,7 +431,15 @@ Access rules (RLS):
 - A crew reads orders, media and addresses only for orders assigned to it. It writes media, live location and status, all through RPC functions.
 - An admin reads and writes everything. Every admin write goes to `admin_audit_log`.
 
-Storage buckets: `order-media`, `chat-media`, `ticket-media` and `certificates` are private, with signed URLs that last 1 hour. `public-content` (article covers) is public.
+Storage buckets: `order-media`, `chat-media`, `ticket-media` and `certificates` are private, with signed URLs that last 1 hour. `public-content` (article covers) is public. Each bucket also has a size cap and a file-type allow-list (migration `storage_buckets`):
+
+| Bucket | Public | Max size | File types |
+| --- | --- | --- | --- |
+| `order-media`, `chat-media`, `ticket-media` | No | 100 MB | JPEG, PNG, WebP, HEIC/HEIF photos; MP4, QuickTime (.mov), WebM videos |
+| `certificates` | No | 10 MB | PDF |
+| `public-content` | Yes | 5 MB | JPEG, PNG, WebP |
+
+Until a phase adds the storage policies for its bucket (with pgTAP tests), only the service role can read or write it. Hosted projects on the Supabase Free plan cap every upload at 50 MB whatever the bucket says, so 50–100 MB videos fail there until the project is on Pro.
 
 ## 8. Crew app and admin dashboard
 
@@ -568,7 +576,7 @@ Assumptions: launch = 300 orders and 1,000 OTP codes a month; growth = 3,000 ord
 | Item | Launch / month | Growth / month | Notes |
 | --- | --- | --- | --- |
 | [Vercel Pro](https://vercel.com/pricing) | $20 | $20 | 1 seat. Hobby forbids commercial use |
-| [Supabase Pro](https://supabase.com/pricing) | $25 | $30–$60 | Includes 8 GB DB, 100 GB files, 250 GB egress, $10 compute credit. Growth adds a Small instance and storage beyond 100 GB at $0.021/GB |
+| [Supabase Pro](https://supabase.com/pricing) | $25 | $30–$60 | Prod only; dev stays on Free. Includes 8 GB DB, 100 GB files, 250 GB egress, $10 compute credit. Growth adds a Small instance and storage beyond 100 GB at $0.021/GB. Free caps uploads at 50 MB, below the 100 MB video limit (§5.10), and pauses after a week idle, so prod must be on Pro by launch |
 | WhatsApp OTP via [OTPIQ](https://docs.otpiq.com/llms-full.txt) | ≈ $19 (25,000 IQD) | ≈ $190 (250,000 IQD) | 25 IQD per authentication message |
 | SMS fallback (≈ 10% of codes) | ≈ $6–$19 | ≈ $61–$191 | OTPIQ lists 80–250 IQD per SMS depending on carrier; your own provider may be cheaper. Admins can switch it off |
 | [Google Maps](https://www.woosmap.com/blog/google-maps-api-pricing-breakdown) | $0 | $0–$40 | 10,000 free map loads and 10,000 free autocomplete requests a month per API; then $7 per 1,000 map loads. Needs a billing card |
@@ -633,7 +641,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 **Phase 0 — Foundation**
 
 - [x] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
-- [ ] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
+- [x] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
 - [ ] PWA manifest + Serwist; icons from the extracted logo
 - [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState
 - [ ] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests
@@ -689,6 +697,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 ### 12.4 Launch checklist
 
+- [ ] Prod Supabase project moved to Pro (Free caps uploads at 50 MB and pauses idle projects); set its global upload limit to at least 100 MB (Storage settings)
 - [ ] Domain bought and connected; Google Maps key restricted to it
 - [ ] OTPIQ WhatsApp number connected and template approved; SMS provider credentials in secrets
 - [ ] Karbala polygon drawn; prices, slots, capacity and subscription price set

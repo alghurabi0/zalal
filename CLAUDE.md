@@ -16,13 +16,15 @@ Phase 0 creates these scripts. Keep this list in sync with package.json.
 - `pnpm lint` (ESLint) / `pnpm typecheck` (`next typegen` + `tsc`) / `pnpm test` (Vitest, `tests/unit/`)
 - `pnpm format` / `pnpm format:check`: Prettier, which also sorts Tailwind classes
 - `pnpm test:e2e`: Playwright at a 390×844 viewport (`tests/e2e/`); builds and starts the app on port 3100. In cloud sessions, set `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`, because the pre-installed Chromium doesn't match the pinned Playwright version. Don't run `playwright install` there.
-- Not yet created (Phase 0, task 2):
-  - `pnpm db:reset`: `supabase db reset` (migrations + seed)
-  - `pnpm db:test`: `supabase test db` (pgTAP; RLS and RPC tests)
-  - `pnpm db:types`: regenerate `src/lib/database.types.ts`
+- `pnpm db:start` / `pnpm db:stop`: local Supabase in Docker, without the services tests don't need (Studio, image proxy, logs, pooler, Edge runtime, postgres-meta)
+- `pnpm db:reset`: `supabase db reset` (migrations + `supabase/seed.sql`)
+- `pnpm db:test`: `supabase test db` (pgTAP in `supabase/tests/database/*.test.sql`). Each test starts with `begin;` and `\ir _helpers.psql`, which adds `tests.create_user(phone)`, `tests.authenticate_as(id)`, `tests.authenticate_as_anon()`, `tests.authenticate_as_service_role()` and `tests.clear_authentication()` inside the test's transaction.
+- `pnpm db:types`: regenerate `src/lib/database.types.ts` from the local database (then Prettier). Never edit that file by hand.
 
 ## Environments
-- You work against **local Supabase only** (Docker). In cloud sessions the SessionStart hook starts Docker and Supabase; the CLI needs `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` there, because the default registry is blocked.
+- You work against **local Supabase only** (Docker). In cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs packages, starts Docker, and starts Supabase in the background (log: `/tmp/supabase-start.log`; the first image pull takes a few minutes). It also writes `.env.local` from the local keys and sets `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`, which the CLI needs there because the default registry is blocked.
+- App code reaches Supabase only through `src/lib/supabase/`: `browser.ts` (client components), `server.ts` (Server Components, Actions, route handlers; acts as the user) and `admin.ts` (secret key, bypasses RLS, server only). Env vars are validated in `src/lib/env.ts` and `src/lib/env.server.ts`; `.env.example` lists them.
+- Local phone login stays off until Phase 1 wires the Send SMS Hook (`supabase start` warns "no SMS provider is enabled").
 - Dev and prod are hosted projects that CI deploys to (docs/supabase-setup.md). Never run `supabase link`, `db push` or `functions deploy` against a hosted project yourself, and never ask for or handle hosted keys.
 
 ## Next.js 16 notes
