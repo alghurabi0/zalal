@@ -92,7 +92,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | --- | --- | --- |
 | Framework | Next.js 16 (App Router), TypeScript strict | Route groups `(customer)`, `crew`, `admin`; Server Actions for writes |
 | UI | Tailwind CSS v4, Radix primitives, Cairo font via `next/font` | `dir="rtl"` at the root; use logical properties only (`ms-`, `pe-`, `start-`) |
-| PWA | Serwist (service worker), web app manifest | Installable; offline shell + "you're offline" state |
+| PWA | Serwist (service worker), web app manifest | Installable; offline page + "you're offline" state. See "PWA and caching" below |
 | Database | Supabase Postgres + Row Level Security | Migrations in `supabase/migrations`; generated TS types |
 | Auth | Supabase Auth, phone OTP + custom **Send SMS Hook** | The hook is a Supabase Edge Function that delivers the code by WhatsApp or SMS (section 9) |
 | Storage | Supabase Storage, private buckets + signed URLs | Resumable (TUS) uploads for video |
@@ -109,7 +109,16 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
-Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on.
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons.
+
+**PWA and caching (Phase 0).** Serwist runs in its "configurator mode": `pnpm build` runs `next build && serwist build`, and the CLI bundles `src/app/sw.ts` into `public/sw.js` (git-ignored) outside the Next.js bundler. The Turbopack integration (`@serwist/turbopack`) is not used, because its route handler exports `dynamic` and `revalidate`, which Next.js rejects when `cacheComponents` is on. The worker is registered in the root layout and is off in `pnpm dev`. Caching policy:
+
+- Cached: build files under `/_next/static` (hashed names), fonts, and the icons and brand images.
+- Never cached: pages, RSC payloads, Server Actions and every cross-origin request (Supabase, Google Maps). Shared crew phones must never show another account's data, and order status must never be stale.
+- Precached at install: only the offline page (`/~offline`), its CSS and the Cairo font files. A page load that fails without a network shows that page ("ماكو انترنيت" with "اعد المحاولة", which reloads the requested URL).
+- Phase 5 adds the Web Push handlers to the same `src/app/sw.ts`.
+
+One web app manifest (`src/app/manifest.ts`) covers all three surfaces: crew and admin also start at `/`, and the role picks the surface after login. Its name and description come from `messages/ar.json`, and the theme and splash color is `navy`.
 
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
@@ -168,7 +177,7 @@ Illustration-only colors don't need tokens. Keep them inside the illustration or
 - Heights: primary button 56 (54 in footers, 48 inside cards), inputs 56 (46 in compact forms), chips 40–52. Minimum touch target 44.
 - Screen padding 20–24; vertical gaps 8–14.
 - Icons: 24-grid, 2px stroke, round caps. Use `lucide-react` and match the canvas glyphs.
-- Logo: the three-wave mark in `Main.dc.html`. Extract it to `public/brand/logo.svg` and generate PWA icons (192, 512, maskable) from it.
+- Logo: the three-wave mark in `Main.dc.html`, extracted to `public/brand/logo.svg`. `pnpm icons` (`scripts/generate-icons.mjs`) generates the rest from it (commit the output): the Welcome tile (`public/brand/logo-tile.svg`, also the favicon `src/app/icon.svg`), the 192 and 512 icons (rounded tile), a 512 maskable icon (full bleed, mark inside the 80% safe zone) and the 180 Apple touch icon (`src/app/apple-icon.png`, full bleed).
 - Numbers: Western digits (0–9) as in the designs; currency written "35,000 د.ع".
 - Phone numbers and times are wrapped in `dir="ltr"` spans, as in the designs.
 
@@ -189,7 +198,7 @@ All tokens live in `@theme` in `src/app/globals.css`. Tailwind's default colors,
 
 Each designed screen below lists what changes from the canvas, how it behaves, and its states. The canvas copy (Iraqi Arabic) is final unless a change is listed. Text in \[brackets\] in the designs is sample data and comes from the database.
 
-**Global rules for every screen:** skeleton loaders while loading; an empty state with a CTA; an error state with "عيد المحاولة"; a top offline banner "ماكو انترنيت". The tab bar shows only on Home, Tips, Notifications, Orders and Profile.
+**Global rules for every screen:** skeleton loaders while loading; an empty state with a CTA; an error state with "اعد المحاولة"; a top offline banner "ماكو انترنيت". The tab bar shows only on Home, Tips, Notifications, Orders and Profile.
 
 ### 5.1 Welcome — `Main.dc.html`
 
@@ -642,7 +651,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 - [x] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
 - [x] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
-- [ ] PWA manifest + Serwist; icons from the extracted logo
+- [x] PWA manifest + Serwist; icons from the extracted logo
 - [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState
 - [ ] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests
 - [ ] Claude Code setup from `docs/claude-code-setup.md`: SessionStart hook, `.claude/settings.json` hooks, guard scripts (no raw hex, no left/right), project skills; fill in the Commands section of CLAUDE.md

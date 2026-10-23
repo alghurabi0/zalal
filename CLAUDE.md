@@ -12,7 +12,8 @@ Arabic (Iraqi dialect), RTL, mobile-first PWA for booking water-tank cleaning in
 
 ## Commands
 Phase 0 creates these scripts. Keep this list in sync with package.json.
-- `pnpm dev`: run the app; `pnpm build` / `pnpm start`: production build
+- `pnpm dev`: run the app (no service worker); `pnpm build` / `pnpm start`: production build. `pnpm build` runs `next build && serwist build`, which writes the service worker `public/sw.js` from `src/app/sw.ts` (spec §3, "PWA and caching").
+- `pnpm icons`: regenerate the PWA icons and favicons from `public/brand/logo.svg`, then commit them
 - `pnpm lint` (ESLint) / `pnpm typecheck` (`next typegen` + `tsc`) / `pnpm test` (Vitest, `tests/unit/`)
 - `pnpm format` / `pnpm format:check`: Prettier, which also sorts Tailwind classes
 - `pnpm test:e2e`: Playwright at a 390×844 viewport (`tests/e2e/`); builds and starts the app on port 3100. In cloud sessions, set `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`, because the pre-installed Chromium doesn't match the pinned Playwright version. Don't run `playwright install` there.
@@ -38,7 +39,7 @@ Phase 0 creates these scripts. Keep this list in sync with package.json.
 - All UI strings go in messages/ar.json, grouped by screen (Iraqi Arabic, copied from the designs). No Arabic literals in components. Read them with next-intl: `useTranslations("Screen")` in components, `getTranslations` in async server code. Keys are type-checked against ar.json. The locale is fixed to `ar` (no `/ar` prefix in URLs) and the time zone to Asia/Baghdad in `src/i18n/request.ts`.
 - Colors, radii, sizes and shadows come from the Tailwind v4 `@theme` tokens only. No raw hex and no arbitrary values (`bg-[#…]`, `rounded-[13px]`) in components. If a design value has no token, add the token (spec §4 lists the known gaps). Tailwind's default colors, radii, font sizes, line heights, letter spacing and shadows are removed, so only design tokens exist. Radii use role names (`rounded-chip`, `rounded-input`, `rounded-button`, `rounded-card`, `rounded-t-sheet`), circles and pills use `rounded-full`, and font sizes are in px (`text-15`). Spacing uses Tailwind's 4px scale (`p-5.5` = 22px).
 - Reuse src/components/ui before you create a component. Icons come from lucide-react, matched to the canvas glyph.
-- Every screen has loading (skeleton), empty (with CTA), error ("عيد المحاولة") and offline ("ماكو انترنيت") states.
+- Every screen has loading (skeleton), empty (with CTA), error ("اعد المحاولة") and offline ("ماكو انترنيت") states.
 - Accessibility: touch targets of at least 44px, an Arabic aria-label on icon-only buttons, a visible focus state.
 
 ## Data and security rules
