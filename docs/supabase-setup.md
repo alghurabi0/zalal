@@ -33,6 +33,14 @@ In each org, create one project:
 
 Write down each **project ref**, the 20-character id in the project URL (`https://supabase.com/dashboard/project/<ref>`).
 
+### 2a. If you connected the projects to GitHub (Supabase's GitHub integration)
+
+Check **Project Settings → Integrations → GitHub** in each project:
+
+- **Dev:** keeping it connected is fine and simpler. With "Deploy to production" on and the production branch set to `main`, Supabase applies migrations to dev on every merge, so CI won't need a `deploy-dev.yml`. Keep **automatic branching off** (preview branches cost extra and aren't needed).
+- **Prod:** **disconnect it**, or at least turn "Deploy to production" off. Otherwise every merge to `main` changes the live database with no approval step. Prod migrations go through the manual, approved GitHub Action instead.
+- Set the Supabase directory to `supabase` (the default).
+
 ## 3. Auth settings (both projects)
 
 Go to **Authentication → Sign In / Providers**:
@@ -42,10 +50,10 @@ Go to **Authentication → Sign In / Providers**:
 - OTP expiry `300` seconds, OTP length `6` (spec §9.1).
 - Leave "Allow new users to sign up" on.
 
-Go to **Authentication → URL Configuration**:
+Go to **Authentication → URL Configuration**. This matters little for Zalal: phone OTP is verified in-app and never follows a redirect link (only email links and OAuth do). So you don't need Vercel to finish this step:
 
-- Site URL: your Vercel URL for now (e.g. `https://zalal.vercel.app`), and your real domain later.
-- Redirect URLs: add `https://*-<your-vercel-team>.vercel.app/**` for preview deploys (dev project only).
+- **Now:** set Site URL to `http://localhost:3000` in both projects, and add `http://localhost:3000/**` to Redirect URLs in dev.
+- **After Phase 0 creates the Vercel project:** set prod's Site URL to the production URL (and your real domain later). In dev, add `https://<project>-*-<team-slug>.vercel.app/**` for preview deploys.
 
 Go to **Authentication → Sessions**: leave session time-box and inactivity timeout **off**, so customers stay logged in and rarely need a paid OTP (spec §11).
 
@@ -72,7 +80,7 @@ Also create a **personal access token** at [supabase.com/dashboard/account/token
 
 Then go to repo → Settings → **Environments** and create an environment named `production` with **Required reviewers = you**. The prod deploy workflow waits for your click.
 
-**Vercel** (project → Settings → Environment Variables), after Phase 0 creates the Vercel project:
+**Vercel** (project → Settings → Environment Variables), after Phase 0 creates the Next.js app. Create **one** Vercel project (not one per environment): its Production environment points to prod Supabase and its Preview environment to dev. Set these by hand rather than with the Supabase ↔ Vercel integration, which syncs a single Supabase project into every environment.
 
 | Variable | Preview (→ dev) | Production (→ prod) |
 | --- | --- | --- |
@@ -97,7 +105,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - The SessionStart hook for cloud sessions starts Docker and runs `supabase start` with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`. In this environment the default image registry (AWS ECR) is blocked, but Docker Hub works. This was tested: `supabase start` and `supabase test db` (pgTAP) both run in a cloud session.
 - GitHub Actions:
   - `ci.yml` on every PR: lint, typecheck, unit tests, `supabase start` + `supabase test db`, Playwright.
-  - `deploy-dev.yml` on push to `main`: `supabase link --project-ref $SUPABASE_DEV_PROJECT_REF` → `supabase db push` → `supabase functions deploy`.
+  - `deploy-dev.yml` on push to `main`: `supabase link --project-ref $SUPABASE_DEV_PROJECT_REF` → `supabase db push` → `supabase functions deploy`. Skip this file if the dev project's GitHub integration already deploys on merge (step 2a).
   - `deploy-prod.yml`, manual (`workflow_dispatch`), uses the `production` environment so you approve it: the same steps against prod.
 - `supabase/seed.sql` loads into local and dev only, never into prod. Prod gets its first admin from the `ADMIN_PHONE` seed script (spec §10.2) and real prices and slots from the dashboard.
 
