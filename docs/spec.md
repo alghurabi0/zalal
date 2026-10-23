@@ -6,7 +6,7 @@ Oct 22, 2026 · @Alghurabi
 
 Zalal (زلال) v1 is an Arabic, mobile-first PWA for booking water-tank cleaning and sterilization in Karbala, run by one company with its own crews. It ships as one codebase with three surfaces: the customer app (designed), a crew app and an admin dashboard (specified here, not yet designed).
 
-Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb) (17 screens + TabBar, 390×844, RTL, Cairo font). The spec refers to each screen by its artboard file, e.g. `Booking.dc.html`.
+Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb) (17 screens + TabBar, 390×844, RTL, Cairo font). The spec refers to each screen by its artboard file, e.g. `Booking.dc.html`. Each artboard also has an exported image at `design/png/<Name>.png` for visual comparison.
 
 ### In scope for v1
 
@@ -64,7 +64,8 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 49 | Rating | Skippable, rates the company; 3 stars or fewer opens a support ticket |
 | 53 | Notifications | Push + in-app only |
 | 54–55 | Content | Articles and categories managed by admin, seeded at launch |
-| 59 | Stack | Next.js + Supabase + Vercel (section 3) |
+| 59 | Stack | Next.js 16 + Supabase + Vercel (section 3) |
+| 60 | Environments | Local (Docker), dev and prod Supabase projects in separate orgs; Claude never holds prod credentials; CI deploys migrations (`docs/supabase-setup.md`) |
 
 ## 2. Roles and surfaces
 
@@ -89,7 +90,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 | Layer | Choice | Notes |
 | --- | --- | --- |
-| Framework | Next.js 15 (App Router), TypeScript strict | Route groups `(customer)`, `crew`, `admin`; Server Actions for writes |
+| Framework | Next.js 16 (App Router), TypeScript strict | Route groups `(customer)`, `crew`, `admin`; Server Actions for writes |
 | UI | Tailwind CSS v4, Radix primitives, Cairo font via `next/font` | `dir="rtl"` at the root; use logical properties only (`ms-`, `pe-`, `start-`) |
 | PWA | Serwist (service worker), web app manifest | Installable; offline shell + "you're offline" state |
 | Database | Supabase Postgres + Row Level Security | Migrations in `supabase/migrations`; generated TS types |
@@ -104,6 +105,8 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | Validation | Zod, shared between client and server |  |
 | Monitoring | Sentry (errors), PostHog (product analytics) | Free tiers |
 | Hosting | Vercel (region `fra1`), Supabase (region Frankfurt) | Closest supported regions to Iraq |
+
+Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
@@ -134,6 +137,25 @@ These tokens are lifted from the artboards' inline styles; put them in `tailwind
 | `ok-bg` / `ok-fg` / `ok` | #DCFCE7 / #15803D / #16A34A | Completed, uploaded, certificate |
 | `map-bg` | #E8EEF3 | Map placeholder |
 
+**Colors used in the canvas but missing from the table above.** Add tokens for these in Phase 0 (pick names that fit the scheme above). Note that the table has no error color, but every screen needs an error state:
+
+| Hex | Where it appears | Suggested token |
+| --- | --- | --- |
+| #B42318 | "تسجيل الخروج" (Profile), "مباشر" label (LiveJob); also use it for error text | `danger` |
+| #DC2626 | "مباشر" live dot (LiveJob) | `live` |
+| #EEF2F7 | Row dividers inside cards (Checkout, Profile, Report) | `divider` |
+| #B45309 | Amber icon stroke on `warn-bg` (Home, Notifications) | `warn-icon` |
+| #78350F | Strong text on amber banner (LiveJob) | `warn-strong` |
+| #D97706 | Star / rating accent (Report) | `star` |
+| #8FB6CC | Dashed "add file" tile border (Upload, Issue) | `dashed` |
+| #BFE6F5 | Quick-reply chip border (Chat, Notifications) | `chip-border` |
+| #9AA9BC | Unchecked radio border, row chevrons (Checkout, Profile) | `control-off` |
+| #9FB3C8 | Filled OTP box border (Otp) | `otp-filled` |
+| #F1F5F9 | Neutral icon well (Notifications) | `well` |
+| #C9D8EA, #DCE7F3 | Body text on navy (Main, Tips featured card) | `on-dark-body` (one token is enough) |
+
+Illustration-only colors don't need tokens. Keep them inside the illustration or SVG component: the map drawing (#DCE5EC, #D4EDDA, #BFE3F2), the photo placeholders in Report (#8B7355, #2B8FB3), the Iraqi flag in Login (#CE1126, #000000) and the shadows (`rgba(11,37,69,…)`). Shadows become `shadow-*` theme tokens.
+
 ### Type, shape, spacing
 
 - Font: Cairo 400–900. Page title 28/900, screen title 20/900, section label 15–16/800, body 15–17/400–700, meta 12–13. Line height 1.7 for Arabic body text.
@@ -162,7 +184,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Channel picker: WhatsApp (default) and SMS. **The SMS button is hidden when the admin toggle `sms_enabled` is off.**
 - "أرسل الرمز" stays disabled until the number is valid.
 - Errors: invalid number; too many requests ("جرب بعد X دقايق"); WhatsApp send failed, which offers SMS if enabled, otherwise "جرب مرة ثانية".
-- Terms and Privacy links open the placeholder pages (5.N14).
+- Terms and Privacy links open the placeholder pages (N14).
 
 ### 5.3 OTP — `Otp.dc.html`
 
@@ -347,6 +369,10 @@ Rules:
 ## 7. Data model
 
 All tables live in Postgres with RLS on. Money is stored as integer IQD. Times are `timestamptz`, shown in `Asia/Baghdad`. Orders snapshot the address and prices, so later edits never change history.
+
+> **Note for Claude Code: this schema is a starting point, not a contract.** The tables below show what data v1 needs and roughly how it fits together. Don't copy them column for column. Claude Code owns the final schema design: table and column names, types, enums vs lookup tables, normalization, keys, constraints, indexes and how RLS is structured. Where you see a better design (safer, simpler, faster, or easier to secure with RLS), use it.
+>
+> What must not change is the behavior this spec describes: the order lifecycle and its guards (section 6), the "one function changes order status" rule, slot capacity that cannot be overbooked, price and address snapshots on orders, integer IQD, RLS on every table, and the access rules below. When you depart from this table, say why in the migration (a short SQL comment) and in the PR description, then update this section so the spec matches the database.
 
 | Table | Key columns | Notes |
 | --- | --- | --- |
@@ -568,6 +594,8 @@ zalal/
 
 ### 12.2 CLAUDE.md starter
 
+The maintained version is `CLAUDE.md` at the repo root, which has grown past this starter. Edit that file, not this block. Tooling and workflow for Claude Code are in `docs/claude-code-setup.md`.
+
 ```markdown
 # Zalal — rules for Claude Code
 - Spec: docs/spec.md. Designs: design/*.dc.html. Read the screen's design file before building it; match layout, copy and tokens exactly unless the spec lists a change.
@@ -586,11 +614,12 @@ zalal/
 
 **Phase 0 — Foundation**
 
-- [ ] Next.js 15 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
+- [ ] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
 - [ ] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
 - [ ] PWA manifest + Serwist; icons from the extracted logo
 - [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState
 - [ ] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests
+- [ ] Claude Code setup from `docs/claude-code-setup.md`: SessionStart hook, `.claude/settings.json` hooks, guard scripts (no raw hex, no left/right), project skills; fill in the Commands section of CLAUDE.md
 
 * Done when: an empty app installs to the home screen on Android and iPhone and renders the Welcome screen pixel-close to `Main.dc.html`
 

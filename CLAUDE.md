@@ -1,11 +1,56 @@
 # Zalal — rules for Claude Code
-- Spec: docs/spec.md. Designs: design/*.dc.html. Read the screen's design file before building it; match layout, copy and tokens exactly unless the spec lists a change.
-- Arabic RTL app. Use logical CSS (ms-/me-/ps-/pe-/start/end), never left/right. Wrap phone numbers and times in dir="ltr".
-- All UI strings go in messages/ar.json (Iraqi Arabic, copy from the designs).
-- Colors, radii and sizes come from the Tailwind theme tokens only. No raw hex in components.
-- TypeScript strict. Zod for every input. Writes go through Server Actions or Postgres RPC; never update orders.status directly; use transition_order().
-- Every table has RLS. Add an RLS test for every new policy.
-- Money = integer IQD; format with formatIQD(). Dates = Asia/Baghdad via lib/dates.
-- Every screen has loading, empty, error and offline states.
-- Do not add libraries without saying why in the PR description.
-- After each task: pnpm lint && pnpm typecheck && pnpm test; commit with a clear message.
+
+Arabic (Iraqi dialect), RTL, mobile-first PWA for booking water-tank cleaning in Karbala. One Next.js 16 (App Router) app, three surfaces: customer `/`, crew `/crew`, admin `/admin`. Backend: Supabase (Postgres + RLS + RPC, Auth, Storage, Realtime). Deployed on Vercel.
+
+## Sources of truth
+- Spec: docs/spec.md. Read the sections your task needs; section numbers are stable (§5 screens, §6 order lifecycle, §7 data model, §12 phases).
+- Designs: design/*.dc.html. These are read-only, so never edit them. Read the screen's design file before building it, and match layout, copy and tokens exactly unless the spec lists a change. Where the spec and a design disagree, the spec wins.
+- The design files are canvas exports. `{{…}}` are template slots filled by the inline script, and `[brackets]` are sample data that comes from the database. They load a `support.js` that is not in the repo, so read them as source code; they won't render on their own. For how a screen looks, use `design/png/<Name>.png`, the exported image of the same artboard (2×, 780×1688). The PNGs show only the first screen (844px tall); for content below the fold, the `.dc.html` is the source.
+- The spec §7 schema is a starting point, not a contract. Design the real schema yourself and improve it where you can, as long as the behavior and rules in the spec still hold. Explain each departure in the migration and the PR, and update §7 to match.
+- If the spec is unclear or contradicts itself on a business rule, ask. Don't guess. Add unresolved questions to spec §13.
+- Out-of-scope items (spec §1) stay out, even when they would be easy to add.
+
+## Commands
+Phase 0 creates these scripts. Keep this list in sync with package.json.
+- `pnpm dev`: run the app
+- `pnpm lint` / `pnpm typecheck` / `pnpm test` (Vitest)
+- `pnpm test:e2e`: Playwright at a 390×844 viewport
+- `pnpm db:reset`: `supabase db reset` (migrations + seed)
+- `pnpm db:test`: `supabase test db` (pgTAP; RLS and RPC tests)
+- `pnpm db:types`: regenerate `src/lib/database.types.ts`
+
+## Environments
+- You work against **local Supabase only** (Docker). In cloud sessions the SessionStart hook starts Docker and Supabase; the CLI needs `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` there, because the default registry is blocked.
+- Dev and prod are hosted projects that CI deploys to (docs/supabase-setup.md). Never run `supabase link`, `db push` or `functions deploy` against a hosted project yourself, and never ask for or handle hosted keys.
+
+## Next.js 16 notes
+- Check the current Next.js docs before using an API you're unsure of. Version 16 changed things, for example `proxy.ts` replaces `middleware.ts`, and `params`, `searchParams`, `cookies()` and `headers()` are async.
+- Default to Server Components. Add `"use client"` only for interactivity, and keep client components small.
+
+## UI rules
+- RTL only. Use logical CSS (ms-/me-/ps-/pe-/start-/end-/text-start, rounded-s/e), never left/right (ml-, pr-, left-, text-left, rounded-l…). Flip directional icons such as arrows and chevrons.
+- Wrap phone numbers, times, codes and order numbers in `dir="ltr"`. Use Western digits (0–9), as in the designs.
+- All UI strings go in messages/ar.json, grouped by screen (Iraqi Arabic, copied from the designs). No Arabic literals in components.
+- Colors, radii, sizes and shadows come from the Tailwind v4 `@theme` tokens only. No raw hex and no arbitrary values (`bg-[#…]`, `rounded-[13px]`) in components. If a design value has no token, add the token (spec §4 lists the known gaps).
+- Reuse src/components/ui before you create a component. Icons come from lucide-react, matched to the canvas glyph.
+- Every screen has loading (skeleton), empty (with CTA), error ("عيد المحاولة") and offline ("ماكو انترنيت") states.
+- Accessibility: touch targets of at least 44px, an Arabic aria-label on icon-only buttons, a visible focus state.
+
+## Data and security rules
+- TypeScript strict. No `any`, and no `@ts-ignore` without a comment explaining why.
+- Zod validates every input at the boundary (Server Actions, route handlers, Edge Functions). Share schemas between client and server.
+- Writes go through Server Actions or Postgres RPC. Never update orders.status directly; use transition_order().
+- Enforce business rules (2 h cutoff, slot capacity, service area, OTP limits) in Postgres or on the server. A UI check alone is never enough.
+- Every table has RLS enabled. Add a pgTAP test for every policy, covering both allowed and denied cases for anon, customer, other customer, crew and admin.
+- Migrations: create them with `supabase migration new`. Never edit a migration once it is merged; add a new one instead. After any schema change, run `pnpm db:types` and commit the generated types.
+- The Supabase service-role key is used only in server code (`import "server-only"`). Secrets live in `.env.local` or Supabase secrets, never in git or client code. Only `NEXT_PUBLIC_*` values may reach the browser.
+- Money is integer IQD; format it with formatIQD(). Store dates as timestamptz; compute and display them in Asia/Baghdad via lib/dates. Never base a business rule on the device's time zone.
+- Phones are stored as E.164 `+9647XXXXXXXXX`; normalize them via lib/phone.
+
+## Workflow
+- One task per branch and per session. For anything that touches schema, RLS, auth or more than a few files, plan first and wait for approval.
+- Write the test first for RPCs and rules (transition_order guards, slot capacity, 2 h cutoff, RLS).
+- Before you call a task done, run `pnpm lint && pnpm typecheck && pnpm test`, plus `pnpm db:test` if SQL changed. For UI work, screenshot the screen at 390×844 (Playwright) and compare it with `design/png/<Name>.png`.
+- Commit each logical change with a clear message.
+- Don't add libraries without saying why in the PR description. Use current stable versions, and check the library's current docs rather than memory (Next.js, Supabase, Tailwind v4 and Serwist change fast).
+- Keep the docs true. If you change a decision, update docs/spec.md. If you add a command or convention, update this file.
