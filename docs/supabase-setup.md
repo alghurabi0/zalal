@@ -68,9 +68,18 @@ In each project, go to **Project Settings → API Keys**. Use the new-style keys
 
 Also create **two personal access tokens** at [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). CI uses them to push migrations and deploy Edge Functions. Give each token as little as it needs:
 
-- `zalal-ci-dev`: **Zalal Dev** org only.
-- `zalal-ci-prod`: **Zalal** org only.
-- If the token page lets you pick permissions, allow only what deploys need: database migrations, Edge Functions, secrets, and project read. Leave org and billing admin off. Set an expiry (for example 1 year) and put the renewal date in your calendar.
+- `zalal-ci-dev`: scoped to the **`zalal-dev` project** (choose project scope, not organization, so a future project in the org isn't covered automatically).
+- `zalal-ci-prod`: scoped to the **`zalal-prod` project**.
+- Permissions, the same for both:
+
+  | Permission | Access | Used by |
+  | --- | --- | --- |
+  | Project Settings | Read | `supabase link` |
+  | Migrations | Read-write | `supabase db push` |
+  | Edge Functions | Read-write | `supabase functions deploy` |
+
+  Leave everything else off. Set Edge Function secrets (OTPIQ and SMS keys) by hand in the dashboard rather than from CI, so the token needs no Secrets access. If a CI run later fails with a 403, its log names the endpoint; add just that permission, read-only where possible.
+- Set an expiry (for example 1 year) and put the renewal date in your calendar.
 
 Why two: a token that can reach both orgs with full access turns any leak (a bad workflow change, a compromised action) into a prod leak. With two tokens, only the approved prod job ever holds the prod token.
 
@@ -136,7 +145,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - [ ] `zalal-dev` and `zalal-prod` in Frankfurt; passwords saved
 - [ ] Phone auth on, email off, OTP 6 / 300 s, URLs set (both projects)
 - [ ] GitHub integration: dev may stay connected; prod disconnected or "Deploy to production" off
-- [ ] Two scoped personal access tokens (dev org, prod org)
+- [ ] Two personal access tokens, each scoped to one project (Project Settings read, Migrations and Edge Functions read-write)
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets
 - [ ] (After Phase 0) Vercel env vars for Preview and Production
 - [ ] (Optional) Supabase domains allowed in this environment's network settings; plugin logged in to Zalal Dev only

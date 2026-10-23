@@ -103,10 +103,13 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | PDF | Headless Chromium (`puppeteer-core` + `@sparticuz/chromium`) in a Vercel function | Renders the HTML certificate so Arabic shaping is correct; PDF stored once in Storage |
 | Media handling | `browser-image-compression` for photos; 60 s / 100 MB cap per video | No server transcoding in v1 |
 | Validation | Zod, shared between client and server |  |
+| i18n | `next-intl`, single locale `ar`, no locale prefix in URLs | Strings in `messages/ar.json`, keys type-checked; i18n-ready for a second language later |
 | Monitoring | Sentry (errors), PostHog (product analytics) | Free tiers |
 | Hosting | Vercel (region `fra1`), Supabase (region Frankfurt) | Closest supported regions to Iraq |
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
+
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on.
 
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
@@ -154,6 +157,8 @@ These tokens are lifted from the artboards' inline styles; put them in `tailwind
 | #F1F5F9 | Neutral icon well (Notifications) | `well` |
 | #C9D8EA, #DCE7F3 | Body text on navy (Main, Tips featured card) | `on-dark-body` (one token is enough) |
 
+These are now tokens under the suggested names (Phase 0).
+
 Illustration-only colors don't need tokens. Keep them inside the illustration or SVG component: the map drawing (#DCE5EC, #D4EDDA, #BFE3F2), the photo placeholders in Report (#8B7355, #2B8FB3), the Iraqi flag in Login (#CE1126, #000000) and the shadows (`rgba(11,37,69,…)`). Shadows become `shadow-*` theme tokens.
 
 ### Type, shape, spacing
@@ -166,6 +171,19 @@ Illustration-only colors don't need tokens. Keep them inside the illustration or
 - Logo: the three-wave mark in `Main.dc.html`. Extract it to `public/brand/logo.svg` and generate PWA icons (192, 512, maskable) from it.
 - Numbers: Western digits (0–9) as in the designs; currency written "35,000 د.ع".
 - Phone numbers and times are wrapped in `dir="ltr"` spans, as in the designs.
+
+### Tokens in code
+
+All tokens live in `@theme` in `src/app/globals.css`. Tailwind's default colors, radii, font sizes, line heights, letter spacing and shadows are removed, so only these exist (`tests/unit/theme-tokens.test.ts` checks the colors against this section):
+
+- **Colors:** the names in the two tables above, plus `white` and `black` for translucent overlays (`bg-white/90`, `bg-black/55`, `bg-navy/75`).
+- **Radii:** role names `chip` 12, `input` 14, `button` 16, `card` 18, `sheet` 26 (`rounded-t-sheet`). One-offs use pixel names: `4` (chat bubble tail), `8` (photo badges), `10` (status badges), `20` (video player, dark profile card), `30` (logo tile). The canvas's other radii are all half the element's height (dots, progress bars, 44×44 icon buttons, 38px pills), so they use `rounded-full`.
+- **Font sizes:** pixel names for each size in the canvas: `text-11` to `text-20`, `text-22`, `24`, `26`, `28`, `44`.
+- **Line heights:** `display` 1.2, `tight` 1.3, `snug` 1.4, `normal` 1.5, `relaxed` 1.6, `body` 1.7 (the default on `body`). These replace Tailwind's defaults of the same names, whose values differ.
+- **Letter spacing:** `wordmark` 6px ("ZALAL"), `phone` 1px (phone input).
+- **Shadows**, by where the canvas uses them: `card`, `float` (controls over the map), `sheet`, `fab` (tab bar Book button), `pin` (crew pin), `segment` (active segmented tab), `knob` (switch), `logo`.
+- **Layout:** `max-w-phone` is 430px, so phones up to the largest common width (430) are full width and wider screens get a centered column. The canvas artboards are 390 wide.
+- **Spacing:** Tailwind's 4px scale already covers every canvas value (`p-5.5` = 22px), so there are no spacing tokens.
 
 ## 5. Customer app screens
 
@@ -614,7 +632,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 **Phase 0 — Foundation**
 
-- [ ] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
+- [x] Next.js 16 + TS + Tailwind v4 + pnpm; Cairo font; `dir="rtl"`; theme tokens from section 4
 - [ ] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
 - [ ] PWA manifest + Serwist; icons from the extracted logo
 - [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState

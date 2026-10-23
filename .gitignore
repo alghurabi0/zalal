@@ -21,3 +21,14 @@ supabase/.temp/
 # Claude Code personal settings
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Next.js and TypeScript
+/.pnp
+.pnp.*
+*.tsbuildinfo
+next-env.d.ts
+*.pem
+
+# Debug logs
+npm-debug.log*
+.pnpm-debug.log*

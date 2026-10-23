@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens from the canvas (docs/spec.md §4). Components use these
+ * utilities only: no raw hex and no arbitrary values.
+ *
+ * Tailwind's default colors, radii, font sizes and shadows are cleared, so a
+ * class that isn't a design token (bg-blue-500, rounded-lg, text-sm) does not
+ * exist. Spacing keeps Tailwind's 4px-based scale, which already covers every
+ * design value (p-5.5 = 22px).
+ */
+@theme {
+  /* Colors */
+  --color-*: initial;
+  --color-white: #ffffff; /* text on navy, translucent overlays (bg-white/90) */
+  --color-black: #000000; /* translucent overlays on photos (bg-black/55) */
+
+  --color-navy: #0b2545; /* primary buttons, headings, ink, dark header */
+  --color-navy-2: #13315c; /* dark cards, icon wells on dark */
+  --color-navy-3: #1b4a7a; /* welcome waves */
+  --color-aqua: #4cc9f0; /* brand accent, logo, CTA on dark */
+  --color-aqua-soft: #8fe0f5; /* link hover on dark */
+  --color-teal: #0a6e8f; /* links, active tab, focus border, icons */
+  --color-bg: #f4f7fb; /* app background */
+  --color-surface: #ffffff; /* cards, inputs */
+  --color-border: #e3eaf2; /* card and input borders */
+  --color-track: #d3dce6; /* progress tracks, inactive steps */
+  --color-muted: #52627a; /* secondary text */
+  --color-body-2: #34455c; /* long body text */
+  --color-on-dark-muted: #9fb8d3; /* secondary text on navy */
+  --color-on-dark-body: #c9d8ea; /* body text on navy */
+  --color-selected: #e6f7fd; /* selected chip/card background */
+  --color-disabled: #c9d3e0; /* disabled button */
+  --color-divider: #eef2f7; /* row dividers inside cards */
+  --color-control-off: #9aa9bc; /* unchecked radio border, row chevrons */
+  --color-otp-filled: #9fb3c8; /* filled OTP box border */
+  --color-chip-border: #bfe6f5; /* quick-reply chip border */
+  --color-dashed: #8fb6cc; /* dashed "add file" tile border */
+  --color-well: #f1f5f9; /* neutral icon well */
+  --color-map-bg: #e8eef3; /* map placeholder */
+
+  --color-warn-bg: #fef3c7; /* "needs cleaning", "on the way" */
+  --color-warn-fg: #92400e;
+  --color-warn: #f59e0b; /* unread dot */
+  --color-warn-icon: #b45309; /* amber icon stroke on warn-bg */
+  --color-warn-strong: #78350f; /* strong text on the amber banner */
+  --color-ok-bg: #dcfce7; /* completed, uploaded, certificate */
+  --color-ok-fg: #15803d;
+  --color-ok: #16a34a;
+  --color-danger: #b42318; /* logout, "live" label, error text */
+  --color-live: #dc2626; /* live dot */
+  --color-star: #d97706; /* rating stars */
+
+  /* Radii. Role names for the spec's shapes; pixel names for one-offs.
+     Circles and pills use rounded-full. */
+  --radius-*: initial;
+  --radius-chip: 12px;
+  --radius-input: 14px;
+  --radius-button: 16px;
+  --radius-card: 18px;
+  --radius-sheet: 26px; /* bottom sheet top corners: rounded-t-sheet */
+  --radius-4: 4px; /* chat bubble tail corner */
+  --radius-8: 8px; /* badges on photos and video */
+  --radius-10: 10px; /* small status badges */
+  --radius-20: 20px; /* video player, dark profile card */
+  --radius-30: 30px; /* logo tile */
+
+  /* Font sizes in px. Line height is inherited (1.7 on body) unless a
+     leading-* class sets it. */
+  --text-*: initial;
+  --text-11: 0.6875rem;
+  --text-12: 0.75rem;
+  --text-13: 0.8125rem;
+  --text-14: 0.875rem;
+  --text-15: 0.9375rem;
+  --text-16: 1rem;
+  --text-17: 1.0625rem;
+  --text-18: 1.125rem;
+  --text-19: 1.1875rem;
+  --text-20: 1.25rem;
+  --text-22: 1.375rem;
+  --text-24: 1.5rem;
+  --text-26: 1.625rem;
+  --text-28: 1.75rem;
+  --text-44: 2.75rem;
+
+  /* Line heights used in the canvas */
+  --leading-*: initial;
+  --leading-display: 1.2; /* brand name on Welcome */
+  --leading-tight: 1.3; /* stacked label + value */
+  --leading-snug: 1.4; /* large headings */
+  --leading-normal: 1.5; /* card and article titles */
+  --leading-relaxed: 1.6; /* chat bubbles, notification body */
+  --leading-body: 1.7; /* Arabic body text (body default) */
+
+  /* Letter spacing */
+  --tracking-*: initial;
+  --tracking-wordmark: 0.375rem; /* "ZALAL" under the logo */
+  --tracking-phone: 1px; /* phone number input */
+
+  /* Shadows, named by where the canvas uses them */
+  --shadow-*: initial;
+  --shadow-card: 0 6px 20px rgb(11 37 69 / 0.08); /* raised card (Home live order) */
+  --shadow-float: 0 2px 10px rgb(11 37 69 / 0.15); /* buttons and chips floating on the map */
+  --shadow-sheet: 0 -6px 24px rgb(11 37 69 / 0.12); /* bottom sheet */
+  --shadow-fab: 0 8px 18px rgb(11 37 69 / 0.3); /* raised Book button in the tab bar */
+  --shadow-pin: 0 4px 12px rgb(11 37 69 / 0.3); /* crew pin on the map */
+  --shadow-segment: 0 1px 4px rgb(11 37 69 / 0.12); /* active segmented-control tab */
+  --shadow-knob: 0 1px 3px rgb(0 0 0 / 0.2); /* switch knob */
+  --shadow-logo: 0 12px 30px rgb(0 0 0 / 0.25); /* logo tile on Welcome */
+
+  /* Layout */
+  --container-phone: 430px; /* app column; centered on wider screens */
+}
+
+@theme inline {
+  /* Cairo is loaded with next/font in the root layout. */
+  --font-*: initial;
+  --font-sans: var(--font-cairo), Tahoma, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans leading-body text-navy antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-teal;
+  }
+}
