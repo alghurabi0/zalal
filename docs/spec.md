@@ -65,7 +65,7 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 53 | Notifications | Push + in-app only |
 | 54–55 | Content | Articles and categories managed by admin, seeded at launch |
 | 59 | Stack | Next.js 16 + Supabase + Vercel (section 3) |
-| 60 | Environments | Local (Docker), dev and prod Supabase projects in separate orgs; Claude never holds prod credentials; CI deploys migrations (`docs/supabase-setup.md`) |
+| 60 | Environments | Local (Docker), dev and prod Supabase projects in separate orgs; Claude never holds prod credentials; CI deploys migrations (`docs/supabase-setup.md`). Production releases only through the approved "Deploy prod" workflow, database first, then app (`docs/deploy-setup.md`) |
 
 ## 2. Roles and surfaces
 
@@ -104,12 +104,12 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | Media handling | `browser-image-compression` for photos; 60 s / 100 MB cap per video | No server transcoding in v1 |
 | Validation | Zod, shared between client and server |  |
 | i18n | `next-intl`, single locale `ar`, no locale prefix in URLs | Strings in `messages/ar.json`, keys type-checked; i18n-ready for a second language later |
-| Monitoring | Sentry (errors), PostHog (product analytics) | Free tiers |
+| Monitoring | Sentry (errors), PostHog (product analytics), both EU region | Free tiers; off without their keys. See "Monitoring, analytics and releases" below |
 | Hosting | Vercel (region `fra1`), Supabase (region Frankfurt) | Closest supported regions to Iraq |
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
-Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4.
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22+, Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4. Monitoring adds @sentry/nextjs 11.9.0 (supports Next 16 with `cacheComponents` and Turbopack) and posthog-js 1.438.20. CI uses actions/checkout v7, actions/setup-node v7 (Node 22), pnpm/action-setup v6 and actions/upload-artifact v7.
 
 **PWA and caching (Phase 0).** Serwist runs in its "configurator mode": `pnpm build` runs `next build && serwist build`, and the CLI bundles `src/app/sw.ts` into `public/sw.js` (git-ignored) outside the Next.js bundler. The Turbopack integration (`@serwist/turbopack`) is not used, because its route handler exports `dynamic` and `revalidate`, which Next.js rejects when `cacheComponents` is on. The worker is registered in the root layout and is off in `pnpm dev`. Caching policy:
 
@@ -119,6 +119,14 @@ Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, 
 - Phase 5 adds the Web Push handlers to the same `src/app/sw.ts`.
 
 One web app manifest (`src/app/manifest.ts`) covers all three surfaces: crew and admin also start at `/`, and the role picks the surface after login. Its name and description come from `messages/ar.json`, and the theme and splash color is `navy`.
+
+**Monitoring, analytics and releases (Phase 0).** Owner setup is in `docs/deploy-setup.md`.
+
+- **Off without keys.** Sentry needs `NEXT_PUBLIC_SENTRY_DSN` and PostHog needs `NEXT_PUBLIC_POSTHOG_KEY`. Without them (local, CI, a fresh project) nothing is sent and the app works the same. `next.config.ts` validates both, so a malformed value fails the build.
+- **Sentry** (`src/instrumentation.ts`, `src/instrumentation-client.ts`, options in `src/lib/monitoring/sentry.ts`) reports browser, server and edge errors, and traces (10% in production, all in previews). Events are tagged `production` or `preview`. It sends nothing personal: no user, IP, cookies, request bodies, query strings, headers other than `user-agent`, or local variables. No session replay. Source maps are uploaded at build time and then removed from the deploy. `app/error.tsx` and `app/global-error.tsx` report what they catch, and every screen's own `error.tsx` must too (`useReportError`).
+- **PostHog** (`src/lib/monitoring/analytics.ts`) runs in Vercel Production only: its key is set there alone. It loads after the page. Page views and clicks are recorded without element text, since a tapped card can show a name, phone or address. No session recording, surveys or extra scripts. Profiles exist only for identified users. From Phase 1, the app identifies logged-in users by user id, never by phone, and calls `posthog.reset()` on logout, because crew phones are shared.
+- **Same-origin paths.** Browser events go through the app's own domain so ad blockers don't drop them: `/zl-e` reaches Sentry through `src/app/sentry-tunnel/route.ts`, which forwards only the event and only for our DSN, and `/zl-a` is rewritten to PostHog EU. The service worker never caches either path. A future `proxy.ts` must leave both alone.
+- **Releases.** Every PR gets CI and a Vercel preview on dev Supabase. A merge to `main` runs CI, then "Deploy dev" migrates dev Supabase. `vercel.json` stops Vercel from deploying `main` by itself. "Deploy prod" is started by hand and approved: it migrates prod Supabase first, then triggers the Vercel Production build through a deploy hook, so the live app never runs ahead of its database. Functions run in `fra1`.
 
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
@@ -678,7 +686,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 - [x] Supabase project (Frankfurt), local dev with the Supabase CLI, generated types
 - [x] PWA manifest + Serwist; icons from the extracted logo
 - [x] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState (see §4 "UI kit"); Welcome screen built on it
-- [ ] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests
+- [x] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests (code and workflows; the owner's account steps are in `docs/deploy-setup.md`)
 - [ ] Claude Code setup from `docs/claude-code-setup.md`: SessionStart hook, `.claude/settings.json` hooks, guard scripts (no raw hex, no left/right), project skills; fill in the Commands section of CLAUDE.md
 
 * Done when: an empty app installs to the home screen on Android and iPhone and renders the Welcome screen pixel-close to `Main.dc.html`

@@ -8,7 +8,7 @@ Claude can't create Supabase projects or see your dashboard: this cloud environm
 | --- | --- | --- | --- |
 | **Local** | Docker, inside each Claude session and on your laptop | Claude, tests, CI | `supabase db reset` |
 | **Dev** (staging) | Supabase project `zalal-dev` | Vercel preview deploys, you testing on a phone | GitHub Action, automatically on every merge to `main` |
-| **Prod** | Supabase project `zalal-prod` | Real customers | GitHub Action, **only when you start it by hand** and approve it |
+| **Prod** | Supabase project `zalal-prod` | Real customers | GitHub Action, **only when you start it by hand** and approve it; the same run then releases the app (`docs/deploy-setup.md`) |
 
 Claude never holds prod credentials. Claude works locally; GitHub Actions push migrations to dev and prod.
 
@@ -35,13 +35,9 @@ In each org, create one project:
 
 Write down each **project ref**, the 20-character id in the project URL (`https://supabase.com/dashboard/project/<ref>`).
 
-### 2a. If you connected the projects to GitHub (Supabase's GitHub integration)
+### 2a. Keep Supabase's own GitHub integration off
 
-Check **Project Settings → Integrations → GitHub** in each project:
-
-- **Dev:** keeping it connected is fine and simpler. With "Deploy to production" on and the production branch set to `main`, Supabase applies migrations to dev on every merge, so CI won't need a `deploy-dev.yml`. Keep **automatic branching off** (preview branches cost extra and aren't needed).
-- **Prod:** **disconnect it**, or at least turn "Deploy to production" off. Otherwise every merge to `main` changes the live database with no approval step. Prod migrations go through the manual, approved GitHub Action instead.
-- Set the Supabase directory to `supabase` (the default).
+**Current state (Oct 23, 2026): neither project is connected**, and they should stay that way. GitHub Actions deploy both: `deploy-dev.yml` after every merge that passes CI, and `deploy-prod.yml` only when you start and approve it. If a project were connected with "Deploy to production" on, it would apply migrations on every merge, around CI and, for prod, around your approval. If you ever connect one, keep "Deploy to production" and automatic branching off in **Project Settings → Integrations → GitHub**.
 
 ## 3. Auth settings (both projects)
 
@@ -99,6 +95,7 @@ Why two: a token that can reach both orgs with full access turns any leak (a bad
      | `SUPABASE_ACCESS_TOKEN` | `zalal-ci-prod` token |
      | `SUPABASE_PROJECT_REF` | prod ref |
      | `SUPABASE_DB_PASSWORD` | prod database password |
+     | `VERCEL_DEPLOY_HOOK_URL` | added later, `docs/deploy-setup.md` step 4 |
 
 2. Go to repo → Settings → Secrets and variables → **Actions** → Repository secrets (used by CI and the dev deploy):
 
@@ -112,7 +109,7 @@ Why two: a token that can reach both orgs with full access turns any leak (a bad
 
 The prod deploy workflow uses `environment: production`, so it pauses for your approval and only then receives the prod secrets.
 
-**Vercel** (project → Settings → Environment Variables), after Phase 0 creates the Next.js app. Create **one** Vercel project (not one per environment): its Production environment points to prod Supabase and its Preview environment to dev. Set these by hand rather than with the Supabase ↔ Vercel integration, which syncs a single Supabase project into every environment.
+**Vercel** (project → Settings → Environment Variables). `docs/deploy-setup.md` step 1 has the full list, with Sentry and PostHog. Create **one** Vercel project (not one per environment): its Production environment points to prod Supabase and its Preview environment to dev. Set these by hand rather than with the Supabase ↔ Vercel integration, which syncs a single Supabase project into every environment.
 
 | Variable | Preview (→ dev) | Production (→ prod) |
 | --- | --- | --- |
@@ -136,10 +133,10 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - Done (task 2): `supabase init`, and `supabase/config.toml` mirroring step 3: phone sign-up on, email sign-up off, 6-digit OTP valid 300 s, 45 s between resends, site URL `http://localhost:3000`. The Send SMS Hook section is in place but off until Phase 1 adds `send-otp`. Migrations enable PostGIS, pg_cron and pg_net and create the five buckets.
 - Done (task 2): the SessionStart hook for cloud sessions installs packages, starts Docker and runs `supabase start` in the background with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`. In this environment the default image registry (AWS ECR) is blocked, but Docker Hub works.
 - `config.toml` only configures local Supabase. Hosted auth settings stay as you set them in step 3; CI never runs `supabase config push`.
-- GitHub Actions:
-  - `ci.yml` on every PR: lint, typecheck, unit tests, `supabase start` + `supabase test db`, Playwright.
-  - `deploy-dev.yml` on push to `main`: `supabase link --project-ref $SUPABASE_DEV_PROJECT_REF` → `supabase db push` → `supabase functions deploy`. Skip this file if the dev project's GitHub integration already deploys on merge (step 2a).
-  - `deploy-prod.yml`, manual (`workflow_dispatch`), uses the `production` environment so you approve it: the same steps against prod.
+- Done (task 5): GitHub Actions in `.github/workflows/`:
+  - `ci.yml` on every PR and push to `main`: Prettier check, lint, typecheck, unit tests, `supabase start` + `supabase test db`, a check that `database.types.ts` matches the schema, and Playwright.
+  - `deploy-dev.yml` after CI passes on `main` (or by hand from `main`): `supabase link` → `supabase db push` → `supabase functions deploy`, with the `SUPABASE_DEV_*` repository secrets. The steps live in `.github/actions/supabase-deploy/`.
+  - `deploy-prod.yml`, manual (`workflow_dispatch`, `main` only), uses the `production` environment so you approve it: the same steps against prod, then the Vercel deploy hook releases the app (`docs/deploy-setup.md`).
 - `supabase/seed.sql` loads into local and dev only, never into prod. Prod gets its first admin from the `ADMIN_PHONE` seed script (spec §10.2) and real prices and slots from the dashboard.
 
 ## Checklist
@@ -147,8 +144,8 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - [ ] Two orgs: Zalal Dev (Free), Zalal (Pro)
 - [ ] `zalal-dev` and `zalal-prod` in Frankfurt; passwords saved
 - [ ] Phone auth on, email off, OTP 6 / 300 s, URLs set (both projects)
-- [ ] GitHub integration: dev may stay connected; prod disconnected or "Deploy to production" off
+- [x] Supabase GitHub integration off for both projects (GitHub Actions deploy instead)
 - [ ] Two personal access tokens, each scoped to one project (Project Settings read, Migrations and Edge Functions read-write)
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets
-- [ ] (After Phase 0) Vercel env vars for Preview and Production
+- [ ] Vercel, Sentry, PostHog and the `main` ruleset: `docs/deploy-setup.md`
 - [ ] (Optional) Supabase domains allowed in this environment's network settings; plugin logged in to Zalal Dev only
