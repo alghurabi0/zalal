@@ -109,6 +109,9 @@ create trigger addresses_manage_default
 before insert or update of is_default on public.addresses
 for each row execute function private.manage_default_address();
 
+-- Trigger functions need no EXECUTE grant to fire.
+revoke execute on all functions in schema private from public;
+
 revoke all on public.addresses from anon, authenticated;
 grant select on public.addresses to authenticated;
 grant insert (user_id, label, district, landmark, lat, lng, is_default) on public.addresses to authenticated;

@@ -38,6 +38,7 @@ create index otp_requests_phone_created_at_idx
 on public.otp_requests (phone, created_at desc);
 
 revoke all on public.otp_requests from anon, authenticated;
+revoke all on sequence public.otp_requests_id_seq from anon, authenticated;
 grant select on public.otp_requests to authenticated;
 
 create policy "Admins read OTP requests"

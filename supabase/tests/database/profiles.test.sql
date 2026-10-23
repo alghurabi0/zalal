@@ -4,7 +4,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(36);
+select plan(37);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -84,6 +84,11 @@ update public.profiles set deleted_at = now()
 where id = tests.user_id('+9647504444444');
 select tests.authenticate_as(tests.user_id('+9647504444444'));
 select is(private.is_admin(), false, 'a deleted admin profile is not an admin');
+select is_empty(
+  $$ update public.profiles set full_name = 'رجعت'
+     where id = tests.user_id('+9647504444444') returning 1 $$,
+  'a deleted account cannot write its name back'
+);
 select tests.clear_authentication();
 update public.profiles set deleted_at = null
 where id = tests.user_id('+9647504444444');

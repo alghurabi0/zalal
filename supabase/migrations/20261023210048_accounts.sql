@@ -16,8 +16,11 @@
 -- [api] schemas), so they can't be called over PostgREST.
 create schema private;
 grant usage on schema private to authenticated, service_role;
--- Functions are executable by PUBLIC by default; grant them one by one instead.
-alter default privileges in schema private revoke execute on functions from public;
+-- Postgres makes every new function executable by PUBLIC, and a per-schema
+-- default privilege can't take that away. So each migration that adds
+-- private functions ends with `revoke execute on all functions in schema
+-- private from public` and grants back only what policies need
+-- (tests/database/rls_audit_private_execute.test.sql checks it).
 
 -- Roles ------------------------------------------------------------------
 
@@ -128,6 +131,7 @@ as $$
   select coalesce((select private.current_user_role()) = 'admin', false);
 $$;
 
+revoke execute on all functions in schema private from public;
 grant execute on function private.current_user_role() to authenticated, service_role;
 grant execute on function private.is_admin() to authenticated, service_role;
 
@@ -149,9 +153,10 @@ for select
 to authenticated
 using (id = (select auth.uid()) or (select private.is_admin()));
 
+-- A deleted (anonymized) account can't write its name back.
 create policy "Users update their own profile"
 on public.profiles
 for update
 to authenticated
-using (id = (select auth.uid()))
-with check (id = (select auth.uid()));
+using (id = (select auth.uid()) and deleted_at is null)
+with check (id = (select auth.uid()) and deleted_at is null);

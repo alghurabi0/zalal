@@ -48,6 +48,7 @@ to anon, authenticated, service_role;
 
 -- Writes come with the A13 map editor (Phase 3), through an audited RPC.
 revoke all on public.service_areas from anon, authenticated;
+revoke all on sequence public.service_areas_id_seq from anon, authenticated;
 grant select on public.service_areas to anon, authenticated;
 
 create policy "Everyone reads active service areas"
