@@ -13,7 +13,7 @@ Follow CLAUDE.md and `supabase/CLAUDE.md` throughout. Schema, RLS and auth chang
 - Spec §7 (data model and access rules), the §6 lifecycle rules if orders are involved, and any §5/§8/§9 entry that the tables serve. Check §13 for open questions on them; ask rather than guess a business rule.
 - The existing migrations the change builds on (`ls supabase/migrations`), and `supabase/tests/database/_helpers.psql`.
 - In the plan, list per table: columns and types, constraints, indexes, who may read and write which columns, the RPCs and triggers, and each departure from §7 with its reason. For a real design choice, give 2 options with trade-offs and a recommendation.
-- Make sure local Supabase is up (`pnpm db:test` runs). If `pnpm db:start` timed out but `docker ps` shows the containers healthy, it is up.
+- Make sure local Supabase is up (`pnpm db:test` runs). In cloud sessions it starts in the background; `/tmp/supabase-start.log` ends with "Supabase is ready." when it's done.
 
 ## 2. Tests first
 
@@ -31,7 +31,7 @@ Follow CLAUDE.md and `supabase/CLAUDE.md` throughout. Schema, RLS and auth chang
 ## 4. Verify
 
 1. `pnpm db:reset`, then `pnpm db:test` until it passes. Fix the `plan(n)` counts last.
-2. Check one path through the real services, not just SQL: for example create a user through the Auth admin API, or call an RPC over REST with the publishable and secret keys (`pnpm exec supabase status -o env` prints the local keys).
+2. Check one path through the real services, not just SQL: for example create a user through the Auth admin API, or call an RPC over REST with the publishable and secret keys (`pnpm exec supabase status -o env` prints the local keys). Run `pnpm db:reset` afterwards: users made this way stay in the database and clash with the phones the tests create.
 3. `pnpm db:types` and commit `src/lib/database.types.ts`. Never edit it by hand.
 4. `pnpm lint` (the guards check RLS and `search_path`), `pnpm typecheck`, `pnpm test`.
 5. Run the `rls-auditor` subagent on the new migrations. Keep any test it writes; fix the migration until it passes.

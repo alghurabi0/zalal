@@ -49,7 +49,7 @@ Cloud sessions start from a fresh clone, so `.claude/hooks/session-start.sh` pre
 
 - `pnpm install --frozen-lockfile`
 - Starts `dockerd` if it isn't running (cloud containers have Docker installed but the daemon stopped) and waits for `docker info`. Local Supabase and the pgTAP tests need it.
-- Starts `pnpm db:start` in the background (`.claude/hooks/start-supabase.sh`, log in `/tmp/supabase-start.log`), so the session doesn't wait on the image pull, then writes `.env.local` from the local keys. It exports `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` and `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium` for the session.
+- Starts `pnpm db:start` in the background (`.claude/hooks/start-supabase.sh`, log in `/tmp/supabase-start.log`), so the session doesn't wait on the image pull, then writes `.env.local` from the local keys. On a resumed session Docker restarts the old Supabase containers by itself, and `supabase start` fails at once while the database is still booting ("container is not ready: starting"). So after a failed start the script waits up to 2 minutes for the database to report healthy and tries again, 3 attempts in all. The log ends with "Supabase is ready." or "Supabase failed to start after 3 attempts". `tests/unit/start-supabase.test.ts` covers it. It exports `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` and `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium` for the session.
 - `db:start` excludes services tests don't need, `edge-runtime` included. Phase 1 drops `edge-runtime` from that list, when the OTP hook needs it.
 
 ### 3.2 `.claude/settings.json` (committed)
