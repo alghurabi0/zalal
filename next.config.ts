@@ -1,5 +1,16 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+
+import { monitoringEnv } from "./src/lib/env";
+import { ANALYTICS_PATH, ERRORS_PATH } from "./src/lib/monitoring/paths";
+
+// Fails the build on a malformed Sentry DSN or PostHog key, instead of
+// shipping an app that silently reports nothing.
+monitoringEnv();
+
+const POSTHOG_HOST = "https://eu.i.posthog.com";
+const POSTHOG_ASSETS_HOST = "https://eu-assets.i.posthog.com";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -9,6 +20,23 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: "/", destination: "/welcome", permanent: false }];
   },
+  // PostHog through our own domain (src/lib/monitoring/analytics.ts). The
+  // specific rules must come before the catch-all.
+  async rewrites() {
+    return [
+      {
+        source: `${ANALYTICS_PATH}/static/:path*`,
+        destination: `${POSTHOG_ASSETS_HOST}/static/:path*`,
+      },
+      {
+        source: `${ANALYTICS_PATH}/array/:path*`,
+        destination: `${POSTHOG_ASSETS_HOST}/array/:path*`,
+      },
+      { source: `${ANALYTICS_PATH}/:path*`, destination: `${POSTHOG_HOST}/:path*` },
+    ];
+  },
+  // PostHog's API paths end in a slash (/e/); a redirect would drop events.
+  skipTrailingSlashRedirect: true,
   turbopack: {
     rules: {
       "*.css": {
@@ -21,4 +49,23 @@ const nextConfig: NextConfig = {
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-export default withNextIntl(nextConfig);
+// Uploads source maps to Sentry when SENTRY_AUTH_TOKEN, SENTRY_ORG and
+// SENTRY_PROJECT are set (Vercel build env only, docs/deploy-setup.md), then
+// deletes them from the build so they are never served. Without them the
+// build just skips the upload.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  telemetry: false,
+  widenClientFileUpload: true,
+  tunnelRoute: ERRORS_PATH,
+  // No session replay, so leave its code out of the bundle.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
+});

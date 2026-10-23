@@ -2,10 +2,11 @@
 # prebuilt binaries; esbuild's script only re-checks the platform binary that
 # pnpm already installs as an optional dependency; @parcel/watcher and
 # @swc/core are only used by next-intl's optional message extractor, which
-# this app doesn't use.
+# this app doesn't use; core-js (via posthog-js) only prints a funding notice.
 ignoredBuiltDependencies:
   - "@parcel/watcher"
   - "@swc/core"
+  - core-js
   - esbuild
   - sharp
   - unrs-resolver

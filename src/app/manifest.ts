@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getTranslations } from "next-intl/server";
 
-import { locale } from "@/i18n/request";
+import { locale } from "@/i18n/config";
 import { brandColors } from "@/lib/brand";
 
 // One manifest for all three surfaces: crew and admin also start at "/",
