@@ -12,7 +12,8 @@ Arabic (Iraqi dialect), RTL, mobile-first PWA for booking water-tank cleaning in
 
 ## Commands
 Phase 0 creates these scripts. Keep this list in sync with package.json.
-- `pnpm dev`: run the app; `pnpm build` / `pnpm start`: production build
+- `pnpm dev`: run the app (no service worker); `pnpm build` / `pnpm start`: production build. `pnpm build` runs `next build && serwist build`, which writes the service worker `public/sw.js` from `src/app/sw.ts` (spec §3, "PWA and caching").
+- `pnpm icons`: regenerate the PWA icons and favicons from `public/brand/logo.svg`, then commit them
 - `pnpm lint` (ESLint) / `pnpm typecheck` (`next typegen` + `tsc`) / `pnpm test` (Vitest, `tests/unit/`)
 - `pnpm format` / `pnpm format:check`: Prettier, which also sorts Tailwind classes
 - `pnpm test:e2e`: Playwright at a 390×844 viewport (`tests/e2e/`); builds and starts the app on port 3100. In cloud sessions, set `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`, because the pre-installed Chromium doesn't match the pinned Playwright version. Don't run `playwright install` there.
