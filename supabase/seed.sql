@@ -1,0 +1,3 @@
+-- Local and dev seed data (spec §10.2). Never loaded into prod.
+-- `supabase db reset` runs this after the migrations. Each phase adds the seed
+-- rows for its own tables (prices, slots, service area, articles, ...).
