@@ -198,7 +198,7 @@ All tokens live in `@theme` in `src/app/globals.css`. Tailwind's default colors,
 
 Each designed screen below lists what changes from the canvas, how it behaves, and its states. The canvas copy (Iraqi Arabic) is final unless a change is listed. Text in \[brackets\] in the designs is sample data and comes from the database.
 
-**Global rules for every screen:** skeleton loaders while loading; an empty state with a CTA; an error state with "عيد المحاولة"; a top offline banner "ماكو انترنيت". The tab bar shows only on Home, Tips, Notifications, Orders and Profile.
+**Global rules for every screen:** skeleton loaders while loading; an empty state with a CTA; an error state with "اعد المحاولة"; a top offline banner "ماكو انترنيت". The tab bar shows only on Home, Tips, Notifications, Orders and Profile.
 
 ### 5.1 Welcome — `Main.dc.html`
 
