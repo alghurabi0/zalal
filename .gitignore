@@ -32,3 +32,6 @@ next-env.d.ts
 # Debug logs
 npm-debug.log*
 .pnpm-debug.log*
+
+# Service worker, built by `serwist build` (pnpm build)
+public/sw*

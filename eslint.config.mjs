@@ -27,6 +27,8 @@ const eslintConfig = defineConfig([
     "test-results/**",
     "next-env.d.ts",
     "design/**",
+    // Built by `serwist build`.
+    "public/sw*",
   ]),
 ]);
 
