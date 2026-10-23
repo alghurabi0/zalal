@@ -105,6 +105,8 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | Monitoring | Sentry (errors), PostHog (product analytics) | Free tiers |
 | Hosting | Vercel (region `fra1`), Supabase (region Frankfurt) | Closest supported regions to Iraq |
 
+Versions: the version numbers above were current when this spec was written. In Phase 0, use the current stable release of each tool (for example Next.js 16 if it is stable and supported by Serwist and Sentry) and pin it in `package.json`. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
+
 Why this stack: one language end to end, managed auth/storage/realtime, and very little server code for Claude Code to get wrong. The main lock-in is Supabase, which is plain Postgres underneath and can be self-hosted later.
 
 ## 4. Design system (from the canvas)
@@ -134,6 +136,25 @@ These tokens are lifted from the artboards' inline styles; put them in `tailwind
 | `ok-bg` / `ok-fg` / `ok` | #DCFCE7 / #15803D / #16A34A | Completed, uploaded, certificate |
 | `map-bg` | #E8EEF3 | Map placeholder |
 
+**Colors used in the canvas but missing from the table above.** Add tokens for these in Phase 0 (pick names that fit the scheme above). Note that the table has no error color, but every screen needs an error state:
+
+| Hex | Where it appears | Suggested token |
+| --- | --- | --- |
+| #B42318 | "تسجيل الخروج" (Profile), "مباشر" label (LiveJob); also use it for error text | `danger` |
+| #DC2626 | "مباشر" live dot (LiveJob) | `live` |
+| #EEF2F7 | Row dividers inside cards (Checkout, Profile, Report) | `divider` |
+| #B45309 | Amber icon stroke on `warn-bg` (Home, Notifications) | `warn-icon` |
+| #78350F | Strong text on amber banner (LiveJob) | `warn-strong` |
+| #D97706 | Star / rating accent (Report) | `star` |
+| #8FB6CC | Dashed "add file" tile border (Upload, Issue) | `dashed` |
+| #BFE6F5 | Quick-reply chip border (Chat, Notifications) | `chip-border` |
+| #9AA9BC | Unchecked radio border, row chevrons (Checkout, Profile) | `control-off` |
+| #9FB3C8 | Filled OTP box border (Otp) | `otp-filled` |
+| #F1F5F9 | Neutral icon well (Notifications) | `well` |
+| #C9D8EA, #DCE7F3 | Body text on navy (Main, Tips featured card) | `on-dark-body` (one token is enough) |
+
+Illustration-only colors don't need tokens. Keep them inside the illustration or SVG component: the map drawing (#DCE5EC, #D4EDDA, #BFE3F2), the photo placeholders in Report (#8B7355, #2B8FB3), the Iraqi flag in Login (#CE1126, #000000) and the shadows (`rgba(11,37,69,…)`). Shadows become `shadow-*` theme tokens.
+
 ### Type, shape, spacing
 
 - Font: Cairo 400–900. Page title 28/900, screen title 20/900, section label 15–16/800, body 15–17/400–700, meta 12–13. Line height 1.7 for Arabic body text.
@@ -162,7 +183,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Channel picker: WhatsApp (default) and SMS. **The SMS button is hidden when the admin toggle `sms_enabled` is off.**
 - "أرسل الرمز" stays disabled until the number is valid.
 - Errors: invalid number; too many requests ("جرب بعد X دقايق"); WhatsApp send failed, which offers SMS if enabled, otherwise "جرب مرة ثانية".
-- Terms and Privacy links open the placeholder pages (5.N14).
+- Terms and Privacy links open the placeholder pages (N14).
 
 ### 5.3 OTP — `Otp.dc.html`
 
@@ -347,6 +368,10 @@ Rules:
 ## 7. Data model
 
 All tables live in Postgres with RLS on. Money is stored as integer IQD. Times are `timestamptz`, shown in `Asia/Baghdad`. Orders snapshot the address and prices, so later edits never change history.
+
+> **Note for Claude Code: this schema is a starting point, not a contract.** The tables below show what data v1 needs and roughly how it fits together. Don't copy them column for column. Claude Code owns the final schema design: table and column names, types, enums vs lookup tables, normalization, keys, constraints, indexes and how RLS is structured. Where you see a better design (safer, simpler, faster, or easier to secure with RLS), use it.
+>
+> What must not change is the behavior this spec describes: the order lifecycle and its guards (section 6), the "one function changes order status" rule, slot capacity that cannot be overbooked, price and address snapshots on orders, integer IQD, RLS on every table, and the access rules below. When you depart from this table, say why in the migration (a short SQL comment) and in the PR description, then update this section so the spec matches the database.
 
 | Table | Key columns | Notes |
 | --- | --- | --- |
@@ -568,6 +593,8 @@ zalal/
 
 ### 12.2 CLAUDE.md starter
 
+The maintained version is `CLAUDE.md` at the repo root, which has grown past this starter. Edit that file, not this block. Tooling and workflow for Claude Code are in `docs/claude-code-setup.md`.
+
 ```markdown
 # Zalal — rules for Claude Code
 - Spec: docs/spec.md. Designs: design/*.dc.html. Read the screen's design file before building it; match layout, copy and tokens exactly unless the spec lists a change.
@@ -591,6 +618,7 @@ zalal/
 - [ ] PWA manifest + Serwist; icons from the extracted logo
 - [ ] Base UI kit: Button, IconButton, Chip, Card, Input, Sheet, TabBar, Stepper, Skeleton, EmptyState
 - [ ] Vercel project, preview deploys, Sentry, PostHog; GitHub Actions running lint, typecheck and tests
+- [ ] Claude Code setup from `docs/claude-code-setup.md`: SessionStart hook, `.claude/settings.json` hooks, guard scripts (no raw hex, no left/right), project skills; fill in the Commands section of CLAUDE.md
 
 * Done when: an empty app installs to the home screen on Android and iPhone and renders the Welcome screen pixel-close to `Main.dc.html`
 

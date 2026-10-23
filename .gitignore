@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+
+# Dependencies and builds
+node_modules/
+.next/
+out/
+coverage/
+.vercel/
+
+# Tests
+test-results/
+playwright-report/
+
+# Env and secrets (never commit)
+.env
+.env*.local
+supabase/.env
+supabase/.temp/
+
+# Claude Code personal settings
+.claude/settings.local.json
+CLAUDE.local.md
