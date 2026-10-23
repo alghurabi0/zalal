@@ -4,6 +4,7 @@ import { Cairo } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
+import { OfflineBanner } from "@/components/ui/offline-banner";
 import { locale } from "@/i18n/request";
 import { brandColors } from "@/lib/brand";
 
@@ -33,6 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: brandColors.navy,
+  // Lets pages draw under the iPhone home indicator; the tab bar and sheets
+  // pad themselves with the pb-safe-* utility (globals.css).
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -50,7 +54,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           cacheOnNavigation={false}
           reloadOnOnline={false}
         >
-          <NextIntlClientProvider>{children}</NextIntlClientProvider>
+          <NextIntlClientProvider>
+            <OfflineBanner />
+            {children}
+          </NextIntlClientProvider>
         </SerwistProvider>
       </body>
     </html>
