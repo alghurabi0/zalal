@@ -73,6 +73,7 @@ Also create **two personal access tokens** at [supabase.com/dashboard/account/to
   | Permission | Access | Used by |
   | --- | --- | --- |
   | Project Settings | Read | `supabase link` |
+  | API Gateway Keys (`api_gateway_keys_read`) | Read | `supabase link` |
   | Migrations | Read-write | `supabase db push` |
   | Edge Functions | Read-write | `supabase functions deploy` |
 
@@ -145,7 +146,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - [ ] `zalal-dev` and `zalal-prod` in Frankfurt; passwords saved
 - [ ] Phone auth on, email off, OTP 6 / 300 s, URLs set (both projects)
 - [x] Supabase GitHub integration off for both projects (GitHub Actions deploy instead)
-- [ ] Two personal access tokens, each scoped to one project (Project Settings read, Migrations and Edge Functions read-write)
+- [ ] Two personal access tokens, each scoped to one project (Project Settings and API Gateway Keys read, Migrations and Edge Functions read-write)
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets
 - [ ] Vercel, Sentry, PostHog and the `main` ruleset: `docs/deploy-setup.md`
 - [ ] (Optional) Supabase domains allowed in this environment's network settings; plugin logged in to Zalal Dev only

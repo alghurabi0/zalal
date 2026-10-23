@@ -22,10 +22,10 @@ runs:
       run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
     - name: Migrations before the push
       shell: bash
-      run: pnpm exec supabase migration list
+      run: pnpm exec supabase migration list --linked
     - name: Apply new migrations
       shell: bash
-      run: pnpm exec supabase db push --yes
+      run: pnpm exec supabase db push --linked --yes
     - name: Deploy Edge Functions
       shell: bash
       run: |
