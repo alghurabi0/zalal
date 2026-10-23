@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: شهادة التعقيم والتقييم</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="background: #0B2545; color: #FFFFFF; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Orders.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #13315C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<h1 style="margin: 0; font-size: 20px; font-weight: 900; flex: 1">شهادة التعقيم</h1>
+<button aria-label="تحميل الشهادة PDF" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #13315C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 52px; height: 52px; border-radius: 26px; background: #4CC9F0; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></span>
+<div style="display: flex; flex-direction: column"><span style="font-size: 19px; font-weight: 900">خزانك نظيف ومعقّم</span><span style="font-size: 13px; color: #9FB8D3">طلب [#1024] · [24 تشرين الأول 2026] · رقم الشهادة [ZL-1024]</span></div>
+</div>
+</div>
+<div style="flex: 1; padding: 14px 16px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button aria-label="فيديو قبل التنظيف" style="height: 104px; border-radius: 16px; border: none; background: #8B7355; position: relative; font-family: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer"><span style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #FFFFFF; border-radius: 8px; padding: 0 8px; font-size: 12px; font-weight: 800">قبل</span><span style="width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="#0B2545"><path d="M8 5v14l11-7z"></path></svg></span></button>
+<button aria-label="فيديو بعد التنظيف" style="height: 104px; border-radius: 16px; border: none; background: #2B8FB3; position: relative; font-family: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer"><span style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #FFFFFF; border-radius: 8px; padding: 0 8px; font-size: 12px; font-weight: 800">بعد</span><span style="width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="#0B2545"><path d="M8 5v14l11-7z"></path></svg></span></button>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 16px; padding: 4px 14px">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<div style="display: flex; justify-content: space-between; align-items: center; min-height: 40px; border-bottom: 1px solid #EEF2F7"><span style="font-size: 13px; color: #52627A">{{r.k}}</span><span style="font-size: 14px; font-weight: 800">{{r.v}}</span></div>
+</sc-for>
+<div style="display: flex; justify-content: space-between; align-items: center; min-height: 40px"><span style="font-size: 13px; color: #52627A">التنظيف الجاي</span><span style="font-size: 14px; font-weight: 800; color: #0A6E8F">[نيسان 2027] · نذكّرك</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: center">
+<span style="font-size: 15px; font-weight: 800">شلون كانت الخدمة؟</span>
+<div role="group" aria-label="التقييم" style="display: flex; gap: 2px; direction: ltr">
+<sc-for list="{{stars}}" as="s" hint-placeholder-count="5">
+<button onClick="{{s.pick}}" aria-label="{{s.label}}" style="width: 44px; height: 44px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" stroke="#D97706" stroke-width="1.6" stroke-linejoin="round" fill="{{s.fill}}"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"></path></svg></button>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center">
+<sc-for list="{{tags}}" as="t" hint-placeholder-count="4">
+<button onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+</div>
+<a href="Issue.dc.html" style="font-size: 14px; font-weight: 700; text-align: center; min-height: 32px">عندك ملاحظة أو مشكلة؟ بلّغنا</a>
+</div>
+<div style="background: #FFFFFF; border-top: 1px solid #E3EAF2; padding: 12px 20px 22px; display: flex; gap: 10px">
+<button style="flex: 1; height: 52px; border-radius: 16px; border: none; background: #0B2545; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800">أرسل التقييم</button>
+<button style="height: 52px; padding: 0 16px; border-radius: 16px; border: 1px solid #E3EAF2; background: #FFFFFF; color: #0B2545; font-family: inherit; font-size: 15px; font-weight: 700">مشاركة</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { rating: 5, tags: { time: true } };
+}
+renderVals() {
+var self = this;
+var base = 'height: 36px; padding: 0 12px; border-radius: 18px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; ';
+return {
+rows: [
+{ k: 'الخزان', v: 'سطح · 1,500 لتر' },
+{ k: 'مادة التعقيم', v: 'كلور 50 ملغ/لتر · ساعة' },
+{ k: 'الكلور المتبقي بالماي', v: '[0.4 ملغ/لتر] · آمن' },
+{ k: 'الفريق', v: '[علي حسن]' }
+],
+stars: [1, 2, 3, 4, 5].map(function (n) { return { label: n + ' من 5', fill: n <= self.state.rating ? '#F59E0B' : 'none', pick: function () { self.setState({ rating: n }); } }; }),
+tags: [{ id: 'time', label: 'وصلوا بالوقت' }, { id: 'clean', label: 'شغل نظيف' }, { id: 'polite', label: 'تعامل محترم' }, { id: 'video', label: 'الفيديو واضح' }].map(function (t) {
+var on = !!self.state.tags[t.id];
+return { label: t.label, style: base + (on ? 'background: #0B2545; color: #FFFFFF; border: 1px solid #0B2545;' : 'background: #F4F7FB; color: #34455C; border: 1px solid #E3EAF2;'), pick: function () { var n = Object.assign({}, self.state.tags); n[t.id] = !on; self.setState({ tags: n }); } };
+})
+};
+}
+}
+</script>
+</body>
+</html>

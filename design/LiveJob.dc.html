@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: الشغل مباشر</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="padding: 18px 20px 12px; display: flex; align-items: center; gap: 12px">
+<a href="Tracking.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<div style="flex: 1; display: flex; flex-direction: column"><h1 style="margin: 0; font-size: 20px; font-weight: 900">الشغل مباشر</h1><span style="font-size: 13px; color: #52627A">طلب [#1024] · الفريق يشتغل هسه</span></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: #B42318"><span style="width: 8px; height: 8px; border-radius: 4px; background: #DC2626"></span>مباشر</span>
+</div>
+<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 10px">
+<div role="img" aria-label="{{player.title}}" style="height: 200px; border-radius: 20px; background: #13315C; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="358" height="200" viewBox="0 0 358 200" style="position: absolute; inset: 0"><rect width="358" height="200" fill="#13315C"></rect><path d="M0 140 q45 -24 90 0 t90 0 t90 0 t90 0 V200 H0Z" fill="#1B4A7A"></path><path d="M0 165 q45 -24 90 0 t90 0 t90 0 t90 0 V200 H0Z" fill="#4CC9F0" fill-opacity="0.3"></path></svg>
+<span style="position: relative; width: 60px; height: 60px; border-radius: 30px; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="#0B2545"><path d="M8 5v14l11-7z"></path></svg></span>
+<span style="position: absolute; top: 12px; right: 12px; background: rgba(11,37,69,0.75); color: #FFFFFF; border-radius: 8px; padding: 2px 10px; font-size: 13px; font-weight: 800">{{player.title}}</span>
+<span dir="ltr" style="position: absolute; bottom: 12px; left: 12px; background: rgba(11,37,69,0.75); color: #FFFFFF; border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 700">{{player.len}}</span>
+</div>
+<div style="background: #FEF3C7; border-radius: 14px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center">
+<span style="font-size: 14px; font-weight: 800; color: #78350F">التعقيم شغال · لا تفتح الماي</span>
+<span style="font-size: 14px; font-weight: 900; color: #78350F">باقي 38 دقيقة</span>
+</div>
+</div>
+<div style="flex: 1; padding: 12px 16px 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; gap: 12px">
+<div style="display: flex; flex-direction: column; align-items: center; width: 26px"><span style="{{s.dot}}">{{s.mark}}</span><sc-if value="{{s.line}}" hint-placeholder-val="{{true}}"><span style="flex: 1; width: 2px; min-height: 10px; background: #D3DCE6"></span></sc-if></div>
+<div style="flex: 1; display: flex; align-items: center; gap: 10px; padding-bottom: 10px">
+<span style="flex: 1; display: flex; flex-direction: column"><span style="{{s.tStyle}}">{{s.t}}</span><span style="font-size: 12px; color: #52627A">{{s.time}}</span></span>
+<sc-if value="{{s.hasClip}}" hint-placeholder-val="{{false}}">
+<button onClick="{{s.play}}" aria-label="{{s.aria}}" style="{{s.clipStyle}}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg><span dir="ltr">{{s.len}}</span></button>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="background: #FFFFFF; border-top: 1px solid #E3EAF2; padding: 12px 20px 22px; display: flex; gap: 10px">
+<a href="Report.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 16px; background: #0B2545; color: #FFFFFF; font-size: 16px; font-weight: 800; text-decoration: none">شوف الشهادة (بعد ما يخلص)</a>
+<a href="Chat.dc.html" aria-label="مراسلة الشركة" style="width: 52px; height: 52px; border-radius: 16px; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path></svg></a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { sel: 3 };
+}
+renderVals() {
+var self = this;
+var list = [
+{ t: 'وصل الفريق وفحص الخزان', time: '9:52 ص', st: 'done', clip: '0:18' },
+{ t: 'تفريغ الخزان', time: '10:05 ص', st: 'done', clip: '0:12' },
+{ t: 'غسل الجدران وشفط الرواسب', time: '10:25 ص', st: 'done', clip: '0:41' },
+{ t: 'تعقيم بالكلور لمدة ساعة', time: 'بدأ 10:40 ص', st: 'now', clip: '0:09' },
+{ t: 'شطف وفحص الكلور', time: 'بعد التعقيم', st: 'next', clip: null }
+];
+var dotBase = 'width: 26px; height: 26px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; box-sizing: border-box; ';
+var cur = list[this.state.sel];
+return {
+player: { title: cur.t, len: cur.clip || '' },
+steps: list.map(function (s, i) {
+var sel = self.state.sel === i;
+return {
+t: s.t, time: s.time, line: i < list.length - 1, hasClip: !!s.clip, len: s.clip, aria: 'شغّل فيديو ' + s.t,
+mark: s.st === 'done' ? '✓' : String(i + 1),
+dot: dotBase + (s.st === 'done' ? 'background: #0B2545; color: #FFFFFF;' : s.st === 'now' ? 'background: #F59E0B; color: #0B2545;' : 'background: #FFFFFF; color: #52627A; border: 2px solid #D3DCE6;'),
+tStyle: 'font-size: 14px; ' + (s.st === 'next' ? 'font-weight: 600; color: #52627A;' : 'font-weight: 800; color: #0B2545;'),
+clipStyle: 'height: 36px; padding: 0 10px; border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; ' + (sel ? 'background: #0B2545; color: #FFFFFF; border: none;' : 'background: #FFFFFF; color: #0B2545; border: 1px solid #E3EAF2;'),
+play: function () { self.setState({ sel: i }); }
+};
+})
+};
+}
+}
+</script>
+</body>
+</html>

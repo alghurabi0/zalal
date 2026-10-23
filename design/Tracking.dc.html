@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: تتبع الفريق</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #E8EEF3; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545">
+<svg aria-hidden="true" width="390" height="500" viewBox="0 0 390 500" style="position: absolute; top: 0; left: 0">
+<rect width="390" height="500" fill="#E8EEF3"></rect>
+<rect x="20" y="90" width="100" height="70" rx="6" fill="#DCE5EC"></rect><rect x="200" y="70" width="80" height="90" rx="6" fill="#DCE5EC"></rect><rect x="300" y="200" width="80" height="80" rx="6" fill="#D4EDDA"></rect><rect x="40" y="230" width="110" height="80" rx="6" fill="#DCE5EC"></rect><rect x="200" y="330" width="120" height="80" rx="6" fill="#DCE5EC"></rect>
+<path d="M-10 190 L400 180" stroke="#FFFFFF" stroke-width="20"></path><path d="M170 -10 L180 510" stroke="#FFFFFF" stroke-width="16"></path><path d="M-10 330 L400 320" stroke="#FFFFFF" stroke-width="14"></path><path d="M300 -10 L280 510" stroke="#FFFFFF" stroke-width="12"></path>
+<path d="M60 120 L60 186 L176 184 L178 324 L284 322 L286 380" fill="none" stroke="#0B2545" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M60 120 L60 186 L130 185" fill="none" stroke="#4CC9F0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path>
+<circle cx="286" cy="390" r="30" fill="#4CC9F0" fill-opacity="0.2"></circle>
+</svg>
+<div style="position: absolute; top: 166px; left: 112px; width: 40px; height: 40px; border-radius: 20px; background: #0B2545; border: 3px solid #FFFFFF; box-shadow: 0 4px 12px rgba(11,37,69,0.3); display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4CC9F0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V7h11v9M14 10h4l3 3v3h-7"></path><circle cx="7" cy="17" r="2"></circle><circle cx="17" cy="17" r="2"></circle></svg>
+</div>
+<div style="position: absolute; top: 118px; left: 76px; background: #0B2545; color: #FFFFFF; border-radius: 10px; padding: 2px 10px; font-size: 13px; font-weight: 800">12 دقيقة</div>
+<div style="position: absolute; top: 352px; left: 268px"><svg aria-hidden="true" width="36" height="46" viewBox="0 0 36 46"><path d="M18 2C9 2 2 9 2 18c0 12 16 26 16 26s16-14 16-26C34 9 27 2 18 2z" fill="#0B2545"></path><path d="M11 18l7-6 7 6v7H11z" fill="#4CC9F0"></path></svg></div>
+<a href="Home.dc.html" aria-label="رجوع" style="position: absolute; top: 20px; right: 20px; width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; box-shadow: 0 2px 10px rgba(11,37,69,0.15); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<div style="position: absolute; top: 24px; left: 20px; height: 36px; border-radius: 18px; background: #FFFFFF; box-shadow: 0 2px 10px rgba(11,37,69,0.15); padding: 0 14px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800"><span style="width: 8px; height: 8px; border-radius: 4px; background: #16A34A"></span>تتبع مباشر</div>
+<div style="position: absolute; bottom: 0; left: 0; right: 0; background: #FFFFFF; border-radius: 26px 26px 0 0; box-shadow: 0 -6px 24px rgba(11,37,69,0.12); padding: 12px 20px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="width: 40px; height: 4px; border-radius: 2px; background: #D3DCE6; align-self: center"></div>
+<div style="display: flex; justify-content: space-between; align-items: flex-end">
+<div style="display: flex; flex-direction: column"><span style="font-size: 13px; color: #52627A">يوصل حوالي</span><span style="font-size: 26px; font-weight: 900">9:53 ص</span></div>
+<span style="font-size: 13px; color: #52627A">3.2 كم</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="{{s.bar}}"></span><span style="{{s.label}}">{{s.t}}</span></div>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; background: #F4F7FB; border-radius: 16px; padding: 12px">
+<div style="width: 50px; height: 50px; border-radius: 25px; background: #0B2545; color: #4CC9F0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900">[ع]</div>
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">[علي حسن] ومساعده</span><span style="font-size: 12px; color: #52627A">تقييم 4.9 · 320 خزان · <span dir="ltr">[كربلاء 12345]</span></span></div>
+<a href="tel:" aria-label="اتصال بالفريق" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></a>
+<a href="Chat.dc.html" aria-label="مراسلة" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path></svg></a>
+</div>
+<a href="LiveJob.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 16px; background: #0B2545; color: #FFFFFF; font-size: 16px; font-weight: 800; text-decoration: none">تابع الشغل بعد ما يوصلون</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+var list = [{ t: 'تأكد', s: 'done' }, { t: 'بالطريق', s: 'now' }, { t: 'وصل', s: 'next' }, { t: 'خلص', s: 'next' }];
+return {
+steps: list.map(function (x) {
+return {
+t: x.t,
+bar: 'height: 6px; border-radius: 3px; background: ' + (x.s === 'done' ? '#0B2545' : x.s === 'now' ? '#4CC9F0' : '#E3EAF2') + ';',
+label: 'font-size: 12px; text-align: center; ' + (x.s === 'next' ? 'color: #52627A; font-weight: 600;' : 'color: #0B2545; font-weight: 800;')
+};
+})
+};
+}
+}
+</script>
+</body>
+</html>

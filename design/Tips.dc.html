@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: معلومات تهمك</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="padding: 18px 20px 10px; display: flex; align-items: center; gap: 12px">
+<a href="Home.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<h1 style="margin: 0; font-size: 22px; font-weight: 900">معلومات تهمك</h1>
+</div>
+<div style="padding: 0 20px 12px; display: flex; gap: 8px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="4">
+<button onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+<div style="flex: 1; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
+<div style="background: #0B2545; color: #FFFFFF; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 800; color: #4CC9F0">مقال اليوم · 3 دقائق</span>
+<span style="font-size: 19px; font-weight: 900; line-height: 1.5">5 علامات تكول خزانك يحتاج تنظيف</span>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{signs}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; gap: 8px; align-items: flex-start"><span style="width: 22px; height: 22px; border-radius: 11px; background: #13315C; color: #4CC9F0; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{s.n}}</span><span style="font-size: 14px; line-height: 1.6; color: #DCE7F3">{{s.t}}</span></div>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{articles}}" as="a" hint-placeholder-count="3">
+<a href="#" style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 16px; padding: 12px; display: flex; gap: 12px; align-items: center; text-decoration: none; color: #0B2545">
+<span style="width: 56px; height: 56px; border-radius: 14px; background: #E6F7FD; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0A6E8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{a.icon}}"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 12px; font-weight: 700; color: #0A6E8F">{{a.cat}} · {{a.min}}</span><span style="font-size: 15px; font-weight: 800; line-height: 1.5">{{a.title}}</span></span>
+</a>
+</sc-for>
+</div>
+<dc-import name="TabBar" active="home" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { cat: 'all' };
+}
+renderVals() {
+var self = this;
+var base = 'height: 38px; padding: 0 14px; border-radius: 19px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; ';
+var cats = [{ id: 'all', label: 'الكل' }, { id: 'health', label: 'صحة' }, { id: 'tips', label: 'نصائح' }, { id: 'summer', label: 'الصيف' }];
+var all = [
+{ c: 'health', cat: 'صحة', min: '4 دقائق', title: 'ليش لازم تنظف الخزان كل 6 أشهر؟', icon: 'M12 3c3.5 4.2 6 7.6 6 10.5A6 6 0 0 1 6 13.5C6 10.6 8.5 7.2 12 3z' },
+{ c: 'summer', cat: 'الصيف', min: '2 دقيقة', title: 'الحر يكثّر البكتريا بالخزان: شلون تحمي عائلتك', icon: 'M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
+{ c: 'tips', cat: 'نصائح', min: '3 دقائق', title: 'غطاء الخزان: أبسط خطوة تمنع الوسخ والحشرات', icon: 'M4 10h16M6 10V7a6 3 0 0 1 12 0v3M5 10v9h14v-9' }
+];
+var list = all.filter(function (a) { return self.state.cat === 'all' || a.c === self.state.cat; });
+return {
+cats: cats.map(function (c) {
+var on = self.state.cat === c.id;
+return { label: c.label, style: base + (on ? 'background: #0B2545; color: #FFFFFF; border: 2px solid #0B2545;' : 'background: #FFFFFF; color: #52627A; border: 2px solid #E3EAF2;'), pick: function () { self.setState({ cat: c.id }); } };
+}),
+signs: [
+{ n: '1', t: 'ريحة غريبة أو طعم مو طبيعي بالماي' },
+{ n: '2', t: 'لون الماي مصفر أو عكر' },
+{ n: '3', t: 'رواسب أو رمل بقاع الكاسة' },
+{ n: '4', t: 'طبقة لزجة على جدار الخزان' },
+{ n: '5', t: 'مرت أكثر من 6 أشهر على آخر تنظيف' }
+],
+articles: list
+};
+}
+}
+</script>
+</body>
+</html>

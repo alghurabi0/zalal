@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: حسابي</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px 16px 0; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 14px; padding: 0 4px">
+<div style="width: 64px; height: 64px; border-radius: 32px; background: #0B2545; color: #4CC9F0; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900">[أ]</div>
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 20px; font-weight: 900">[أحمد علي]</span><span dir="ltr" style="font-size: 14px; color: #52627A; text-align: right">+964 780 123 4567</span></div>
+<a href="#" style="min-height: 44px; display: flex; align-items: center; font-size: 14px; font-weight: 700">تعديل</a>
+</div>
+<div style="background: #0B2545; color: #FFFFFF; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 16px; font-weight: 800">الاشتراك السنوي</span><span style="font-size: 12px; font-weight: 800; color: #0B2545; background: #4CC9F0; border-radius: 10px; padding: 2px 10px">فعّال</span></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #9FB8D3">الزيارات المتبقية</span><span style="font-size: 20px; font-weight: 900">1 من 2</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #9FB8D3">الزيارة الجاية</span><span style="font-size: 16px; font-weight: 800">[نيسان 2027]</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #9FB8D3">ينتهي</span><span style="font-size: 16px; font-weight: 800">[تشرين 2027]</span></div>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<a href="{{r.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-bottom: 1px solid #EEF2F7; text-decoration: none; color: #0B2545">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A6E8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{r.icon}}"></path></svg>
+<span style="flex: 1; font-size: 15px; font-weight: 700">{{r.label}}</span>
+<span style="font-size: 13px; color: #52627A">{{r.meta}}</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA9BC" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"></path></svg>
+</a>
+</sc-for>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; cursor: pointer">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A6E8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"></path></svg>
+<span style="flex: 1; font-size: 15px; font-weight: 700">تذكير بموعد التنظيف</span>
+<input type="checkbox" checked="{{notif}}" onChange="{{toggle}}" style="position: absolute; opacity: 0; width: 1px; height: 1px">
+<span aria-hidden="true" style="{{track}}"><span style="{{knob}}"></span></span>
+</label>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column">
+<a href="Chat.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #EEF2F7; text-decoration: none; color: #0B2545; font-size: 15px; font-weight: 700">مركز المساعدة وتواصل معنا</a>
+<a href="Main.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; text-decoration: none; color: #B42318; font-size: 15px; font-weight: 700">تسجيل الخروج</a>
+</div>
+</div>
+<dc-import name="TabBar" active="profile" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { notif: true };
+}
+renderVals() {
+var self = this;
+var on = this.state.notif;
+return {
+notif: on,
+toggle: function () { self.setState({ notif: !self.state.notif }); },
+track: 'width: 48px; height: 28px; border-radius: 14px; display: flex; align-items: center; padding: 3px; box-sizing: border-box; justify-content: ' + (on ? 'flex-start' : 'flex-end') + '; background: ' + (on ? '#0A6E8F' : '#C9D3E0') + ';',
+knob: 'width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.2);',
+rows: [
+{ label: 'عناويني', meta: '2', href: 'Location.dc.html', icon: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5' },
+{ label: 'خزاناتي', meta: '2 خزان', href: '#', icon: 'M6 6h12v14H6zM9 3h6v3H9zM6 14q3 -2 6 0t6 0' },
+{ label: 'طرق الدفع', meta: 'كاش، زين كاش', href: '#', icon: 'M3 6h18v12H3zM3 10h18M7 15h3' },
+{ label: 'شهادات التعقيم', meta: '3', href: 'Report.dc.html', icon: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Zalal — rules for Claude Code
+- Spec: docs/spec.md. Designs: design/*.dc.html. Read the screen's design file before building it; match layout, copy and tokens exactly unless the spec lists a change.
+- Arabic RTL app. Use logical CSS (ms-/me-/ps-/pe-/start/end), never left/right. Wrap phone numbers and times in dir="ltr".
+- All UI strings go in messages/ar.json (Iraqi Arabic, copy from the designs).
+- Colors, radii and sizes come from the Tailwind theme tokens only. No raw hex in components.
+- TypeScript strict. Zod for every input. Writes go through Server Actions or Postgres RPC; never update orders.status directly; use transition_order().
+- Every table has RLS. Add an RLS test for every new policy.
+- Money = integer IQD; format with formatIQD(). Dates = Asia/Baghdad via lib/dates.
+- Every screen has loading, empty, error and offline states.
+- Do not add libraries without saying why in the PR description.
+- After each task: pnpm lint && pnpm typecheck && pnpm test; commit with a clear message.

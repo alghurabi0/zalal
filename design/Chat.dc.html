@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: المحادثة مع الشركة</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="background: #FFFFFF; border-bottom: 1px solid #E3EAF2; padding: 14px 16px; display: flex; align-items: center; gap: 12px">
+<a href="Home.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #F4F7FB; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #0B2545; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="26" height="22" viewBox="0 0 100 80" fill="none" stroke-linecap="round" stroke-width="10"><path d="M8 18 q10.5 -10 21 0 t21 0 t21 0 t21 0" stroke="#4CC9F0"></path><path d="M8 40 q10.5 -10 21 0 t21 0 t21 0 t21 0" stroke="#4CC9F0" stroke-opacity="0.7"></path><path d="M8 62 q10.5 -10 21 0 t21 0 t21 0 t21 0" stroke="#4CC9F0" stroke-opacity="0.4"></path></svg></span>
+<div style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 16px; font-weight: 900">دعم زلال</span><span style="font-size: 12px; color: #15803D; font-weight: 700">متصلين · نرد عادة خلال 5 دقائق</span></div>
+<a href="tel:" aria-label="اتصال بالشركة" style="width: 44px; height: 44px; border-radius: 22px; background: #F4F7FB; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></a>
+</div>
+<div style="flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; justify-content: flex-end">
+<span style="align-self: center; font-size: 12px; color: #52627A; background: #E3EAF2; border-radius: 10px; padding: 2px 10px">اليوم</span>
+<sc-for list="{{msgs}}" as="m" hint-placeholder-count="5">
+<div style="{{m.wrap}}">
+<sc-if value="{{m.isVideo}}" hint-placeholder-val="{{false}}">
+<div style="width: 200px; height: 120px; border-radius: 14px; background: #13315C; display: flex; align-items: center; justify-content: center; position: relative"><span style="width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="#0B2545"><path d="M8 5v14l11-7z"></path></svg></span><span dir="ltr" style="position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: #FFFFFF; font-weight: 700">0:15</span></div>
+</sc-if>
+<span style="font-size: 15px; line-height: 1.6">{{m.text}}</span>
+<span style="{{m.timeStyle}}">{{m.time}}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding: 0 16px 8px; display: flex; gap: 6px; overflow: hidden">
+<sc-for list="{{topics}}" as="t" hint-placeholder-count="4">
+<button onClick="{{t.send}}" style="height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid #BFE6F5; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 700; color: #0A6E8F; white-space: nowrap; cursor: pointer">{{t.label}}</button>
+</sc-for>
+</div>
+<div style="background: #FFFFFF; border-top: 1px solid #E3EAF2; padding: 10px 12px 22px; display: flex; align-items: center; gap: 8px">
+<button onClick="{{attach}}" aria-label="إرفاق صورة أو فيديو" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #F4F7FB; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12l-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 8"></path></svg></button>
+<label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden">اكتب رسالتك</label>
+<input id="msg" type="text" placeholder="اكتب رسالتك..." value="{{draft}}" onChange="{{setDraft}}" style="flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 22px; border: 1px solid #E3EAF2; background: #F4F7FB; font-family: inherit; font-size: 15px; color: #0B2545; outline: none">
+<button onClick="{{send}}" aria-label="إرسال" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #0B2545; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4CC9F0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1)"><path d="M4 12l16-8-6 16-3-7z"></path></svg></button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { draft: '', msgs: [
+{ me: false, text: 'هلا بيك! شلون نكدر نساعدك اليوم؟', time: '8:02 ص' },
+{ me: true, text: 'أريد أغير موعد طلب #1024 لساعة 9 الصبح بدل 10', time: '8:05 ص' },
+{ me: false, text: 'تم، غيرنا الموعد لساعة 9 الصبح ووصلك إشعار بالتأكيد.', time: '8:15 ص' },
+{ me: true, video: true, text: 'وهذا فيديو للتسريب اللي بالسطح، تكدرون تشوفونه وياكم؟', time: '8:20 ص' }
+] };
+}
+renderVals() {
+var self = this;
+function push(m) { self.setState({ msgs: self.state.msgs.concat([Object.assign({ me: true, time: 'هسه' }, m)]), draft: '' }); }
+var msgs = this.state.msgs.slice(-5);
+return {
+draft: this.state.draft,
+setDraft: function (e) { self.setState({ draft: e.target.value }); },
+send: function () { if ((self.state.draft || '').trim()) push({ text: self.state.draft }); },
+attach: function () { push({ video: true, text: 'فيديو مرفق' }); },
+topics: ['تغيير موعد', 'استفسار عن سعر', 'شكوى', 'إلغاء طلب'].map(function (t) { return { label: t, send: function () { push({ text: t }); } }; }),
+msgs: msgs.map(function (m) {
+return {
+text: m.text, time: m.time, isVideo: !!m.video,
+wrap: 'max-width: 78%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; ' + (m.me ? 'align-self: flex-start; background: #0B2545; color: #FFFFFF; border-radius: 16px 16px 4px 16px;' : 'align-self: flex-end; background: #FFFFFF; color: #0B2545; border: 1px solid #E3EAF2; border-radius: 16px 16px 16px 4px;'),
+timeStyle: 'font-size: 11px; ' + (m.me ? 'color: #9FB8D3;' : 'color: #52627A;')
+};
+})
+};
+}
+}
+</script>
+</body>
+</html>

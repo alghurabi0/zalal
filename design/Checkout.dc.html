@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: الحجز، الملخص والدفع</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="padding: 18px 20px 8px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Upload.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<div style="flex: 1; display: flex; flex-direction: column"><h1 style="margin: 0; font-size: 20px; font-weight: 900">تأكيد الحجز</h1><span style="font-size: 13px; color: #52627A">الخطوة 3 من 3 · الملخص والدفع</span></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px"><span style="height: 5px; border-radius: 3px; background: #0B2545"></span><span style="height: 5px; border-radius: 3px; background: #0B2545"></span><span style="height: 5px; border-radius: 3px; background: #0B2545"></span></div>
+</div>
+<div style="flex: 1; padding: 6px 16px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
+<div style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 18px; padding: 4px 14px">
+<sc-for list="{{summary}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 50px; border-bottom: 1px solid #EEF2F7">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A6E8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{s.icon}}"></path></svg>
+<span style="font-size: 13px; color: #52627A; width: 70px">{{s.k}}</span>
+<span style="flex: 1; font-size: 14px; font-weight: 800">{{s.v}}</span>
+<a href="{{s.href}}" style="font-size: 13px; font-weight: 700; min-height: 44px; display: flex; align-items: center">تغيير</a>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 15px; font-weight: 800">طريقة الدفع</span>
+<sc-for list="{{pays}}" as="p" hint-placeholder-count="3">
+<button onClick="{{p.pick}}" style="{{p.style}}">
+<span style="{{p.radio}}"><span style="{{p.dot}}"></span></span>
+<span style="flex: 1; display: flex; flex-direction: column; align-items: flex-start"><span style="font-size: 15px; font-weight: 800; color: #0B2545">{{p.name}}</span><span style="font-size: 12px; color: #52627A">{{p.desc}}</span></span>
+</button>
+</sc-for>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E3EAF2; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="color: #52627A">تنظيف وتعقيم خزان سطح × 1</span><span style="font-weight: 700">[35,000]</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 14px"><span style="color: #52627A">فحص كلور وشهادة</span><span style="font-weight: 700; color: #15803D">مجاناً</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 900; border-top: 1px dashed #D3DCE6; padding-top: 8px"><span>المجموع</span><span>[35,000 د.ع]</span></div>
+</div>
+</div>
+<div style="background: #FFFFFF; border-top: 1px solid #E3EAF2; padding: 12px 20px 22px; display: flex; flex-direction: column; gap: 6px">
+<a href="Tracking.dc.html" style="display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 16px; background: #0B2545; color: #FFFFFF; font-size: 18px; font-weight: 800; text-decoration: none">أكّد الحجز</a>
+<span style="font-size: 12px; color: #52627A; text-align: center">إلغاء مجاني لحد ساعتين قبل الموعد</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { pay: 'cash' };
+}
+renderVals() {
+var self = this;
+return {
+summary: [
+{ k: 'الخدمة', v: 'خزان سطح · 1,000–2,000 لتر', href: 'Booking.dc.html', icon: 'M6 8h12v12H6zM9 5h6v3H9z' },
+{ k: 'الموعد', v: 'السبت 24 · 8–10 الصبح', href: 'Booking.dc.html', icon: 'M4 5h16v16H4zM16 3v4M8 3v4M4 11h16' },
+{ k: 'العنوان', v: 'البيت · [حي الحسين]', href: 'Location.dc.html', icon: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z' },
+{ k: 'المرفقات', v: '2 فيديو', href: 'Upload.dc.html', icon: 'M3 7h12v10H3zM15 10l6-3v10l-6-3' }
+],
+pays: [
+{ id: 'cash', name: 'كاش', desc: 'تدفع للفريق بعد ما يخلص الشغل' },
+{ id: 'zain', name: 'زين كاش', desc: 'دفع من محفظتك' },
+{ id: 'card', name: 'بطاقة', desc: 'كي كارد أو ماستر كارد' }
+].map(function (p) {
+var on = self.state.pay === p.id;
+return Object.assign({}, p, {
+style: 'display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 14px; border-radius: 14px; font-family: inherit; cursor: pointer; text-align: right; ' + (on ? 'background: #E6F7FD; border: 2px solid #0B2545;' : 'background: #FFFFFF; border: 2px solid #E3EAF2;'),
+radio: 'width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 2px solid ' + (on ? '#0B2545' : '#9AA9BC') + ';',
+dot: 'width: 10px; height: 10px; border-radius: 5px; background: ' + (on ? '#0B2545' : 'transparent') + ';',
+pick: function () { self.setState({ pay: p.id }); }
+});
+})
+};
+}
+}
+</script>
+</body>
+</html>

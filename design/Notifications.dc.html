@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: الإشعارات</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column">
+<div style="padding: 18px 20px 12px; display: flex; align-items: center; gap: 12px">
+<a href="Home.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></a>
+<h1 style="margin: 0; font-size: 22px; font-weight: 900; flex: 1">الإشعارات</h1>
+<button onClick="{{readAll}}" style="min-height: 44px; padding: 0 10px; border: none; background: transparent; font-family: inherit; font-size: 14px; font-weight: 700; color: #0A6E8F; cursor: pointer">قراءة الكل</button>
+</div>
+<div style="flex: 1; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; overflow: hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<span style="font-size: 13px; font-weight: 800; color: #52627A; padding: 6px 4px 0">{{g.title}}</span>
+<sc-for list="{{g.items}}" as="n" hint-placeholder-count="3">
+<a href="{{n.href}}" style="{{n.style}}">
+<span style="{{n.iconBox}}"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{n.iconColor}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.icon}}"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{n.title}}</span><span style="font-size: 13px; color: #52627A; line-height: 1.6">{{n.body}}</span><span style="font-size: 12px; color: #52627A">{{n.time}}</span></span>
+<sc-if value="{{n.unread}}" hint-placeholder-val="{{false}}"><span aria-label="غير مقروء" style="width: 10px; height: 10px; border-radius: 5px; background: #0A6E8F; flex-shrink: 0; margin-top: 6px"></span></sc-if>
+</a>
+</sc-for>
+</sc-for>
+</div>
+<dc-import name="TabBar" active="home" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { allRead: false };
+}
+renderVals() {
+var self = this;
+var I = {
+truck: 'M3 16V7h11v9M14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3',
+shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
+chat: 'M4 5h16v11H9l-5 4z',
+clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18'
+};
+function item(n) {
+var unread = n.unread && !self.state.allRead;
+return Object.assign({}, n, {
+unread: unread,
+style: 'display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 16px; text-decoration: none; color: #0B2545; ' + (unread ? 'background: #FFFFFF; border: 1px solid #BFE6F5;' : 'background: transparent; border: 1px solid transparent;'),
+iconBox: 'width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: ' + n.bg + ';',
+icon: I[n.i]
+});
+}
+return {
+readAll: function () { self.setState({ allRead: true }); },
+groups: [
+{ title: 'اليوم', items: [
+{ i: 'truck', bg: '#FEF3C7', iconColor: '#B45309', title: 'الفريق طلع لبيتك', body: 'فريق [المشرف] بالطريق، يوصل خلال 12 دقيقة.', time: '9:41 ص', unread: true, href: 'Tracking.dc.html' },
+{ i: 'chat', bg: '#E6F7FD', iconColor: '#0A6E8F', title: 'رد جديد من الدعم', body: 'تم تأكيد تغيير الموعد لساعة 9 الصبح.', time: '8:15 ص', unread: true, href: 'Chat.dc.html' }
+].map(item) },
+{ title: 'قبل', items: [
+{ i: 'video', bg: '#E6F7FD', iconColor: '#0A6E8F', title: 'فيديو قبل وبعد جاهز', body: 'شوف فيديو تنظيف خزانك من الطلب [#0987].', time: 'أمس', unread: false, href: 'Report.dc.html' },
+{ i: 'shield', bg: '#DCFCE7', iconColor: '#15803D', title: 'شهادة التعقيم صدرت', body: 'الكلور المتبقي ضمن الحد الآمن.', time: 'أمس', unread: false, href: 'Report.dc.html' },
+{ i: 'clock', bg: '#F1F5F9', iconColor: '#52627A', title: 'تذكير بموعد التنظيف', body: 'مرت 6 أشهر على آخر تنظيف لخزان البيت.', time: '12 تشرين الأول', unread: false, href: 'Booking.dc.html' }
+].map(item) }
+]
+};
+}
+}
+</script>
+</body>
+</html>

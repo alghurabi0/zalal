@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>زلال: تسجيل الدخول</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400..900&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A6E8F}a:hover{color:#0B2545}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4F7FB; font-family: 'Cairo', Tahoma, sans-serif; color: #0B2545; display: flex; flex-direction: column; padding: 20px 24px 32px; gap: 24px">
+<a href="Main.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 900">هلا بيك بزلال</h1>
+<p style="margin: 0; font-size: 16px; color: #52627A; line-height: 1.7">اكتب رقم موبايلك، ونرسلك رمز تحقق برسالة SMS أو واتساب.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="phone" style="font-size: 14px; font-weight: 700">رقم الموبايل</label>
+<div style="display: flex; gap: 8px; direction: ltr">
+<div style="height: 56px; padding: 0 14px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E3EAF2; display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700">
+<span style="width: 22px; height: 15px; border-radius: 3px; overflow: hidden; display: flex; flex-direction: column"><span style="flex: 1; background: #CE1126"></span><span style="flex: 1; background: #FFFFFF"></span><span style="flex: 1; background: #000000"></span></span>+964
+</div>
+<input id="phone" type="tel" inputmode="numeric" placeholder="7XX XXX XXXX" value="{{phone}}" onChange="{{setPhone}}" style="flex: 1; min-width: 0; height: 56px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: #FFFFFF; border: 2px solid {{border}}; font-family: inherit; font-size: 18px; font-weight: 700; color: #0B2545; letter-spacing: 1px; outline: none">
+</div>
+<span style="font-size: 13px; color: #52627A">مثال: 7801234567</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 14px; font-weight: 700">أرسل الرمز عن طريق</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{channels}}" as="c" hint-placeholder-count="2">
+<button onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="flex: 1"></div>
+<sc-if value="{{ready}}" hint-placeholder-val="{{true}}">
+<a href="Otp.dc.html" style="display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 16px; background: #0B2545; color: #FFFFFF; font-size: 18px; font-weight: 800; text-decoration: none">أرسل الرمز</a>
+</sc-if>
+<sc-if value="{{notReady}}" hint-placeholder-val="{{false}}">
+<button disabled="{{true}}" style="height: 56px; border-radius: 16px; border: none; background: #C9D3E0; color: #52627A; font-family: inherit; font-size: 18px; font-weight: 800">أرسل الرمز</button>
+</sc-if>
+<p style="margin: 0; text-align: center; font-size: 13px; color: #52627A; line-height: 1.7">بالمتابعة توافق على <a href="#" style="font-weight: 700">شروط الاستخدام</a> و<a href="#" style="font-weight: 700">سياسة الخصوصية</a></p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { phone: '', channel: 'wa' };
+}
+renderVals() {
+var self = this;
+var digits = (this.state.phone || '').replace(/\D/g, '');
+var ready = digits.length >= 10;
+var base = 'height: 52px; border-radius: 14px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; ';
+var on = 'background: #E6F7FD; border: 2px solid #0B2545; color: #0B2545;';
+var off = 'background: #FFFFFF; border: 2px solid #E3EAF2; color: #52627A;';
+return {
+phone: this.state.phone,
+setPhone: function (e) { self.setState({ phone: e.target.value }); },
+border: ready ? '#0A6E8F' : '#E3EAF2',
+ready: ready,
+notReady: !ready,
+channels: [{ id: 'wa', label: 'واتساب' }, { id: 'sms', label: 'رسالة SMS' }].map(function (c) {
+return { label: c.label, style: base + (self.state.channel === c.id ? on : off), pick: function () { self.setState({ channel: c.id }); } };
+})
+};
+}
+}
+</script>
+</body>
+</html>
