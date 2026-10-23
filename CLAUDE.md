@@ -11,10 +11,12 @@ Arabic (Iraqi dialect), RTL, mobile-first PWA for booking water-tank cleaning in
 - Out-of-scope items (spec §1) stay out, even when they would be easy to add.
 
 ## Commands
-Phase 0 creates these scripts. Keep this list in sync with package.json.
+Keep this list in sync with package.json.
 - `pnpm dev`: run the app (no service worker); `pnpm build` / `pnpm start`: production build. `pnpm build` runs `next build && serwist build`, which writes the service worker `public/sw.js` from `src/app/sw.ts` (spec §3, "PWA and caching").
 - `pnpm icons`: regenerate the PWA icons and favicons from `public/brand/logo.svg`, then commit them
-- `pnpm lint` (ESLint) / `pnpm typecheck` (`next typegen` + `tsc`) / `pnpm test` (Vitest, `tests/unit/`; component tests are `.test.tsx` with `// @vitest-environment happy-dom` and render via `react-dom/server`)
+- `pnpm lint` (ESLint, then the guards) / `pnpm typecheck` (`next typegen` + `tsc`) / `pnpm test` (Vitest, `tests/unit/`; component tests are `.test.tsx` with `// @vitest-environment happy-dom` and render via `react-dom/server`)
+- `pnpm guards [files]`: `scripts/guards.ts`, the rules below that ESLint can't check: no left/right classes or properties, no raw colors (hex, `rgb(`, `oklch(`…) outside the theme, illustrations and `src/lib/brand.ts`, no arbitrary Tailwind values, no Arabic in `src/**/*.ts(x)`, `enable row level security` for every table in the migration that creates it, and `set search_path = ''` on every `security definer` function. For a justified exception, comment `guard-allow <rule>: <reason>` on the line or the line above.
+- `node scripts/protected-paths.ts [base]`: fails if the branch changed or deleted files in `design/` or `supabase/migrations/` since `base` (default `origin/main`)
 - `pnpm format` / `pnpm format:check`: Prettier, which also sorts Tailwind classes
 - `pnpm test:e2e`: Playwright at a 390×844 viewport (`tests/e2e/`); builds and starts the app on port 3100. In cloud sessions, set `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`, because the pre-installed Chromium doesn't match the pinned Playwright version. Don't run `playwright install` there.
 - `pnpm db:start` / `pnpm db:stop`: local Supabase in Docker, without the services tests don't need (Studio, image proxy, logs, pooler, Edge runtime, postgres-meta)
@@ -22,7 +24,8 @@ Phase 0 creates these scripts. Keep this list in sync with package.json.
 - `pnpm db:test`: `supabase test db` (pgTAP in `supabase/tests/database/*.test.sql`). Each test starts with `begin;` and `\ir _helpers.psql`, which adds `tests.create_user(phone)`, `tests.authenticate_as(id)`, `tests.authenticate_as_anon()`, `tests.authenticate_as_service_role()` and `tests.clear_authentication()` inside the test's transaction.
 - `pnpm db:types`: regenerate `src/lib/database.types.ts` from the local database (then Prettier). Never edit that file by hand.
 - `node scripts/write-env-local.mjs`: write `.env.local` from the running local Supabase (keeps an existing file unless `--force`)
-- CI (`.github/workflows/ci.yml`) runs on every PR: `format:check`, `lint`, `typecheck`, `test`, then `db:start`, `db:test`, a check that `database.types.ts` matches the schema, and `test:e2e`. Both jobs must pass to merge.
+- CI (`.github/workflows/ci.yml`) runs on every PR: `format:check`, `lint`, `typecheck`, `test`, then `db:start`, `db:test`, a check that `database.types.ts` matches the schema, and `test:e2e`. `.github/workflows/protected-paths.yml` runs `protected-paths.ts`; the owner's `protected-change` label skips it for a deliberate design update (never add it yourself). All three jobs must pass to merge.
+- Claude Code config (`.claude/`, docs/claude-code-setup.md §3): `settings.json` allows the commands above without prompting and denies reading `.env` files, editing `design/`, and Supabase commands against a hosted project. Its hooks refuse edits to `design/`, `database.types.ts` and merged migrations, and run Prettier, `eslint --fix` and the guards after each edit; fix what they report. Skills: `/build-screen <Name>` and `/ship-task`.
 
 ## Environments
 - You work against **local Supabase only** (Docker). In cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs packages, starts Docker, and starts Supabase in the background (log: `/tmp/supabase-start.log`; the first image pull takes a few minutes). It also writes `.env.local` from the local keys and sets `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`, which the CLI needs there because the default registry is blocked.
