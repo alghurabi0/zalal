@@ -66,19 +66,40 @@ In each project, go to **Project Settings → API Keys**. Use the new-style keys
 - **Publishable key** (`sb_publishable_…`): safe in the browser.
 - **Secret key** (`sb_secret_…`): server only, never in the browser or in git.
 
-Also create a **personal access token** at [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens), named `zalal-github-ci`. CI uses it to push migrations.
+Also create **two personal access tokens** at [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). CI uses them to push migrations and deploy Edge Functions. Give each token as little as it needs:
+
+- `zalal-ci-dev`: **Zalal Dev** org only.
+- `zalal-ci-prod`: **Zalal** org only.
+- If the token page lets you pick permissions, allow only what deploys need: database migrations, Edge Functions, secrets, and project read. Leave org and billing admin off. Set an expiry (for example 1 year) and put the renewal date in your calendar.
+
+Why two: a token that can reach both orgs with full access turns any leak (a bad workflow change, a compromised action) into a prod leak. With two tokens, only the approved prod job ever holds the prod token.
 
 ## 5. Put the secrets where they belong
 
-**GitHub** (repo → Settings → Secrets and variables → Actions):
+**GitHub**: dev secrets are repository secrets, and prod secrets are **environment secrets** that only the approved prod job can read.
 
-| Secret | Value |
-| --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | the personal access token |
-| `SUPABASE_DEV_PROJECT_REF` / `SUPABASE_DEV_DB_PASSWORD` | dev ref and password |
-| `SUPABASE_PROD_PROJECT_REF` / `SUPABASE_PROD_DB_PASSWORD` | prod ref and password |
+1. Go to repo → Settings → **Environments** → create `production`:
+   - **Required reviewers**: you.
+   - **Deployment branches**: "Selected branches", `main` only.
+   - **Environment secrets** (on this page, not the repo-wide list):
 
-Then go to repo → Settings → **Environments** and create an environment named `production` with **Required reviewers = you**. The prod deploy workflow waits for your click.
+     | Secret | Value |
+     | --- | --- |
+     | `SUPABASE_ACCESS_TOKEN` | `zalal-ci-prod` token |
+     | `SUPABASE_PROJECT_REF` | prod ref |
+     | `SUPABASE_DB_PASSWORD` | prod database password |
+
+2. Go to repo → Settings → Secrets and variables → **Actions** → Repository secrets (used by CI and the dev deploy):
+
+   | Secret | Value |
+   | --- | --- |
+   | `SUPABASE_DEV_ACCESS_TOKEN` | `zalal-ci-dev` token |
+   | `SUPABASE_DEV_PROJECT_REF` | dev ref |
+   | `SUPABASE_DEV_DB_PASSWORD` | dev database password |
+
+3. Make sure **no prod value is in the repository secrets list**. If you added one there earlier, delete it.
+
+The prod deploy workflow uses `environment: production`, so it pauses for your approval and only then receives the prod secrets.
 
 **Vercel** (project → Settings → Environment Variables), after Phase 0 creates the Next.js app. Create **one** Vercel project (not one per environment): its Production environment points to prod Supabase and its Preview environment to dev. Set these by hand rather than with the Supabase ↔ Vercel integration, which syncs a single Supabase project into every environment.
 
@@ -114,7 +135,8 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - [ ] Two orgs: Zalal Dev (Free), Zalal (Pro)
 - [ ] `zalal-dev` and `zalal-prod` in Frankfurt; passwords saved
 - [ ] Phone auth on, email off, OTP 6 / 300 s, URLs set (both projects)
-- [ ] Personal access token created
-- [ ] GitHub secrets + `production` environment with you as required reviewer
+- [ ] GitHub integration: dev may stay connected; prod disconnected or "Deploy to production" off
+- [ ] Two scoped personal access tokens (dev org, prod org)
+- [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets
 - [ ] (After Phase 0) Vercel env vars for Preview and Production
 - [ ] (Optional) Supabase domains allowed in this environment's network settings; plugin logged in to Zalal Dev only
