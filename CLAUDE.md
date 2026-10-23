@@ -21,12 +21,16 @@ Phase 0 creates these scripts. Keep this list in sync with package.json.
 - `pnpm db:reset`: `supabase db reset` (migrations + `supabase/seed.sql`)
 - `pnpm db:test`: `supabase test db` (pgTAP in `supabase/tests/database/*.test.sql`). Each test starts with `begin;` and `\ir _helpers.psql`, which adds `tests.create_user(phone)`, `tests.authenticate_as(id)`, `tests.authenticate_as_anon()`, `tests.authenticate_as_service_role()` and `tests.clear_authentication()` inside the test's transaction.
 - `pnpm db:types`: regenerate `src/lib/database.types.ts` from the local database (then Prettier). Never edit that file by hand.
+- `node scripts/write-env-local.mjs`: write `.env.local` from the running local Supabase (keeps an existing file unless `--force`)
+- CI (`.github/workflows/ci.yml`) runs on every PR: `format:check`, `lint`, `typecheck`, `test`, then `db:start`, `db:test`, a check that `database.types.ts` matches the schema, and `test:e2e`. Both jobs must pass to merge.
 
 ## Environments
 - You work against **local Supabase only** (Docker). In cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs packages, starts Docker, and starts Supabase in the background (log: `/tmp/supabase-start.log`; the first image pull takes a few minutes). It also writes `.env.local` from the local keys and sets `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`, which the CLI needs there because the default registry is blocked.
 - App code reaches Supabase only through `src/lib/supabase/`: `browser.ts` (client components), `server.ts` (Server Components, Actions, route handlers; acts as the user) and `admin.ts` (secret key, bypasses RLS, server only). Env vars are validated in `src/lib/env.ts` and `src/lib/env.server.ts`; `.env.example` lists them.
 - Local phone login stays off until Phase 1 wires the Send SMS Hook (`supabase start` warns "no SMS provider is enabled").
 - Dev and prod are hosted projects that CI deploys to (docs/supabase-setup.md). Never run `supabase link`, `db push` or `functions deploy` against a hosted project yourself, and never ask for or handle hosted keys.
+- Releases (docs/deploy-setup.md): PRs get a Vercel preview on dev Supabase; merges to `main` migrate dev; the owner runs the approved "Deploy prod" workflow, which migrates prod and then deploys the app. Vercel never deploys `main` by itself (`vercel.json`), so a migration must work with the app code merged alongside it.
+- Sentry and PostHog are off without `NEXT_PUBLIC_SENTRY_DSN` / `NEXT_PUBLIC_POSTHOG_KEY`, which is the normal state locally and in CI. Don't add their keys to `.env.local`.
 
 ## Next.js 16 notes
 - Check the current Next.js docs before using an API you're unsure of. Version 16 changed things, for example `proxy.ts` replaces `middleware.ts`, and `params`, `searchParams`, `cookies()` and `headers()` are async. The docs for the installed version are in `node_modules/next/dist/docs/` (see AGENTS.md, which `next dev` keeps in the repo).
@@ -54,6 +58,8 @@ Phase 0 creates these scripts. Keep this list in sync with package.json.
 - The Supabase service-role key is used only in server code (`import "server-only"`). Secrets live in `.env.local` or Supabase secrets, never in git or client code. Only `NEXT_PUBLIC_*` values may reach the browser.
 - Money is integer IQD; format it with formatIQD(). Store dates as timestamptz; compute and display them in Asia/Baghdad via lib/dates. Never base a business rule on the device's time zone.
 - Phones are stored as E.164 `+9647XXXXXXXXX`; normalize them via lib/phone.
+- Never send personal data (phone, name, address, OTP, photos) to Sentry or PostHog: no `Sentry.setUser` with a phone, no PostHog properties holding them. Identify PostHog users by user id only and call `posthog.reset()` on logout. Every `error.tsx` calls `useReportError(error)` from `src/lib/monitoring/use-report-error.ts`.
+- `/zl-e` (Sentry) and `/zl-a` (PostHog) are forwarding paths (`src/lib/monitoring/paths.ts`). Keep them out of `proxy.ts` matchers and service-worker caching.
 
 ## Workflow
 - One task per branch and per session. For anything that touches schema, RLS, auth or more than a few files, plan first and wait for approval.

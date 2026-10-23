@@ -1,0 +1,62 @@
+# Lint, types, unit tests, database tests and end-to-end tests. Runs on every
+# PR and on every push to main; deploy-dev.yml runs after it succeeds on main.
+# Branch protection on main requires both jobs (docs/deploy-setup.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  integration:
+    name: Database and end-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      - name: Start local Supabase
+        run: pnpm db:start
+      - name: Database tests (pgTAP)
+        run: pnpm db:test
+      - name: Generated types match the schema
+        run: |
+          pnpm db:types
+          git diff --exit-code src/lib/database.types.ts || {
+            echo "::error file=src/lib/database.types.ts::Out of date. Run pnpm db:types and commit the result."
+            exit 1
+          }
+
+      - name: Point the app at local Supabase
+        run: node scripts/write-env-local.mjs
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests (Playwright)
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7

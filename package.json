@@ -25,12 +25,14 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "11.9.0",
     "@serwist/next": "9.5.13",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
     "lucide-react": "1.61.0",
     "next": "16.4.2",
     "next-intl": "4.14.9",
+    "posthog-js": "1.438.20",
     "radix-ui": "1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

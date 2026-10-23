@@ -1,0 +1,36 @@
+name: Deploy Supabase
+description: >
+  Applies new migrations and deploys Edge Functions to one hosted Supabase
+  project. Expects SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF and
+  SUPABASE_DB_PASSWORD in the environment. Never loads seed.sql.
+runs:
+  using: composite
+  steps:
+    - name: Check the secrets are set
+      shell: bash
+      run: |
+        missing=0
+        for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
+          if [ -z "${!name}" ]; then
+            echo "::error::$name is empty. Add it as described in docs/supabase-setup.md step 5."
+            missing=1
+          fi
+        done
+        exit $missing
+    - name: Link the project
+      shell: bash
+      run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
+    - name: Migrations before the push
+      shell: bash
+      run: pnpm exec supabase migration list
+    - name: Apply new migrations
+      shell: bash
+      run: pnpm exec supabase db push --yes
+    - name: Deploy Edge Functions
+      shell: bash
+      run: |
+        if compgen -G "supabase/functions/[!_]*/index.ts" > /dev/null; then
+          pnpm exec supabase functions deploy --use-api --yes
+        else
+          echo "No Edge Functions yet."
+        fi

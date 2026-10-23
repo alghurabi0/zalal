@@ -19,3 +19,35 @@ export function publicEnv(): PublicEnv {
   });
   return cached;
 }
+
+// An unset value and an empty one both mean "off".
+const optional = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((value) => (value === "" ? undefined : value), schema.optional());
+
+// Sentry and PostHog are optional: without their keys (local, CI, or before
+// the accounts exist) they stay off and the app works the same.
+const monitoringEnvSchema = z.object({
+  NEXT_PUBLIC_SENTRY_DSN: optional(z.url()),
+  NEXT_PUBLIC_POSTHOG_KEY: optional(z.string().min(1)),
+  // Set by Vercel on every deploy; unset locally and in CI.
+  NEXT_PUBLIC_VERCEL_ENV: optional(z.enum(["production", "preview", "development"])),
+});
+
+export type MonitoringEnv = z.infer<typeof monitoringEnvSchema>;
+
+let cachedMonitoring: MonitoringEnv | undefined;
+
+export function monitoringEnv(): MonitoringEnv {
+  cachedMonitoring ??= monitoringEnvSchema.parse({
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
+  });
+  return cachedMonitoring;
+}
+
+/** "production" and "preview" on Vercel; "local" everywhere else. Tags Sentry events. */
+export function deployEnv(): "production" | "preview" | "local" {
+  const env = monitoringEnv().NEXT_PUBLIC_VERCEL_ENV;
+  return env === "production" || env === "preview" ? env : "local";
+}

@@ -1,21 +1,14 @@
 import { SerwistProvider } from "@serwist/next/react";
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
 import { OfflineBanner } from "@/components/ui/offline-banner";
-import { locale } from "@/i18n/request";
+import { locale } from "@/i18n/config";
 import { brandColors } from "@/lib/brand";
+import { cairo } from "@/lib/fonts";
 
 import "./globals.css";
-
-// Cairo is a variable font, so one file covers weights 400–900.
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  variable: "--font-cairo",
-  display: "swap",
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata");
