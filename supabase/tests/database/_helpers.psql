@@ -1,0 +1,92 @@
+-- Shared pgTAP helpers. Each test file includes this right after `begin;`
+-- with `\ir _helpers.psql`, so the helpers live only inside that test's
+-- transaction and are rolled back with it. Nothing here reaches a migration.
+--
+-- The .psql extension keeps `supabase test db` from running this file as a
+-- test of its own.
+
+-- The local stack may already have pgTAP; keep its "already exists" notice quiet.
+set local client_min_messages = warning;
+create extension if not exists pgtap with schema extensions;
+
+create schema tests;
+grant usage on schema tests to anon, authenticated, service_role;
+
+-- Creates an auth user with the given phone (E.164, e.g. '+9647801234567')
+-- and returns its id. Phase 1 adds a trigger that also creates the profile.
+create function tests.create_user(p_phone text)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (
+    id, instance_id, aud, role, phone, phone_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  )
+  values (
+    v_id, '00000000-0000-0000-0000-000000000000', 'authenticated',
+    'authenticated', ltrim(p_phone, '+'), now(),
+    '{"provider": "phone", "providers": ["phone"]}', '{}', now(), now()
+  );
+  return v_id;
+end;
+$$;
+
+-- Acts as a logged-in user for the rest of the transaction, the way
+-- PostgREST does: the `authenticated` role plus the JWT claims that auth.uid()
+-- and auth.jwt() read.
+create function tests.authenticate_as(p_user_id uuid)
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object(
+      'sub', p_user_id,
+      'role', 'authenticated',
+      'aud', 'authenticated',
+      'phone', (select phone from auth.users where id = p_user_id)
+    )::text,
+    true
+  );
+  perform set_config('role', 'authenticated', true);
+end;
+$$;
+
+-- Acts as a guest (the publishable key, no session).
+create function tests.authenticate_as_anon()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims', '{"role": "anon"}', true);
+  perform set_config('role', 'anon', true);
+end;
+$$;
+
+-- Acts as the server (the secret key), which bypasses RLS.
+create function tests.authenticate_as_service_role()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims', '{"role": "service_role"}', true);
+  perform set_config('role', 'service_role', true);
+end;
+$$;
+
+-- Back to the test runner's own role (postgres).
+create function tests.clear_authentication()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('role', 'postgres', true);
+end;
+$$;
+
+grant execute on all functions in schema tests to anon, authenticated, service_role;

@@ -19,6 +19,8 @@ In [supabase.com/dashboard](https://supabase.com/dashboard), create two **organi
 - **Zalal Dev** on the **Free** plan. Free projects pause after a week without traffic; un-pause from the dashboard when needed.
 - **Zalal** on the **Pro** plan ($25/month, spec §11). Prod lives here.
 
+> **Current state (Oct 23, 2026): both orgs are on Free.** That's fine while building, with two limits to know: Free caps every upload at **50 MB** (the app allows 100 MB videos, spec §5.10, so larger ones fail), and Free projects pause after a week without traffic. Move the prod org to Pro before launch (spec §12.4), then set **Storage → Settings → Upload file size limit** to at least 100 MB.
+
 Why two orgs: when you connect the Supabase plugin, its login is granted per organization. Grant it only **Zalal Dev**, and Claude can't reach prod even by mistake.
 
 ## 2. Create the projects
@@ -131,8 +133,9 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 
 ## 7. What Claude sets up in Phase 0 (no action from you)
 
-- `supabase init`, `supabase/config.toml` (phone sign-up on and the Send SMS Hook wired up locally, mirroring step 3 where the CLI supports it), and the migrations for extensions and buckets.
-- The SessionStart hook for cloud sessions starts Docker and runs `supabase start` with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`. In this environment the default image registry (AWS ECR) is blocked, but Docker Hub works. This was tested: `supabase start` and `supabase test db` (pgTAP) both run in a cloud session.
+- Done (task 2): `supabase init`, and `supabase/config.toml` mirroring step 3: phone sign-up on, email sign-up off, 6-digit OTP valid 300 s, 45 s between resends, site URL `http://localhost:3000`. The Send SMS Hook section is in place but off until Phase 1 adds `send-otp`. Migrations enable PostGIS, pg_cron and pg_net and create the five buckets.
+- Done (task 2): the SessionStart hook for cloud sessions installs packages, starts Docker and runs `supabase start` in the background with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`. In this environment the default image registry (AWS ECR) is blocked, but Docker Hub works.
+- `config.toml` only configures local Supabase. Hosted auth settings stay as you set them in step 3; CI never runs `supabase config push`.
 - GitHub Actions:
   - `ci.yml` on every PR: lint, typecheck, unit tests, `supabase start` + `supabase test db`, Playwright.
   - `deploy-dev.yml` on push to `main`: `supabase link --project-ref $SUPABASE_DEV_PROJECT_REF` → `supabase db push` → `supabase functions deploy`. Skip this file if the dev project's GitHub integration already deploys on merge (step 2a).
