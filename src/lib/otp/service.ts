@@ -208,8 +208,12 @@ export function createOtpService(deps: OtpDeps) {
 
     // The user has no password yet (created by the seed or an admin) or an
     // old one (the secret was rotated). Setting it signs them out elsewhere,
-    // which happens only this once.
+    // which happens only this once. A trigger on auth.users refuses password
+    // changes outside a window the server opens first, so a stolen session
+    // can't set a password of its own (migration auth_user_guard).
     if (signInError?.code === "invalid_credentials" && profile !== null) {
+      const { error: grantError } = await admin.rpc("allow_password_set", { p_user_id: userId });
+      if (grantError) fail("password window", grantError);
       const { error: updateError } = await admin.auth.admin.updateUserById(userId, { password });
       if (updateError) fail("password set", updateError);
       ({ error: signInError } = await deps.signIn(phone, password));

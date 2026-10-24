@@ -270,6 +270,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      allow_password_set: { Args: { p_user_id: string }; Returns: undefined };
       check_otp: {
         Args: { p_code_hash: string; p_phone: string };
         Returns: Record<string, unknown>;

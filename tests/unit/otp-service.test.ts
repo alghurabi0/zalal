@@ -284,7 +284,28 @@ describe("verifyOtp", () => {
     expect(db.updateUserById).toHaveBeenCalledWith("u1", {
       password: signInPassword("secret", "u1"),
     });
+    // The window for the password change opens first (migration auth_user_guard).
+    expect(db.rpc).toHaveBeenCalledWith("allow_password_set", { p_user_id: "u1" });
+    expect(db.rpc.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      db.updateUserById.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(signIn).toHaveBeenCalledTimes(2);
+  });
+
+  it("doesn't set the password when the window can't be opened", async () => {
+    const db = fakeAdmin({
+      profile: { id: "u1", role: "admin", full_name: "Zaid", deleted_at: null },
+    });
+    db.rpc.mockImplementation(async (name) =>
+      name === "allow_password_set"
+        ? { data: null, error: { message: "boom" } }
+        : { data: { result: "ok", attempts_left: null, locked_until: null }, error: null },
+    );
+    const svc = service(db.admin, {
+      signIn: async () => ({ error: { code: "invalid_credentials" } }),
+    });
+    await expect(svc.verifyOtp(input)).rejects.toThrow(/password window failed: boom/);
+    expect(db.updateUserById).not.toHaveBeenCalled();
   });
 
   it("throws when sign-in fails for another reason", async () => {

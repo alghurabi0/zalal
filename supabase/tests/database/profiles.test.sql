@@ -43,12 +43,14 @@ select throws_ok(
   'signup with a foreign number is refused'
 );
 
+-- The auth.users guard refuses the email before the profile's phone check
+-- runs (auth_user_guard.test.sql).
 select throws_ok(
   $$ insert into auth.users (id, instance_id, aud, role, email)
      values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000',
              'authenticated', 'authenticated', 'someone@example.com') $$,
-  '23502',
-  null,
+  'ZL003',
+  'email_not_allowed',
   'signup without a phone (email) is refused'
 );
 

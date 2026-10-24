@@ -167,6 +167,70 @@ describe("login by phone", () => {
     expect(result).toMatchObject({ ok: true, userId: created.user!.id });
   });
 
+  it("refuses a password or an email set through a user's own session", async () => {
+    // Someone holding a stolen session must not get a second way in
+    // (migration auth_user_guard, spec §13).
+    const phone = newPhone();
+    const otp = setup();
+    await otp.requestOtp({ phone: local(phone), channel: "whatsapp" });
+    const login = await otp.verifyOtp({
+      phone: local(phone),
+      code: otp.whatsapp.codes.get(phone)!,
+    });
+    expect(login.ok).toBe(true);
+    const session = otp.sessions[0]!;
+
+    const setPassword = await session.auth.updateUser({ password: "thief-password-123" });
+    expect(setPassword.error).not.toBeNull();
+    const thief = await anonClient().auth.signInWithPassword({
+      phone,
+      password: "thief-password-123",
+    });
+    expect(thief.error?.code).toBe("invalid_credentials");
+
+    const setEmail = await session.auth.updateUser({ email: "thief@example.com" });
+    expect(setEmail.error).not.toBeNull();
+    const { data: stored } = await admin.auth.admin.getUserById(
+      (login as { userId: string }).userId,
+    );
+    expect(stored.user?.email ?? "").toBe("");
+    expect(stored.user?.new_email ?? "").toBe("");
+
+    // The owner's session still works, and so does the next code login.
+    expect((await session.auth.refreshSession()).error).toBeNull();
+    await skipResendWait(phone);
+    await otp.requestOtp({ phone: local(phone), channel: "whatsapp" });
+    expect(
+      await otp.verifyOtp({ phone: local(phone), code: otp.whatsapp.codes.get(phone)! }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("can still set a new password after the secret key is rotated", async () => {
+    const phone = newPhone();
+    const before = setup();
+    await before.requestOtp({ phone: local(phone), channel: "whatsapp" });
+    const first = await before.verifyOtp({
+      phone: local(phone),
+      code: before.whatsapp.codes.get(phone)!,
+    });
+    expect(first.ok).toBe(true);
+
+    // A service with another secret derives another password: sign-in fails
+    // once, then the server opens a window and sets the new one.
+    const whatsapp = new FakeSender();
+    const rotated = createOtpService({
+      admin,
+      senders: { whatsapp, sms: new FakeSender() },
+      hmacSecret: "rotated-secret",
+      signIn: (p, password) => anonClient().auth.signInWithPassword({ phone: p, password }),
+    });
+    await skipResendWait(phone);
+    await rotated.requestOtp({ phone: local(phone), channel: "whatsapp" });
+    expect(
+      await rotated.verifyOtp({ phone: local(phone), code: whatsapp.codes.get(phone)! }),
+    ).toMatchObject({ ok: true, userId: (first as { userId: string }).userId });
+  });
+
   it("falls back to SMS when WhatsApp fails, and records it", async () => {
     const phone = newPhone();
     const otp = setup();
