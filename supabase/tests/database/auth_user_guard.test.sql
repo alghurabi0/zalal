@@ -3,9 +3,9 @@
 -- password only it can derive. So someone holding a stolen session must not
 -- be able to give the account a second way in through Supabase Auth's own
 -- API (PUT /auth/v1/user):
--- - A password changes only inside a window our server opened for that user
---   with allow_password_set() (service role only). The change uses up the
---   window, which lasts 30 seconds. Clearing a password is always allowed.
+-- - A password changes only inside set_login_password() (service role
+--   only), which sets it and logs the user out everywhere. Clearing a
+--   password is always allowed.
 -- - No account gets an email address, or a pending email change.
 -- The trigger fires whoever writes auth.users. The test runner can't switch
 -- to Supabase Auth's own role (supabase_auth_admin), so the integration test
@@ -13,29 +13,25 @@
 begin;
 \ir _helpers.psql
 
-select plan(23);
+select plan(22);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
 select tests.create_user('+9647703333333', 'crew');
 select tests.create_user('+9647504444444', 'admin');
 
-select has_table('private', 'password_set_grants', 'the window table exists');
-select ok(
-  (select relrowsecurity from pg_class where oid = 'private.password_set_grants'::regclass),
-  'the window table has RLS on'
+select has_function(
+  'public', 'set_login_password', array['uuid', 'text'], 'set_login_password exists'
 );
-select has_function('public', 'allow_password_set', array['uuid'], 'allow_password_set exists');
 
 -- Passwords -----------------------------------------------------------------
-
 
 select throws_ok(
   $$ update auth.users
      set encrypted_password = extensions.crypt('thief', extensions.gen_salt('bf'))
      where id = tests.user_id('+9647802222222') $$,
   'ZL002', 'password_change_not_allowed',
-  'a password change without a window is refused (PUT /auth/v1/user with a stolen session)'
+  'a password change outside set_login_password is refused (PUT /auth/v1/user)'
 );
 
 select throws_ok(
@@ -53,24 +49,37 @@ select lives_ok(
 
 select lives_ok(
   $$ update auth.users set encrypted_password = '' where id = tests.user_id('+9647802222222') $$,
-  'clearing a password needs no window (account deletion)'
+  'clearing a password is allowed'
 );
 
+-- B has a session on another device.
+insert into auth.sessions (id, user_id, created_at, updated_at)
+values (gen_random_uuid(), tests.user_id('+9647802222222'), now(), now());
 
--- The server opens a window, then sets the password.
+-- The server sets B's password.
 select tests.authenticate_as_service_role();
 select lives_ok(
-  $$ select public.allow_password_set(tests.user_id('+9647802222222')) $$,
-  'the server opens a window'
+  $$ select public.set_login_password(tests.user_id('+9647802222222'), repeat('k', 43)) $$,
+  'the server sets a password'
 );
 select tests.clear_authentication();
 
+select ok(
+  (select encrypted_password = extensions.crypt(repeat('k', 43), encrypted_password)
+   from auth.users where id = tests.user_id('+9647802222222')),
+  'it is stored as a bcrypt hash of that password'
+);
 
-select lives_ok(
-  $$ update auth.users
-     set encrypted_password = extensions.crypt('server-derived', extensions.gen_salt('bf'))
-     where id = tests.user_id('+9647802222222') $$,
-  'inside the window the password changes'
+select is(
+  (select count(*)::int from auth.sessions where user_id = tests.user_id('+9647802222222')),
+  0,
+  'and the user is logged out on other devices'
+);
+
+select is(
+  current_setting('zalal.password_set_for', true),
+  '',
+  'the mark is cleared afterwards'
 );
 
 select throws_ok(
@@ -78,41 +87,33 @@ select throws_ok(
      set encrypted_password = extensions.crypt('thief', extensions.gen_salt('bf'))
      where id = tests.user_id('+9647802222222') $$,
   'ZL002', 'password_change_not_allowed',
-  'the change used up the window'
+  'right after the server''s set, another write is still refused'
 );
 
-
-select is(
-  (select count(*)::int from private.password_set_grants
-   where user_id = tests.user_id('+9647802222222')),
-  0,
-  'no window is left behind'
-);
-
--- A window for one user doesn't open another's.
-select tests.authenticate_as_service_role();
-select public.allow_password_set(tests.user_id('+9647703333333'));
-select tests.clear_authentication();
+-- The mark names one user only (set here by hand, which no client can do in
+-- a transaction that writes auth.users).
+select set_config('zalal.password_set_for', tests.user_id('+9647703333333')::text, true);
 select throws_ok(
   $$ update auth.users
      set encrypted_password = extensions.crypt('thief', extensions.gen_salt('bf'))
      where id = tests.user_id('+9647801111111') $$,
   'ZL002', 'password_change_not_allowed',
-  'a window is for one user only'
+  'the mark for one user doesn''t let another''s password change'
 );
+select set_config('zalal.password_set_for', '', true);
 
--- An expired window doesn't count. now() is fixed in this transaction, so
--- backdate the window.
-update private.password_set_grants
-set expires_at = now() - interval '1 second'
-where user_id = tests.user_id('+9647703333333');
+select tests.authenticate_as_service_role();
 select throws_ok(
-  $$ update auth.users
-     set encrypted_password = extensions.crypt('server-derived', extensions.gen_salt('bf'))
-     where id = tests.user_id('+9647703333333') $$,
-  'ZL002', 'password_change_not_allowed',
-  'an expired window is refused'
+  $$ select public.set_login_password(tests.user_id('+9647801111111'), 'short') $$,
+  '22023', 'password_too_short',
+  'a weak password is refused'
 );
+select throws_ok(
+  $$ select public.set_login_password(gen_random_uuid(), repeat('k', 43)) $$,
+  'P0002', 'user_not_found',
+  'an unknown user is refused'
+);
+select tests.clear_authentication();
 
 -- Creating a user with a password is the admin API's createUser: allowed.
 select lives_ok(
@@ -157,40 +158,34 @@ select throws_ok(
   'a new user with an email is refused'
 );
 
-
--- Who may open a window -----------------------------------------------------
+-- Who may set a password ----------------------------------------------------
 
 select ok(
-  not has_function_privilege('anon', 'public.allow_password_set(uuid)', 'execute'),
-  'a guest cannot open a window'
+  not has_function_privilege('anon', 'public.set_login_password(uuid, text)', 'execute'),
+  'a guest cannot set a password'
 );
 
 select tests.authenticate_as(tests.user_id('+9647801111111'));
 select throws_ok(
-  $$ select public.allow_password_set(tests.user_id('+9647801111111')) $$,
+  $$ select public.set_login_password(tests.user_id('+9647801111111'), repeat('t', 43)) $$,
   '42501', null,
-  'a customer cannot open a window, even for themselves'
+  'a customer cannot set a password, even their own'
 );
+select tests.clear_authentication();
+
+select tests.authenticate_as(tests.user_id('+9647703333333'));
 select throws_ok(
-  $$ select * from private.password_set_grants $$,
+  $$ select public.set_login_password(tests.user_id('+9647703333333'), repeat('t', 43)) $$,
   '42501', null,
-  'a customer cannot read the windows'
+  'a crew account cannot set a password'
 );
 select tests.clear_authentication();
 
 select tests.authenticate_as(tests.user_id('+9647504444444'));
 select throws_ok(
-  $$ select public.allow_password_set(tests.user_id('+9647801111111')) $$,
+  $$ select public.set_login_password(tests.user_id('+9647801111111'), repeat('t', 43)) $$,
   '42501', null,
-  'an admin cannot open a window either: only the server can'
-);
-select tests.clear_authentication();
-
-select tests.authenticate_as_service_role();
-select throws_ok(
-  $$ select public.allow_password_set(gen_random_uuid()) $$,
-  '23503', null,
-  'a window needs a real user'
+  'an admin cannot set a password either: only the server can'
 );
 select tests.clear_authentication();
 

@@ -8,67 +8,80 @@
 -- - set their own password, then sign in with it without any code;
 -- - attach an email address, which becomes another way to log in.
 -- This trigger refuses both, whoever writes auth.users:
--- - The password changes only inside a window our server opened for that
---   user with allow_password_set() (service role only), right before it sets
---   the password through the Auth admin API. That happens only for users who
---   don't have the derived password yet (the seeded first admin, or after
---   the secret key is rotated). The change uses up the window; it lasts 30
---   seconds. A simpler "set once, never change" rule would lock everyone out
---   when the key is rotated.
+-- - A password changes only inside set_login_password(), the server-only RPC
+--   that sets it. The RPC marks its own transaction (a transaction-local
+--   setting holding the user id) and the trigger accepts a new password only
+--   when that mark names the user. Nothing outside that transaction can set
+--   the mark: Supabase Auth and PostgREST never let clients set settings,
+--   and only service_role may run the RPC. An earlier draft let the server
+--   open a short window and then call the Auth admin API; the RLS audit
+--   showed a stolen session could race that window with its own
+--   PUT /auth/v1/user, because Auth writes both the same way.
+-- - The server sets a password only for users who don't have the derived one
+--   yet (the seeded first admin, or everyone once after the secret key is
+--   rotated). Like the Auth admin API did, it then logs the user out on
+--   their other devices, which after a rotation is what we want.
 -- - Creating a user with a password (the admin API's createUser) and clearing
---   a password (account deletion) need no window.
+--   a password need no mark.
 -- - No email address and no pending email change, ever (v1 has no email).
---   If account deletion (N13, Phase 6) uses the admin API's soft delete and
---   it writes a scrambled email, revisit this rule then.
+--   The Auth admin API's soft delete writes a hashed value into email and
+--   email_change, so it is refused too; account deletion (N13, Phase 6) must
+--   revisit this rule or delete through its own RPC.
+-- - If Auth's database password encryption (GOTRUE_SECURITY_DB_ENCRYPTION_*)
+--   is ever turned on, Auth re-encrypts the hash on sign-in and this trigger
+--   would refuse that write. It is off, and nothing here needs it.
 --
 -- Not covered, accepted for v1 (spec §13): a stolen session stays usable
 -- until it is refreshed away (there is no "log out on all devices" yet), can
 -- edit its own user metadata (nothing reads it; roles come from profiles),
 -- and can log its owner out everywhere.
 --
--- New: private.password_set_grants, public.allow_password_set(uuid). Not in
--- spec §7 before; added there.
+-- New: public.set_login_password(uuid, text). Not in spec §7 before; added
+-- there.
 
--- Windows ----------------------------------------------------------------------
+-- The server's password set ---------------------------------------------------
 
--- In private: no API role reads or writes it. Only allow_password_set() and
--- the trigger below (both security definer) touch it.
-create table private.password_set_grants (
-  user_id uuid primary key references auth.users (id) on delete cascade,
-  expires_at timestamptz not null
-);
-
-alter table private.password_set_grants enable row level security;
-
-revoke all on private.password_set_grants from public, anon, authenticated, service_role;
-
--- Opens (or renews) a 30-second window in which this user's password may be
--- set. The server calls it with the secret key right before
--- auth.admin.updateUserById(id, { password }). Security definer because no
--- API role may write the table; only service_role may execute it.
-create function public.allow_password_set(p_user_id uuid)
+-- Sets the user's sign-in password (bcrypt, as Auth stores it) and ends
+-- their sessions. The server calls it with the secret key when signing in
+-- with the derived password fails. Security definer because no API role may
+-- write auth.users; only service_role may execute it.
+create function public.set_login_password(p_user_id uuid, p_password text)
 returns void
-language sql
+language plpgsql
 security definer
 set search_path = ''
 as $$
-  insert into private.password_set_grants (user_id, expires_at)
-  values (p_user_id, now() + interval '30 seconds')
-  on conflict (user_id) do update set expires_at = excluded.expires_at;
-$$;
--- One row per user at most, renewed each time, so nothing needs purging.
+begin
+  -- The derived password is 43 characters; refuse anything weak by mistake.
+  if char_length(coalesce(p_password, '')) < 32 then
+    raise exception using errcode = '22023', message = 'password_too_short';
+  end if;
 
-revoke execute on function public.allow_password_set(uuid) from public, anon, authenticated;
-grant execute on function public.allow_password_set(uuid) to service_role;
+  perform set_config('zalal.password_set_for', p_user_id::text, true);
+
+  update auth.users as u
+  set encrypted_password = extensions.crypt(p_password, extensions.gen_salt('bf', 10)),
+      updated_at = now()
+  where u.id = p_user_id;
+  if not found then
+    raise exception using errcode = 'P0002', message = 'user_not_found';
+  end if;
+
+  -- Log out everywhere (refresh tokens go with their sessions).
+  delete from auth.sessions as s where s.user_id = p_user_id;
+
+  perform set_config('zalal.password_set_for', '', true);
+end;
+$$;
+
+revoke execute on function public.set_login_password(uuid, text) from public, anon, authenticated;
+grant execute on function public.set_login_password(uuid, text) to service_role;
 
 -- Trigger ----------------------------------------------------------------------
 
--- Supabase Auth writes auth.users as supabase_auth_admin, which may not read
--- the windows, hence security definer.
 create function private.guard_auth_user()
 returns trigger
 language plpgsql
-security definer
 set search_path = ''
 as $$
 begin
@@ -79,12 +92,9 @@ begin
   if tg_op = 'UPDATE'
     and new.encrypted_password is distinct from old.encrypted_password
     and nullif(new.encrypted_password, '') is not null
+    and coalesce(current_setting('zalal.password_set_for', true), '') <> new.id::text
   then
-    delete from private.password_set_grants as g
-    where g.user_id = new.id and g.expires_at > now();
-    if not found then
-      raise exception using errcode = 'ZL002', message = 'password_change_not_allowed';
-    end if;
+    raise exception using errcode = 'ZL002', message = 'password_change_not_allowed';
   end if;
 
   return new;

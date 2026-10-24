@@ -25,8 +25,8 @@ export function hashOtpCode(secret: string, phone: string, code: string): string
  * The password the server signs a user in with after a correct code (spec
  * §9.1): an HMAC of the user id, keyed with the server secret. Nobody types
  * or sees it, and it can't be worked out without the secret. It stays the
- * same across logins on purpose: setting a new password through the Auth
- * admin API signs the user out on every other device.
+ * same across logins on purpose: setting a new one (set_login_password)
+ * signs the user out on every other device.
  */
 export function signInPassword(secret: string, userId: string): string {
   return createHmac("sha256", secret).update(`zalal-signin:v1:${userId}`).digest("base64url");
