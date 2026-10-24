@@ -8,8 +8,9 @@
 -- - The server makes a 6-digit code, stores only its HMAC (keyed with a
 --   server secret, so a database dump can't be brute-forced), sends it
 --   through OTPIQ, and checks typed codes with check_otp.
--- - On a correct code the server signs the user in through the Auth admin
---   API (a fresh random password per login), so no Auth phone code exists.
+-- - On a correct code the server creates the user through the Auth admin
+--   API if needed and signs in with a password only the server can derive
+--   (an HMAC of the user id), so no Auth phone code exists.
 -- - The Send SMS Hook below refuses every send, so /otp, /resend and phone
 --   sign-up called directly deliver nothing.
 --
