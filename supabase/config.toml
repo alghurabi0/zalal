@@ -179,7 +179,9 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-enable_signup = true
+# Off: the app server creates users with the Auth admin API after checking
+# our own OTP (spec §9.1). Match it on hosted projects.
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -208,6 +210,8 @@ sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
+# Also counts password sign-ins, and every login comes from the app server's
+# IP (spec §9.1). Raise it on hosted projects (docs/supabase-setup.md).
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
 sign_in_sign_ups = 30
@@ -261,18 +265,18 @@ otp_expiry = 3600
 # content_path = "./supabase/templates/password_changed_notification.html"
 
 [auth.sms]
-# Phone + OTP is the only login (spec §2, §9.1).
+# Phone + OTP is the only login (spec §2, §9.1), but the app server makes,
+# sends and checks the code, then signs the user in with a one-time random
+# password. The phone provider stays on for that password sign-in; Auth
+# itself never sends a code (see the Send SMS Hook below).
 enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
-# On, so a phone + password signup can't get a session without an OTP
-# (it would skip request_otp's limits). Match it on hosted projects.
+# On: the server creates users already confirmed, and any other phone signup
+# would need an Auth code, which the hook refuses. Match it on hosted projects.
 enable_confirmations = true
-# Template for sending OTP to users
+# Unused: the hook refuses every send. Kept at decision 10's values.
 template = "Your code is {{ .Code }}"
-# Controls the minimum amount of time that must pass before sending another sms otp.
-# Spec decision 10: 45 s between resends.
 max_frequency = "45s"
-# Spec decision 10: 6-digit code, valid for 5 minutes.
 otp_length = 6
 otp_expiry = 300
 
@@ -288,12 +292,13 @@ otp_expiry = 300
 # Force log out if the user has been inactive longer than the specified duration.
 # inactivity_timeout = "8h"
 
-# Send SMS Hook: delivers the OTP by WhatsApp or SMS (spec §9.1). Phase 1 adds the `send-otp`
-# Edge Function and turns this on; until then phone OTP can't be delivered locally.
+# Send SMS Hook: refuses every send (migration otp_server_codes), so a client
+# calling Auth's /otp or /resend directly gets nothing, and Auth never stores
+# a phone code that could be guessed at /verify (spec §9.1). Set the same
+# hook on hosted projects (docs/supabase-setup.md).
 [auth.hook.send_sms]
-enabled = false
-uri = "http://host.docker.internal:54321/functions/v1/send-otp"
-secrets = "env(SEND_SMS_HOOK_SECRET)"
+enabled = true
+uri = "pg-functions://postgres/private/refuse_auth_sms"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -306,12 +311,15 @@ secrets = "env(SEND_SMS_HOOK_SECRET)"
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# Local only, never used: the CLI turns phone login off unless one of these
+# providers is on, even when a Send SMS Hook is set, and Auth always uses the
+# hook first. These placeholders are not credentials. Hosted projects need
+# no SMS provider.
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+enabled = true
+account_sid = "unused-the-send-sms-hook-refuses-all-sends"
+message_service_sid = "unused"
+auth_token = "unused"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
