@@ -38,6 +38,7 @@ Two things to know:
    | `OTPIQ_API_KEY` | dev key `sk_dev_…` | live key `sk_live_…` | step 5; mark **Sensitive**. Login fails on Vercel without it |
    | `OTPIQ_SMS_SENDER_ID` | optional | optional | step 5 |
    | `OTPIQ_WHATSAPP_ACCOUNT_ID`, `_PHONE_ID`, `_TEMPLATE` | optional | optional | step 5; all three or none |
+   | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | browser key | same key | step 6; without it Location shows a drawn map |
 
    Leave **Settings → Environment Variables → Automatically expose System Environment Variables** on. The app reads `NEXT_PUBLIC_VERCEL_ENV` from it to tag Sentry events as `production` or `preview`.
 4. **Settings → Functions → Function Region**: `vercel.json` already pins `fra1` (Frankfurt, next to Supabase). Check it shows Frankfurt.
@@ -93,7 +94,17 @@ The app server sends login codes by WhatsApp, or by SMS, through [OTPIQ](https:/
 4. **Settings → Limits**: you can turn on the **phone number** limit as a backstop (for example 5 per 10 minutes; ours is 3 per 10 minutes). Leave the **IP address** limit off: every code is sent from Vercel's servers, so an IP limit would block all users at once.
 5. Before launch (spec §12.4): connect the company WhatsApp Business number (**Connect WhatsApp account**) and get the Arabic authentication template approved, then set `OTPIQ_WHATSAPP_ACCOUNT_ID`, `OTPIQ_WHATSAPP_PHONE_ID` and `OTPIQ_WHATSAPP_TEMPLATE` (from **List WhatsApp resources**). Until then codes go out from OTPIQ's own WhatsApp account. An SMS sender ID (`OTPIQ_SMS_SENDER_ID`) needs an Iraqi company license and is optional.
 
-## 6. Check it works
+## 6. Google Maps (Location)
+
+Location (spec §5.4) shows a Google map with a search box. Without a key the screen still works with a drawn map, and the pin comes only from "موقعي الحالي", which is how it runs locally and in CI.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project named `zalal` and add a billing account (Google requires one even inside the free tier, spec §11).
+2. **APIs & Services → Library**: enable **Maps JavaScript API** and **Places API (New)**.
+3. **APIs & Services → Credentials → Create credentials → API key**. Under **Application restrictions** pick **Websites** and add the production domain and `*.vercel.app` previews (for example `https://zalal.iq/*` and `https://zalal-*.vercel.app/*`). Under **API restrictions** allow only the two APIs above. The key reaches the browser, so these restrictions are what protect it.
+4. Put the key in Vercel as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` for **Preview** and **Production**, then redeploy (it is read at build time).
+5. Before launch (spec §12.4), replace the `*.vercel.app` entry with the real domain only.
+
+## 7. Check it works
 
 - [ ] A PR shows two green checks and a Vercel preview link. The preview opens Welcome.
 - [ ] After a merge, **Deploy dev** runs and passes (Actions tab).
@@ -107,6 +118,7 @@ The app server sends login codes by WhatsApp, or by SMS, through [OTPIQ](https:/
 
   Within a minute Sentry shows a "Sentry check" issue. Under **Settings → Source Maps**, each build has an uploaded bundle. (Errors thrown from the browser console don't count; Sentry ignores them.)
 - [ ] PostHog: open the production URL. **Activity** shows a `$pageview` within a minute.
+- [ ] Google Maps: log in on a preview, add an address. The map loads, search finds a Karbala street, and moving the map moves the saved pin.
 
 ## Checklist
 
@@ -116,6 +128,7 @@ The app server sends login codes by WhatsApp, or by SMS, through [OTPIQ](https:/
 - [ ] Sentry project in the EU region; DSN, org, project and auth token in Vercel; IP storage off
 - [ ] PostHog EU project; key in Vercel Production; client IP discarded; replay off
 - [ ] OTPIQ dev key in Vercel Preview, live key in Production; IP limit off; credit added
+- [ ] Google Maps key restricted to the app's domains and the two APIs; in Vercel Preview and Production
 - [ ] `VERCEL_DEPLOY_HOOK_URL` in the GitHub `production` environment
 - [ ] Ruleset on `main` requiring both CI checks
 - [ ] First Deploy prod run; production URL opens Welcome
