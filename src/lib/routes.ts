@@ -19,6 +19,8 @@ export const routes = {
   book: "/book",
   chat: "/chat",
   profile: "/profile",
+  /** POST only: ends the session, then Welcome. */
+  logout: "/logout",
   terms: "/terms",
   privacy: "/privacy",
   /** Crew and admin surfaces (spec §2); placeholders until Phase 3. */

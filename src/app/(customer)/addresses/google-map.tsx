@@ -19,20 +19,27 @@ export function GoogleMapLayer({
   initial,
   onIdle,
   panToRef,
+  pendingPanRef,
 }: {
   initial: LatLng;
   onIdle: (center: LatLng) => void;
   /** Filled with a function that pans the map, for search and "موقعي الحالي". */
   panToRef: RefObject<((position: LatLng) => void) | null>;
+  /** A position asked for before the map existed; centered on when it's ready. */
+  pendingPanRef: RefObject<LatLng | null>;
 }) {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
+    if (pendingPanRef.current) {
+      map.setCenter(pendingPanRef.current);
+      pendingPanRef.current = null;
+    }
     panToRef.current = (position) => map.panTo(position);
     return () => {
       panToRef.current = null;
     };
-  }, [map, panToRef]);
+  }, [map, panToRef, pendingPanRef]);
 
   return (
     <Map

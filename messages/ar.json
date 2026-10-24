@@ -98,6 +98,7 @@
     "allLabelsUsedCta": "رجوع",
     "notFoundTitle": "ما لكينا هذا العنوان",
     "notFoundBody": "يمكن انحذف. ارجع واختار عنوان ثاني.",
+    "notFoundCta": "رجوع",
     "errors": {
       "outsideArea": "بعد ما نخدم منطقتك، حالياً بس كربلاء",
       "labelTaken": "هذا الاسم مستخدم لعنوان ثاني، اختار اسم ثاني.",

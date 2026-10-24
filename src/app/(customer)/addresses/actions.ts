@@ -27,7 +27,10 @@ export async function saveAddress(
   _prev: SaveAddressState,
   form: FormData,
 ): Promise<SaveAddressState> {
-  const viewer = await requireViewer(routes.newAddress);
+  const editing = form.get("id");
+  const viewer = await requireViewer(
+    typeof editing === "string" && editing !== "" ? routes.editAddress(editing) : routes.newAddress,
+  );
   const parsed = addressInputSchema.safeParse({
     label: form.get("label"),
     district: form.get("district") ?? "",

@@ -68,10 +68,14 @@ function Editor({
   const initial = address ? { lat: address.lat, lng: address.lng } : KARBALA_CENTER;
   const [center, setCenter] = useState<LatLng>(initial);
   const panToRef = useRef<((position: LatLng) => void) | null>(null);
+  // A position asked for before the map is ready (a cached GPS fix comes
+  // back almost at once): the map centers on it as soon as it exists.
+  const pendingPanRef = useRef<LatLng | null>(null);
   const moveTo = useCallback((position: LatLng) => {
     // With Google Maps the map pans and reports its new center when idle.
+    setCenter(position);
     if (panToRef.current) panToRef.current(position);
-    else setCenter(position);
+    else pendingPanRef.current = position;
   }, []);
 
   const [locating, setLocating] = useState(false);
@@ -136,7 +140,14 @@ function Editor({
     <div className="mx-auto flex h-dvh w-full max-w-phone flex-col overflow-hidden bg-map-bg">
       <div className="relative min-h-50 flex-1">
         <MapPlaceholder className="absolute inset-0" />
-        {withMap && <GoogleMapLayer initial={initial} onIdle={setCenter} panToRef={panToRef} />}
+        {withMap && (
+          <GoogleMapLayer
+            initial={initial}
+            onIdle={setCenter}
+            panToRef={panToRef}
+            pendingPanRef={pendingPanRef}
+          />
+        )}
         <CenterPin />
 
         <div className="absolute inset-x-5 top-5 z-10 flex items-start gap-3">

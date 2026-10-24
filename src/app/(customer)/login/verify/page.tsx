@@ -29,8 +29,10 @@ async function VerifyContent() {
     <>
       <BackButton href={loginHref} />
       <OtpForm
-        // Next keeps recently visited pages alive: each code gets a fresh form.
-        key={`${pending.phone}:${pending.sentAt}`}
+        // Next keeps recently visited pages alive: another number gets a
+        // fresh form. Not keyed by the send time, so a resend keeps the form
+        // (and its "sent a new code" message); logout reloads the page.
+        key={pending.phone}
         phone={pending.phone}
         channel={pending.channel}
         smsEnabled={pending.smsEnabled}

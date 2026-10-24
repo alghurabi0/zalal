@@ -49,7 +49,8 @@ export function identifyUser(userId: string) {
 }
 
 /** On logout: forgets the user, because crew phones are shared (spec §3). */
-export function resetAnalytics() {
+export async function resetAnalytics(): Promise<void> {
   if (!monitoringEnv().NEXT_PUBLIC_POSTHOG_KEY) return;
-  void import("posthog-js").then(({ default: posthog }) => posthog.reset());
+  const { default: posthog } = await import("posthog-js");
+  posthog.reset();
 }

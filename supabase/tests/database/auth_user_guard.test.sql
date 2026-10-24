@@ -13,7 +13,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(22);
+select plan(24);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -156,6 +156,27 @@ select throws_ok(
        '{"provider": "phone", "providers": ["phone"]}', '{}', now(), now()) $$,
   'ZL003', 'email_not_allowed',
   'a new user with an email is refused'
+);
+
+-- A row that already has an email (made by hand in the dashboard, before
+-- this guard): it can still log in, but its email can't change. Set up with
+-- triggers off, the way such a row came about.
+set local session_replication_role = replica;
+update auth.users set email = 'owner@example.com' where id = tests.user_id('+9647703333333');
+set local session_replication_role = origin;
+
+select tests.authenticate_as_service_role();
+select lives_ok(
+  $$ select public.set_login_password(tests.user_id('+9647703333333'), repeat('k', 43)) $$,
+  'a row that already has an email can still get its password set'
+);
+select tests.clear_authentication();
+
+select throws_ok(
+  $$ update auth.users set email = 'thief@example.com'
+     where id = tests.user_id('+9647703333333') $$,
+  'ZL003', 'email_not_allowed',
+  'but its email can''t be changed to another'
 );
 
 -- Who may set a password ----------------------------------------------------

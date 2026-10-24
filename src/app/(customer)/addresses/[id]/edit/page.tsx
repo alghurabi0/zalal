@@ -39,7 +39,7 @@ async function EditAddress({ params, searchParams }: PageProps<"/addresses/[id]/
       <AddressMessage
         title={t("notFoundTitle")}
         description={t("notFoundBody")}
-        cta={t("allLabelsUsedCta")}
+        cta={t("notFoundCta")}
         href={back}
       />
     );

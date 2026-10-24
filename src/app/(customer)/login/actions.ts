@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { afterLogin } from "@/lib/auth/destination";
-import { clearPendingLogin, readPendingLogin, writePendingLogin } from "@/lib/auth/pending-login";
+import { readPendingLogin, writePendingLogin } from "@/lib/auth/pending-login";
 import { requestOtp, verifyOtp } from "@/lib/otp";
 import { otpChannelSchema } from "@/lib/otp/schemas";
 import { phoneInputSchema } from "@/lib/phone";
@@ -34,14 +34,15 @@ const sendCodeFormSchema = z.object({
 async function send(phone: string, channel: "whatsapp" | "sms", next: string | null) {
   const result = await requestOtp({ phone, channel });
   if (result.ok) {
-    await writePendingLogin({
+    const pending = {
       phone,
       channel: result.channelUsed,
       sentAt: Date.now(),
       smsEnabled: result.smsEnabled,
       next,
-    });
-    return { ok: true as const };
+    };
+    await writePendingLogin(pending);
+    return { ok: true as const, pending };
   }
   return { ok: false as const, error: sendError(result, channel) };
 }
@@ -108,8 +109,7 @@ export async function resendCode(_prev: ResendState, form: FormData): Promise<Re
 
   const outcome = await send(pending.phone, channel.data, pending.next);
   if (!outcome.ok) return { error: outcome.error.error };
-  const updated = await readPendingLogin();
-  return { error: null, sentAt: updated?.sentAt, channel: updated?.channel };
+  return { error: null, sentAt: outcome.pending.sentAt, channel: outcome.pending.channel };
 }
 
 export type VerifyState =
@@ -141,24 +141,33 @@ export async function verifyCode(_prev: VerifyState, form: FormData): Promise<Ve
     }
   }
 
-  // The user id comes from a correct code, so the secret-key client only
-  // answers "does this user have an address?".
-  const { count, error } = await createAdminClient()
-    .from("addresses")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", result.userId)
-    .is("deleted_at", null);
-  if (error) throw new Error(`Address count failed: ${error.message}`);
-
-  await clearPendingLogin();
+  // The pending-login cookie stays until it expires (15 min) or logout
+  // clears it: deleting it here would make Next re-render this page, which
+  // then finds no login in progress and redirects to Login, racing the
+  // client's navigation to `destination`. A logged-in user can't open
+  // /login/* anyway (proxy.ts).
   return {
     status: "ok",
     userId: result.userId,
     destination: afterLogin({
       role: result.role,
       isNewUser: result.isNewUser,
-      hasAddress: (count ?? 0) > 0,
+      hasAddress: result.role === "customer" ? await hasAddress(result.userId) : true,
       next: pending.next,
     }),
   };
+}
+
+/**
+ * Only customers have addresses. The user id comes from a correct code, so
+ * the secret-key client only answers "does this user have an address?".
+ */
+async function hasAddress(userId: string): Promise<boolean> {
+  const { count, error } = await createAdminClient()
+    .from("addresses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+  if (error) throw new Error(`Address count failed: ${error.message}`);
+  return (count ?? 0) > 0;
 }

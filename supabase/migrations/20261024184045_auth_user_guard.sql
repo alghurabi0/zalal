@@ -23,7 +23,8 @@
 --   their other devices, which after a rotation is what we want.
 -- - Creating a user with a password (the admin API's createUser) and clearing
 --   a password need no mark.
--- - No email address and no pending email change, ever (v1 has no email).
+-- - No new email address and no new pending email change (v1 has no
+--   email). A row that already has an email keeps working.
 --   The Auth admin API's soft delete writes a hashed value into email and
 --   email_change, so it is refused too; account deletion (N13, Phase 6) must
 --   revisit this rule or delete through its own RPC.
@@ -85,7 +86,14 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if nullif(new.email, '') is not null or nullif(new.email_change, '') is not null then
+  -- Only a new email counts: a row that already has one (say, an account
+  -- made by hand in the dashboard) can still have its password set.
+  if (tg_op = 'INSERT' and (nullif(new.email, '') is not null or nullif(new.email_change, '') is not null))
+    or (tg_op = 'UPDATE' and (
+      (new.email is distinct from old.email and nullif(new.email, '') is not null)
+      or (new.email_change is distinct from old.email_change and nullif(new.email_change, '') is not null)
+    ))
+  then
     raise exception using errcode = 'ZL003', message = 'email_not_allowed';
   end if;
 
