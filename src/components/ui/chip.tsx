@@ -72,15 +72,23 @@ type ChipGroupProps = {
   legend: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Overrides the legend's default 15px extra-bold label. */
+  legendClassName?: string;
   /** Layout of the chips, e.g. "grid grid-cols-3". */
   bodyClassName?: string;
 };
 
 /** A labelled set of chips: a <fieldset> whose <legend> is the section label. */
-export function ChipGroup({ legend, children, className, bodyClassName }: ChipGroupProps) {
+export function ChipGroup({
+  legend,
+  children,
+  className,
+  legendClassName,
+  bodyClassName,
+}: ChipGroupProps) {
   return (
     <fieldset className={className}>
-      <legend className="mb-2 text-15 font-extrabold">{legend}</legend>
+      <legend className={cn("mb-2 text-15 font-extrabold", legendClassName)}>{legend}</legend>
       <div className={cn("flex flex-wrap gap-2", bodyClassName)}>{children}</div>
     </fieldset>
   );

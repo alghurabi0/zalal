@@ -9,6 +9,7 @@ const KEYS = [
   "OTPIQ_WHATSAPP_ACCOUNT_ID",
   "OTPIQ_WHATSAPP_PHONE_ID",
   "OTPIQ_WHATSAPP_TEMPLATE",
+  "OTP_DEV_OUTBOX",
   "VERCEL_ENV",
 ];
 
@@ -30,6 +31,28 @@ afterEach(() => {
 });
 
 describe("OTP env", () => {
+  it("writes codes to OTP_DEV_OUTBOX for the e2e tests", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const { mkdtemp, readFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const dir = await mkdtemp(path.join(tmpdir(), "zl-outbox-"));
+    vi.stubEnv("OTP_DEV_OUTBOX", dir);
+    const { otpSenders } = await load();
+    await otpSenders().sms.send("+9647801234567", "654321");
+    expect(await readFile(path.join(dir, "+9647801234567"), "utf8")).toBe("654321");
+  });
+
+  it.each([
+    ["on Vercel", { VERCEL_ENV: "preview", OTPIQ_API_KEY: "sk_dev_abc" }],
+    ["with an OTPIQ key", { OTPIQ_API_KEY: "sk_dev_abc" }],
+  ])("refuses OTP_DEV_OUTBOX %s", async (_, env) => {
+    vi.stubEnv("OTP_DEV_OUTBOX", "/tmp/outbox");
+    for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+    const { otpEnv } = await load();
+    expect(() => otpEnv()).toThrow(/OTP_DEV_OUTBOX|e2e/);
+  });
+
   it("uses the log sender locally without a key", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const { otpSenders } = await load();

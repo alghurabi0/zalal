@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { otpCodeSchema, requestOtpInputSchema } from "@/lib/otp/schemas";
-import { IRAQI_MOBILE_E164, normalizeIraqiMobile, toWesternDigits } from "@/lib/phone";
+import { formatPhone, IRAQI_MOBILE_E164, normalizeIraqiMobile, toWesternDigits } from "@/lib/phone";
 
 // Arabic-Indic and Persian digits, built from code points so the test reads
 // the same in any editor.
@@ -79,5 +79,15 @@ describe("OTP input schemas", () => {
 
   it.each(["12345", "1234567", "12345a", ""])("refuses the code %j", (code) => {
     expect(otpCodeSchema.safeParse(code).success).toBe(false);
+  });
+});
+
+describe("formatPhone", () => {
+  it("groups an Iraqi number as the designs show it", () => {
+    expect(formatPhone("+9647801234567")).toBe("+964 780 123 4567");
+  });
+
+  it("leaves anything else as it is", () => {
+    expect(formatPhone("+12025550123")).toBe("+12025550123");
   });
 });
