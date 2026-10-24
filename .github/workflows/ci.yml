@@ -1,4 +1,4 @@
-# Lint, types, unit tests, database tests and end-to-end tests. Runs on every
+# Lint, types, unit tests, database, integration and end-to-end tests. Runs on every
 # PR and on every push to main; deploy-dev.yml runs after it succeeds on main.
 # Branch protection on main requires both jobs (docs/deploy-setup.md).
 name: CI
@@ -40,6 +40,8 @@ jobs:
         run: pnpm db:start
       - name: Database tests (pgTAP)
         run: pnpm db:test
+      - name: Integration tests (login against local Supabase)
+        run: pnpm test:integration
       - name: Generated types match the schema
         run: |
           pnpm db:types

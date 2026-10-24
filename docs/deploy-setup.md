@@ -1,6 +1,6 @@
 # Vercel, Sentry, PostHog and GitHub setup (for the owner)
 
-Claude can't create these accounts or hold their keys. You do steps 1–5 once, about 30 minutes in total. The code side is already done: `vercel.json`, Sentry and PostHog in the app, and the GitHub Actions workflows. Do `docs/supabase-setup.md` first: Vercel needs the Supabase keys from its step 4.
+Claude can't create these accounts or hold their keys. You do steps 1–6 once, about 30 minutes in total. The code side is already done: `vercel.json`, Sentry and PostHog in the app, and the GitHub Actions workflows. Do `docs/supabase-setup.md` first: Vercel needs the Supabase keys from its step 4.
 
 Until you add the keys, nothing breaks. Sentry and PostHog stay off without them, and the build runs the same.
 
@@ -8,7 +8,7 @@ Until you add the keys, nothing breaks. Sentry and PostHog stay off without them
 
 | Step | What happens | Where it runs |
 | --- | --- | --- |
-| 1. Claude opens a PR | CI runs lint, types, unit tests, database tests and Playwright. Vercel builds a **preview** with its own URL, using **dev** Supabase | GitHub Actions, Vercel Preview |
+| 1. Claude opens a PR | CI runs lint, types, unit tests, database and integration tests, and Playwright. Vercel builds a **preview** with its own URL, using **dev** Supabase | GitHub Actions, Vercel Preview |
 | 2. You merge to `main` | CI runs again. When it passes, **Deploy dev** applies new migrations and Edge Functions to dev Supabase. Vercel does **not** deploy `main` (`vercel.json`) | GitHub Actions |
 | 3. You release | Actions → **Deploy prod** → Run workflow, then approve it. It migrates **prod** Supabase first, then tells Vercel to build `main` for **Production** | GitHub Actions, Vercel Production |
 
@@ -35,6 +35,9 @@ Two things to know:
    | `SENTRY_PROJECT` | `zalal` | same | step 2 |
    | `SENTRY_AUTH_TOKEN` | token | same token | step 2; mark **Sensitive** |
    | `NEXT_PUBLIC_POSTHOG_KEY` | — | project key | step 3; **Production only**, so previews don't pollute the numbers |
+   | `OTPIQ_API_KEY` | dev key `sk_dev_…` | live key `sk_live_…` | step 5; mark **Sensitive**. Login fails on Vercel without it |
+   | `OTPIQ_SMS_SENDER_ID` | optional | optional | step 5 |
+   | `OTPIQ_WHATSAPP_ACCOUNT_ID`, `_PHONE_ID`, `_TEMPLATE` | optional | optional | step 5; all three or none |
 
    Leave **Settings → Environment Variables → Automatically expose System Environment Variables** on. The app reads `NEXT_PUBLIC_VERCEL_ENV` from it to tag Sentry events as `production` or `preview`.
 4. **Settings → Functions → Function Region**: `vercel.json` already pins `fra1` (Frankfurt, next to Supabase). Check it shows Frankfurt.
@@ -80,7 +83,17 @@ Events go through the app's own domain (`/zl-a`), so ad blockers don't drop them
    This is the "block merges on red" rule (`docs/claude-code-setup.md` §3.7).
 3. **Settings → Actions → General**: keep Actions allowed. The workflows need only read access to the repo.
 
-## 5. Check it works
+## 5. OTPIQ (login codes)
+
+The app server sends login codes by WhatsApp, or by SMS, through [OTPIQ](https://app.otpiq.com) (spec §9.1). The key lives only in Vercel's server env, never in the browser or in git. Locally and in CI there is no key: `pnpm dev` prints each code in its terminal instead.
+
+1. In the OTPIQ dashboard, **Project Settings**: create a **Dev Key** with your own phone as the development number. A dev key sends every message to that number, whatever number is typed, so previews can never text a real customer. Put it in Vercel as `OTPIQ_API_KEY` for **Preview**.
+2. Copy the project's live API key (`sk_live_…`) into `OTPIQ_API_KEY` for **Production**. The app refuses to start login with a dev key in Production.
+3. Add credit (trial accounts only send to your own number). When OTPIQ refuses a send because of the key, credit, spending cap, trial mode or sender ID, Sentry gets an "OTPIQ account problem" error, without the phone number or code.
+4. **Settings → Limits**: you can turn on the **phone number** limit as a backstop (for example 5 per 10 minutes; ours is 3 per 10 minutes). Leave the **IP address** limit off: every code is sent from Vercel's servers, so an IP limit would block all users at once.
+5. Before launch (spec §12.4): connect the company WhatsApp Business number (**Connect WhatsApp account**) and get the Arabic authentication template approved, then set `OTPIQ_WHATSAPP_ACCOUNT_ID`, `OTPIQ_WHATSAPP_PHONE_ID` and `OTPIQ_WHATSAPP_TEMPLATE` (from **List WhatsApp resources**). Until then codes go out from OTPIQ's own WhatsApp account. An SMS sender ID (`OTPIQ_SMS_SENDER_ID`) needs an Iraqi company license and is optional.
+
+## 6. Check it works
 
 - [ ] A PR shows two green checks and a Vercel preview link. The preview opens Welcome.
 - [ ] After a merge, **Deploy dev** runs and passes (Actions tab).
@@ -102,6 +115,7 @@ Events go through the app's own domain (`/zl-a`), so ad blockers don't drop them
 - [ ] Supabase Auth URLs updated for the Vercel URLs
 - [ ] Sentry project in the EU region; DSN, org, project and auth token in Vercel; IP storage off
 - [ ] PostHog EU project; key in Vercel Production; client IP discarded; replay off
+- [ ] OTPIQ dev key in Vercel Preview, live key in Production; IP limit off; credit added
 - [ ] `VERCEL_DEPLOY_HOOK_URL` in the GitHub `production` environment
 - [ ] Ruleset on `main` requiring both CI checks
 - [ ] First Deploy prod run; production URL opens Welcome

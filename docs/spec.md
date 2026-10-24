@@ -40,7 +40,7 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 4 | Surfaces | Customer app, crew app, admin dashboard (support inbox inside admin) |
 | 6–7 | Language, area | Arabic (Iraqi dialect), i18n-ready; Karbala service polygon, addresses outside are blocked |
 | 8 | Name | New users enter their name after OTP |
-| 9 | OTP channel | WhatsApp first; SMS fallback, admin toggle. Both through OTPIQ (settled Oct 23, 2026) |
+| 9 | OTP channel | WhatsApp first; SMS fallback, admin toggle. Both through OTPIQ (settled Oct 23, 2026). Our server makes, sends and checks the code; Supabase Auth only holds the session (settled Oct 24, 2026, section 9.1) |
 | 10 | OTP rules | 6 digits, 5 min expiry, 45 s resend, 5 attempts then lockout, 07X numbers only |
 | 11 | Guests | Can browse tips and prices; login required at Book |
 | 12 | Profile | Edit name only; phone change = new OTP; account deletion available |
@@ -94,7 +94,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | UI | Tailwind CSS v4, Radix primitives, Cairo font via `next/font` | `dir="rtl"` at the root; use logical properties only (`ms-`, `pe-`, `start-`) |
 | PWA | Serwist (service worker), web app manifest | Installable; offline page + "you're offline" state. See "PWA and caching" below |
 | Database | Supabase Postgres + Row Level Security | Migrations in `supabase/migrations`; generated TS types |
-| Auth | Supabase Auth, phone OTP + custom **Send SMS Hook** | The hook is a Supabase Edge Function that delivers the code by WhatsApp or SMS (section 9) |
+| Auth | Supabase Auth for users and sessions; phone OTP made, sent (OTPIQ) and checked by our server | After a correct code the server signs the user in with a server-only password. A **Send SMS Hook** refuses every Supabase-sent code (section 9.1) |
 | Storage | Supabase Storage, private buckets + signed URLs | Resumable (TUS) uploads for video |
 | Realtime | Supabase Realtime | Chat messages, order status, crew location |
 | Jobs | `pg_cron` + Edge Functions | Reminders, subscription expiry, stale-slot cleanup |
@@ -462,7 +462,7 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 | `article_categories` | `id`, `name`, `sort` | Seeded |
 | `articles` | `id`, `slug`, `title`, `category_id`, `cover_path`, `body_md`, `read_minutes`, `featured`, `status` (draft \| published), `published_at` | Seeded |
 | `settings` | One row, one typed column per setting | Settings listed below. Readable by everyone, guests included |
-| `otp_requests` | `phone`, `channel`, `channel_used`, `failed_attempts`, `locked_until`, `created_at` | Channel choice read by the Send SMS Hook. Server-only RPCs enforce the limits: `request_otp`, `record_otp_failure`, `otp_locked_until`. Purged after 7 days |
+| `otp_requests` | `phone`, `channel` (picked), `channel_used` (after any fallback), `code_hash`, `sent_at`, `provider_message_id`, `send_error`, `failed_attempts`, `locked_until`, `verified_at`, `created_at` | One row per send. `code_hash` is an HMAC of the code keyed with a server secret; admins read every column but it. Server-only RPCs: `request_otp` (limits), `record_otp_sent` / `record_otp_send_failed`, `check_otp` (single use, 5 min, 5 wrong codes lock 15 min), `otp_locked_until`. Purged after 7 days |
 | `admin_audit_log` | `admin_id`, `action`, `entity`, `entity_id`, `diff` | Every admin write |
 
 Settings (columns of the one `settings` row, migration `settings`): `sms_enabled` (on), `company_phone` (E.164, set before launch), `working_hours_start` / `working_hours_end` / `working_days` (9:00–21:00, Sat–Thu; days use 0 = Sunday … 6 = Saturday), `cleaning_interval_months` (6), `booking_window_days` (14), `cancel_cutoff_hours` (2), `max_tanks_per_order` (6), `terms_md`, `privacy_md`, `min_app_version` (x.y.z), `maintenance_mode` (off). Added by the phase that needs them: `sterilant_text` (Phase 3), `support_response_text` (Phase 5), `subscription_plan` ({price\_iqd, visits, tanks\_covered, description}, Phase 6).
@@ -527,17 +527,21 @@ GPS rule for v1:
 
 ### 9.1 OTP delivery
 
-Supabase Auth generates and checks the code. Our [Send SMS Hook](https://supabase.com/docs/guides/auth/auth-hooks/send-sms-hook) only delivers it. The hook payload carries `user.phone` and `sms.otp` but no channel, so the channel the user picked is saved first.
+Our server makes, sends and checks the code (settled Oct 24, 2026). Supabase Auth keeps the users and sessions but never sends or checks a phone code. Its `/verify` endpoint is public and has no attempt limit, only a per-IP rate limit, so a code Supabase made could be guessed from many IPs around our lock. The code lives in `src/lib/otp/`.
 
-1. Login screen → Server Action `requestOtp(phone, channel)`. It validates the number, applies our rate limit (3 sends per 10 minutes, 10 per day per phone), writes `otp_requests`, then calls `supabase.auth.signInWithOtp({ phone })`.
-2. Supabase calls the hook, an Edge Function `send-otp` that verifies the hook signature. It reads the latest `otp_requests` row for that phone:
-   - Channel `whatsapp`: send through [OTPIQ](https://otpiq.com/) `POST /sms` with `provider: "whatsapp"`, `smsType: "verification"`.
-   - Channel `sms` and `sms_enabled` on: send through OTPIQ SMS, behind an `SmsSender` interface so another provider can be added later.
-   - WhatsApp call fails right away and `sms_enabled` is on: retry once over SMS, and record `channel_used`.
-3. OTP screen → Server Action `verifyOtp(phone, code)` → `supabase.auth.verifyOtp`. Failures are counted in `otp_requests`; the 5th failure locks the phone for 15 minutes.
-4. Supabase Auth settings: OTP length 6, expiry 300 s.
+1. Login screen → Server Action → `requestOtp({ phone, channel })`. It validates the number (Zod, `src/lib/phone.ts`), makes a random 6-digit code and calls `request_otp`, which applies our limits (one send per 45 s, 3 per 10 minutes, 10 per 24 hours per phone, SMS only while `sms_enabled` is on, nothing while locked) and stores only an HMAC of the code. Then it sends the code:
+   - Channel `whatsapp`: [OTPIQ](https://otpiq.com/) `POST /sms` with `provider: "whatsapp"`, `smsType: "verification"`. Our own WhatsApp number and template are used once set; OTPIQ's account until then.
+   - Channel `sms`: OTPIQ with `provider: "sms"`. Both go through an `OtpSender` interface, so another provider can be added later.
+   - WhatsApp fails right away (timeout, network or provider error, number refused) and `sms_enabled` is on: retry once over SMS. Not when the failure is our OTPIQ account or OTPIQ's own rate limit, which SMS would hit too.
+   - The outcome goes back through `record_otp_sent` (with `channel_used`) or `record_otp_send_failed`. A failed send doesn't start the 45 s wait, so Login can offer SMS at once.
+2. OTP screen → Server Action → `verifyOtp({ phone, code })`. `check_otp` compares the HMAC with the phone's latest sent code: valid for 5 minutes, usable once, and the 5th wrong code locks the phone for 15 minutes, during which even the right code is refused.
+3. On a correct code the server finds the profile by phone, or creates the user through the Auth admin API (phone confirmed). It then signs in with `signInWithPassword`, using a password derived from the server secret and the user id, which sets the session cookies. That password never changes, because setting a new one through the admin API signs the user out on their other devices. Users created without it (the seed's first admin) get it set on their first login.
+4. Supabase Auth settings (`supabase/config.toml`, and by hand on hosted projects, `docs/supabase-setup.md` step 3): phone provider on with confirmations, sign-ups off, and the Send SMS Hook `private.refuse_auth_sms`, which refuses every send. So `/otp`, `/resend` and phone sign-up called directly deliver nothing, and Supabase never holds a phone code. Every sign-in comes from the app server's IP, so the hosted token-refresh rate limit (which also counts sign-ins) is raised.
+5. OTPIQ problems the owner has to fix (key, credit, spending cap, trial mode, sender ID) go to Sentry without the phone or code. Locally and in CI there is no OTPIQ key and codes are printed in the server terminal; on Vercel a key is required, and Production refuses a dev key.
 
-To do before launch: connect the WhatsApp Business number in OTPIQ and get the Arabic authentication template approved. Put API keys only in Supabase secrets.
+Phone change (Phase 6, decision 12) must use the same flow: our code to the new number, then the admin API changes the phone. Supabase's own phone-change SMS is refused by the hook.
+
+To do before launch: connect the WhatsApp Business number in OTPIQ and get the Arabic authentication template approved. The OTPIQ key lives only in Vercel's server env (`docs/deploy-setup.md` step 5).
 
 ### 9.2 Notifications
 
@@ -656,7 +660,7 @@ zalal/
   src/server/actions/       # Server Actions (all writes)
   messages/ar.json          # every UI string
   supabase/migrations/      # schema, RLS, RPC functions
-  supabase/functions/       # send-otp, send-push, reminders
+  supabase/functions/       # send-push, reminders
   supabase/seed.sql
   tests/unit/  tests/e2e/   # Vitest, Playwright (390x844 viewport)
 ```
@@ -695,7 +699,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 **Phase 1 — Accounts and addresses**
 
 - [x] Schema: profiles, settings, otp\_requests, service\_areas, addresses, tanks; RLS. With the first schema task, add the `db-change` skill, the `rls-auditor` subagent and `supabase/CLAUDE.md` (`docs/claude-code-setup.md` §3.4–3.6)
-- [ ] `send-otp` Edge Function (OTPIQ WhatsApp + SMS sender interface + admin toggle)
+- [x] OTP on the server (OTPIQ WhatsApp + SMS behind an `OtpSender` interface + `sms_enabled` toggle): our server makes, sends and checks the code, and Supabase Auth never sends one (§9.1). Replaces the planned `send-otp` Edge Function, which would have left Supabase's `/verify` open to guessing (§13)
 - [ ] Screens: Welcome, Login, OTP, Name (N1), Location, address list/picker (N2), My tanks (N3); guest mode
 
 * Done when: a real Iraqi number logs in over WhatsApp; turning `sms_enabled` off hides SMS; a pin outside Karbala is refused
@@ -742,7 +746,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 - [ ] Prod Supabase project moved to Pro (Free caps uploads at 50 MB and pauses idle projects); set its global upload limit to at least 100 MB (Storage settings)
 - [ ] Domain bought and connected; Google Maps key restricted to it
-- [ ] OTPIQ WhatsApp number connected and template approved; SMS provider credentials in secrets
+- [ ] OTPIQ WhatsApp number connected and template approved; live OTPIQ key in Vercel Production (`docs/deploy-setup.md` step 5)
 - [ ] Karbala polygon drawn; prices, slots, capacity and subscription price set
 - [ ] Terms and Privacy text replaced; stamp image uploaded
 - [ ] Seeded articles reviewed
@@ -758,8 +762,9 @@ These are assumptions made while writing the spec. Each has a working default, s
 - [ ] **No-show policy (before Phase 3):** no fee or block in v1, only a status and a chat message. OK?
 - [ ] **Subscription details (before Phase 6):** price, number of tanks covered, and whether one visit covers a multi-tank order.
 - [ ] **Operations (before Phase 2):** slot capacity (seeded as 2), working days (seeded Sat–Thu, Friday closed), support hours (seeded 9 AM–9 PM).
-- [x] **SMS provider (before Phase 1):** OTPIQ for both WhatsApp and SMS (settled Oct 23, 2026). The `SmsSender` interface stays, so another provider can be added later.
-- [ ] **OTP verify bypass (before Phase 1, task 2):** our wrong-code count and lock run in the `verifyOtp` Server Action, but a client can call Supabase Auth's `/verify` endpoint directly and skip them; only Supabase's own per-IP limit (`token_verifications`) applies there. Close it (for example by routing verification only through the server) or accept the risk. The same applies to sends: a client can call Auth's `/otp` directly, so `send-otp` must refuse to deliver a code unless a fresh `otp_requests` row (made by `request_otp`) exists for that phone.
+- [x] **SMS provider (before Phase 1):** OTPIQ for both WhatsApp and SMS (settled Oct 23, 2026). The `OtpSender` interface keeps room for another provider later.
+- [x] **OTP verify bypass (before Phase 1, task 2):** closed (settled Oct 24, 2026). Our server makes, sends and checks the code and signs the user in itself, and the Send SMS Hook refuses every Supabase-sent code. So Supabase's `/verify` has no phone code to guess, and calling its `/otp` directly delivers nothing (§9.1).
+- [ ] **Auth gaps for a stolen session (after Phase 1, task 3):** a logged-in user can set their own password (`PUT /auth/v1/user`) and then sign in with it without our code, and can attach an email, which becomes a second way to log in. Both need someone who already holds a valid session; the next code login overwrites a self-set password. Close them (for example a trigger on `auth.users` that accepts only the server-derived password and refuses an email) or accept the risk. Found by the RLS audit of the `otp_server_codes` migration.
 - [x] **Districts (before Phase 1):** free text as designed, 2–60 characters (settled Oct 23, 2026). An admin-managed list can come later if the data gets messy.
 - [ ] **Media retention (before Phase 6):** delete booking videos 90 days after completion?
 - [ ] **Certificate identity (before Phase 4):** company legal name, stamp/signature image, phone for the footer.

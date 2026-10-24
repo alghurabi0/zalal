@@ -43,11 +43,17 @@ Write down each **project ref**, the 20-character id in the project URL (`https:
 
 Go to **Authentication → Sign In / Providers**:
 
-- **Phone**: enable. Leave the SMS provider unset for now; Phase 1 adds our own **Send SMS Hook** (WhatsApp/SMS via OTPIQ), configured under **Authentication → Hooks**.
-- **Phone → Confirm phone**: on. Otherwise a phone + password signup gets a session without any OTP, skipping our send limits.
+- **Phone**: enable. Leave the SMS provider unset. Our server makes, sends (OTPIQ) and checks login codes itself, then signs the user in with a password only the server knows (spec §9.1). Supabase only keeps the sessions.
+- **Phone → Confirm phone**: on. The server creates users already confirmed; any other phone signup would need a Supabase code, which the hook below refuses.
 - **Email**: disable (v1 has no email).
-- OTP expiry `300` seconds, OTP length `6` (spec §9.1).
-- Leave "Allow new users to sign up" on.
+- OTP expiry `300` seconds, OTP length `6`. Unused now, but keep them matching decision 10.
+- **"Allow new users to sign up": off.** The server creates users through the admin API after checking the code, which works with sign-ups off. With them on, anyone could create accounts directly.
+
+After the `otp_server_codes` migration has reached the project (dev: after the merge that brings it; prod: after the next **Deploy prod**), go to **Authentication → Hooks → Send SMS hook**:
+
+- Type **Postgres**, schema `private`, function `refuse_auth_sms`, and enable it. It refuses every send, so a client calling Supabase's `/otp` directly gets no code, and Supabase never holds a phone code that could be guessed at its `/verify` endpoint. If the dashboard doesn't list the `private` schema, tell Claude; a `public` wrapper can be added.
+
+Go to **Authentication → Rate Limits**: raise **token refreshes** to the highest value offered. It is counted per IP and also covers sign-ins, and every login comes from the app server's few IPs, not from the user's phone. Our own per-phone limits (spec §9.1) protect sending; the password Supabase checks is a random 43-character value, so a higher limit gives an attacker nothing.
 
 Go to **Authentication → URL Configuration**. This matters little for Zalal: phone OTP is verified in-app and never follows a redirect link (only email links and OAuth do). So you don't need Vercel to finish this step:
 
@@ -78,7 +84,7 @@ Also create **two personal access tokens** at [supabase.com/dashboard/account/to
   | Migrations | Read-write | `supabase db push` |
   | Edge Functions | Read-write | `supabase functions deploy` |
 
-  Leave everything else off. Set Edge Function secrets (OTPIQ and SMS keys) by hand in the dashboard rather than from CI, so the token needs no Secrets access. If a CI run later fails with a 403, its log names the endpoint; add just that permission, read-only where possible.
+  Leave everything else off. If an Edge Function ever needs a secret, set it by hand in the dashboard rather than from CI, so the token needs no Secrets access. (The OTPIQ key is not one: login codes are sent by the app server, so it lives in Vercel, `docs/deploy-setup.md` step 5.) If a CI run later fails with a 403, its log names the endpoint; add just that permission, read-only where possible.
 - Set an expiry (for example 1 year) and put the renewal date in your calendar.
 
 Why two: a token that can reach both orgs with full access turns any leak (a bad workflow change, a compromised action) into a prod leak. With two tokens, only the approved prod job ever holds the prod token.
@@ -132,7 +138,8 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 
 ## 7. What Claude sets up in Phase 0 (no action from you)
 
-- Done (task 2): `supabase init`, and `supabase/config.toml` mirroring step 3: phone sign-up on, email sign-up off, 6-digit OTP valid 300 s, 45 s between resends, site URL `http://localhost:3000`. The Send SMS Hook section is in place but off until Phase 1 adds `send-otp`. Migrations enable PostGIS, pg_cron and pg_net and create the five buckets.
+- Done (task 2): `supabase init`, and `supabase/config.toml` mirroring step 3: phone sign-up on, email sign-up off, 6-digit OTP valid 300 s, 45 s between resends, site URL `http://localhost:3000`. Migrations enable PostGIS, pg_cron and pg_net and create the five buckets.
+- Done (Phase 1, task 2): sign-ups off and the Send SMS Hook set to `private.refuse_auth_sms` in `config.toml`, as in step 3. Locally the CLI also needs a built-in SMS provider turned on before it enables phone login at all, so `config.toml` turns on Twilio with placeholder values that are never used (Supabase always calls the hook first). Hosted projects don't need that.
 - Done (task 2): the SessionStart hook for cloud sessions installs packages, starts Docker and runs `supabase start` in the background with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`. In this environment the default image registry (AWS ECR) is blocked, but Docker Hub works.
 - `config.toml` only configures local Supabase. Hosted auth settings stay as you set them in step 3; CI never runs `supabase config push`.
 - Done (task 5): GitHub Actions in `.github/workflows/`:
@@ -146,6 +153,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - [ ] Two orgs: Zalal Dev (Free), Zalal (Pro)
 - [ ] `zalal-dev` and `zalal-prod` in Frankfurt; passwords saved
 - [ ] Phone auth on with Confirm phone on, email off, OTP 6 / 300 s, URLs set (both projects)
+- [ ] Sign-ups off, Send SMS hook set to `private.refuse_auth_sms`, token refresh limit raised (both projects, after the migration reaches them)
 - [x] Supabase GitHub integration off for both projects (GitHub Actions deploy instead)
 - [ ] Two personal access tokens, each scoped to one project (Project Settings and API Gateway Keys read, Migrations and Edge Functions read-write)
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets

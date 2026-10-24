@@ -61,30 +61,45 @@ export type Database = {
         Row: {
           channel: Database["public"]["Enums"]["otp_channel"];
           channel_used: Database["public"]["Enums"]["otp_channel"] | null;
+          code_hash: string;
           created_at: string;
           failed_attempts: number;
           id: number;
           locked_until: string | null;
           phone: string;
+          provider_message_id: string | null;
+          send_error: string | null;
+          sent_at: string | null;
+          verified_at: string | null;
         };
         ComputedFields: never;
         Insert: {
           channel: Database["public"]["Enums"]["otp_channel"];
           channel_used?: Database["public"]["Enums"]["otp_channel"] | null;
+          code_hash: string;
           created_at?: string;
           failed_attempts?: number;
           id?: never;
           locked_until?: string | null;
           phone: string;
+          provider_message_id?: string | null;
+          send_error?: string | null;
+          sent_at?: string | null;
+          verified_at?: string | null;
         };
         Update: {
           channel?: Database["public"]["Enums"]["otp_channel"];
           channel_used?: Database["public"]["Enums"]["otp_channel"] | null;
+          code_hash?: string;
           created_at?: string;
           failed_attempts?: number;
           id?: never;
           locked_until?: string | null;
           phone?: string;
+          provider_message_id?: string | null;
+          send_error?: string | null;
+          sent_at?: string | null;
+          verified_at?: string | null;
         };
         Relationships: [];
       };
@@ -255,12 +270,31 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      check_otp: {
+        Args: { p_code_hash: string; p_phone: string };
+        Returns: Record<string, unknown>;
+      };
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
       in_service_area: { Args: { p_lat: number; p_lng: number }; Returns: boolean };
       otp_locked_until: { Args: { p_phone: string }; Returns: string };
-      record_otp_failure: { Args: { p_phone: string }; Returns: Record<string, unknown> };
+      record_otp_send_failed: {
+        Args: { p_error: string; p_request_id: number };
+        Returns: undefined;
+      };
+      record_otp_sent: {
+        Args: {
+          p_channel_used: Database["public"]["Enums"]["otp_channel"];
+          p_provider_message_id?: string;
+          p_request_id: number;
+        };
+        Returns: undefined;
+      };
       request_otp: {
-        Args: { p_channel: Database["public"]["Enums"]["otp_channel"]; p_phone: string };
+        Args: {
+          p_channel: Database["public"]["Enums"]["otp_channel"];
+          p_code_hash: string;
+          p_phone: string;
+        };
         Returns: Record<string, unknown>;
       };
     };
