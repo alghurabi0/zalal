@@ -49,7 +49,7 @@ Cloud sessions start from a fresh clone, so `.claude/hooks/session-start.sh` pre
 
 - `pnpm install --frozen-lockfile`
 - Starts `dockerd` if it isn't running (cloud containers have Docker installed but the daemon stopped) and waits for `docker info`. Local Supabase and the pgTAP tests need it.
-- Starts `pnpm db:start` in the background (`.claude/hooks/start-supabase.sh`, log in `/tmp/supabase-start.log`), so the session doesn't wait on the image pull, then writes `.env.local` from the local keys. It exports `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` and `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium` for the session.
+- Starts `pnpm db:start` in the background (`.claude/hooks/start-supabase.sh`, log in `/tmp/supabase-start.log`), so the session doesn't wait on the image pull, then writes `.env.local` from the local keys. On a resumed session Docker restarts the old Supabase containers by itself, and `supabase start` fails at once while the database is still booting ("container is not ready: starting"). So after a failed start the script waits up to 2 minutes for the database to report healthy and tries again, 3 attempts in all. The log ends with "Supabase is ready." or "Supabase failed to start after 3 attempts". `tests/unit/start-supabase.test.ts` covers it. It exports `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` and `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium` for the session.
 - `db:start` excludes services tests don't need, `edge-runtime` included. Phase 1 drops `edge-runtime` from that list, when the OTP hook needs it.
 
 ### 3.2 `.claude/settings.json` (committed)
@@ -83,18 +83,18 @@ Each skill is written after its workflow has been done by hand once, then refine
 
 - **`/build-screen <Name>`**: reads `design/<Name>.dc.html`, its PNG and the spec §5 entry; lists the "Change:" items, kit components, missing tokens and strings first; builds with the UI kit, `ar.json` and all 4 states; ends with a Playwright screenshot at 390×844 compared with the PNG, and a list of departures.
 - **`/ship-task`**: runs format, lint, typecheck and unit tests, the protected-paths check, `db:test` and types when SQL changed, and e2e when the UI changed; then `/code-review` (plus `/security-review` where relevant), the doc updates, commits, push and the PR. Only you start it; Claude doesn't load it on its own.
-- **`db-change`** (Phase 1, first schema task): create the migration, the RLS policies and the pgTAP tests (allow and deny for each role), regenerate types, and update spec §7 if the design departs from it. It waits until that workflow has been done by hand once.
+- **`db-change`** (added in Phase 1, task 1, after doing that schema by hand): plan, write the pgTAP tests first (allow and deny for each role) and watch them fail, write the migration, check one path through the real Auth or REST API, regenerate types, run `rls-auditor`, and update spec §7 for each departure. Claude loads it for any SQL task.
 
 ### 3.5 Subagents (`.claude/agents/`, from Phase 1)
 
-- **`rls-auditor`**: read-only. Given a migration, tries to find ways one customer could read or write another customer's data, or a crew could see orders it isn't assigned to. Writes failing pgTAP tests for what it finds. Add it with the first RLS policies.
+- **`rls-auditor`** (added in Phase 1, task 1): given migrations or a branch, tries to find ways a guest, one customer, a crew or an admin could read or write data they shouldn't: leftover default grants, policy gaps, foreign-key tricks, writable server-owned columns, unsafe `security definer` functions. It changes no code; it writes only new `rls_audit_<topic>.test.sql` files, each a failing pgTAP test that proves a finding, and reports a fix.
 - **`design-checker`**: read-only. Compares a screenshot with the design file and its PNG and reports differences (spacing, tokens, copy, RTL mistakes).
 
 ### 3.6 Nested CLAUDE.md files (when the folders exist)
 
 These load only when Claude works in that folder, which keeps the root file short:
 
-- `supabase/CLAUDE.md` (Phase 1): SQL conventions. `security definer` functions must `set search_path = ''` (the guards check this), plus naming, `transition_order` rules and pgTAP helpers.
+- `supabase/CLAUDE.md` (added in Phase 1, task 1): SQL conventions: naming, revoking Supabase's default grants, column grants, role helpers, `security definer` rules (the guards check `search_path = ''`), error codes the app maps, the `transition_order` rule and the pgTAP helpers and patterns.
 - `src/app/crew/CLAUDE.md` (Phase 3): mobile, one big action button, GPS and Wake Lock rules, the upload retry queue.
 - `src/app/admin/CLAUDE.md` (Phase 3): desktop-first, every write goes to the audit log, sound and push alerts.
 

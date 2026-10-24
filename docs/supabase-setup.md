@@ -44,6 +44,7 @@ Write down each **project ref**, the 20-character id in the project URL (`https:
 Go to **Authentication → Sign In / Providers**:
 
 - **Phone**: enable. Leave the SMS provider unset for now; Phase 1 adds our own **Send SMS Hook** (WhatsApp/SMS via OTPIQ), configured under **Authentication → Hooks**.
+- **Phone → Confirm phone**: on. Otherwise a phone + password signup gets a session without any OTP, skipping our send limits.
 - **Email**: disable (v1 has no email).
 - OTP expiry `300` seconds, OTP length `6` (spec §9.1).
 - Leave "Allow new users to sign up" on.
@@ -144,7 +145,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 
 - [ ] Two orgs: Zalal Dev (Free), Zalal (Pro)
 - [ ] `zalal-dev` and `zalal-prod` in Frankfurt; passwords saved
-- [ ] Phone auth on, email off, OTP 6 / 300 s, URLs set (both projects)
+- [ ] Phone auth on with Confirm phone on, email off, OTP 6 / 300 s, URLs set (both projects)
 - [x] Supabase GitHub integration off for both projects (GitHub Actions deploy instead)
 - [ ] Two personal access tokens, each scoped to one project (Project Settings and API Gateway Keys read, Migrations and Edge Functions read-write)
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets

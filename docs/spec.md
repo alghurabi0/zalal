@@ -40,7 +40,7 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 4 | Surfaces | Customer app, crew app, admin dashboard (support inbox inside admin) |
 | 6–7 | Language, area | Arabic (Iraqi dialect), i18n-ready; Karbala service polygon, addresses outside are blocked |
 | 8 | Name | New users enter their name after OTP |
-| 9 | OTP channel | WhatsApp first; SMS fallback via the owner's Iraqi SMS provider, admin toggle |
+| 9 | OTP channel | WhatsApp first; SMS fallback, admin toggle. Both through OTPIQ (settled Oct 23, 2026) |
 | 10 | OTP rules | 6 digits, 5 min expiry, 45 s resend, 5 attempts then lockout, 07X numbers only |
 | 11 | Guests | Can browse tips and prices; login required at Book |
 | 12 | Profile | Edit name only; phone change = new OTP; account deletion available |
@@ -436,11 +436,11 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 
 | Table | Key columns | Notes |
 | --- | --- | --- |
-| `profiles` | `id` (= `auth.users.id`), `role` (customer \| crew \| admin), `full_name`, `phone`, `reminders_enabled`, `deleted_at` | Created by a trigger on signup |
+| `profiles` | `id` (= `auth.users.id`), `role` (`app_role`: customer \| crew \| admin), `full_name` (null until N1), `phone` (E.164 copy of the Auth phone), `reminders_enabled`, `deleted_at` | Created by a trigger on signup; the phone check refuses any non-07X signup. Users edit only `full_name` and `reminders_enabled` |
 | `crews` | `id`, `name` ("فريق 1"), `user_id`, `active` | One login per crew |
-| `service_areas` | `id`, `name`, `polygon` (PostGIS geography) | Karbala seeded; edited in admin |
-| `addresses` | `id`, `user_id`, `label` (home \| family \| work), `district`, `landmark`, `location` (point), `is_default`, `deleted_at` | Unique (`user_id`, `label`) |
-| `tanks` | `id`, `user_id`, `address_id`, `type` (roof \| ground), `size` (s \| m \| l), `nickname`, `last_cleaned_at` |  |
+| `service_areas` | `id`, `name`, `area` (geography MultiPolygon), `active` | Karbala placeholder seeded; edited in admin (A13). `in_service_area(lat, lng)` checks a point against the active areas |
+| `addresses` | `id`, `user_id`, `label` (home \| family \| work), `district` (free text), `landmark`, `lat`, `lng`, `location` (point generated from lat/lng), `is_default`, `deleted_at` | Pin must be in an active service area (error `ZL001`). Unique (`user_id`, `label`) and one default among live rows. Soft delete through `delete_address()`, which also removes the address's tanks |
+| `tanks` | `id`, `user_id`, `address_id`, `type` (roof \| ground), `size` (s \| m \| l), `nickname`, `last_cleaned_at` | Foreign key on (`address_id`, `user_id`), so a tank sits only on its owner's address. `last_cleaned_at` is set only by order completion |
 | `price_list` | `tank_type`, `size`, `price_iqd`, `updated_by` | Primary key (type, size); 6 rows |
 | `slots` | `id`, `label`, `start_time`, `end_time`, `capacity`, `weekdays` int\[\], `active` | e.g. "8–10 الصبح" |
 | `blocked_dates` | `date`, `reason` | Holidays such as Arbaeen and Ashura |
@@ -461,17 +461,18 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 | `subscriptions` | `id`, `user_id`, `status` (requested \| active \| expired \| cancelled), `price_iqd`, `visits_total`, `visits_used`, `tanks_covered`, `starts_on`, `ends_on`, `paid`, `admin_note` | Managed by hand in admin |
 | `article_categories` | `id`, `name`, `sort` | Seeded |
 | `articles` | `id`, `slug`, `title`, `category_id`, `cover_path`, `body_md`, `read_minutes`, `featured`, `status` (draft \| published), `published_at` | Seeded |
-| `settings` | `key`, `value` (jsonb) | Keys listed below |
-| `otp_requests` | `phone`, `channel`, `created_at` | Channel choice read by the Send SMS Hook; rate-limit window |
+| `settings` | One row, one typed column per setting | Settings listed below. Readable by everyone, guests included |
+| `otp_requests` | `phone`, `channel`, `channel_used`, `failed_attempts`, `locked_until`, `created_at` | Channel choice read by the Send SMS Hook. Server-only RPCs enforce the limits: `request_otp`, `record_otp_failure`, `otp_locked_until`. Purged after 7 days |
 | `admin_audit_log` | `admin_id`, `action`, `entity`, `entity_id`, `diff` | Every admin write |
 
-Settings keys: `sms_enabled`, `company_phone`, `working_hours` ({start, end, days}), `support_response_text`, `cleaning_interval_months` (6), `booking_window_days` (14), `cancel_cutoff_hours` (2), `max_tanks_per_order` (6), `sterilant_text`, `subscription_plan` ({price\_iqd, visits, tanks\_covered, description}), `terms_md`, `privacy_md`, `min_app_version`, `maintenance_mode`.
+Settings (columns of the one `settings` row, migration `settings`): `sms_enabled` (on), `company_phone` (E.164, set before launch), `working_hours_start` / `working_hours_end` / `working_days` (9:00–21:00, Sat–Thu; days use 0 = Sunday … 6 = Saturday), `cleaning_interval_months` (6), `booking_window_days` (14), `cancel_cutoff_hours` (2), `max_tanks_per_order` (6), `terms_md`, `privacy_md`, `min_app_version` (x.y.z), `maintenance_mode` (off). Added by the phase that needs them: `sterilant_text` (Phase 3), `support_response_text` (Phase 5), `subscription_plan` ({price\_iqd, visits, tanks\_covered, description}, Phase 6).
 
 Access rules (RLS):
 
 - A customer reads and writes only their own rows. Their order rows can be written only through RPC functions.
 - A crew reads orders, media and addresses only for orders assigned to it. It writes media, live location and status, all through RPC functions.
-- An admin reads and writes everything. Every admin write goes to `admin_audit_log`.
+- An admin reads and writes everything. Every admin write goes to `admin_audit_log`. Until Phase 3 adds those audited RPCs, admins only read; the owner changes settings with SQL.
+- How it's built: every table revokes Supabase's default grants and grants only what each role needs, with column grants for server-owned columns. Policies read the role from `profiles` through `private.current_user_role()` and `private.is_admin()`, so a role change applies at once. Conventions are in `supabase/CLAUDE.md`.
 
 Storage buckets: `order-media`, `chat-media`, `ticket-media` and `certificates` are private, with signed URLs that last 1 hour. `public-content` (article covers) is public. Each bucket also has a size cap and a file-type allow-list (migration `storage_buckets`):
 
@@ -531,7 +532,7 @@ Supabase Auth generates and checks the code. Our [Send SMS Hook](https://supabas
 1. Login screen → Server Action `requestOtp(phone, channel)`. It validates the number, applies our rate limit (3 sends per 10 minutes, 10 per day per phone), writes `otp_requests`, then calls `supabase.auth.signInWithOtp({ phone })`.
 2. Supabase calls the hook, an Edge Function `send-otp` that verifies the hook signature. It reads the latest `otp_requests` row for that phone:
    - Channel `whatsapp`: send through [OTPIQ](https://otpiq.com/) `POST /sms` with `provider: "whatsapp"`, `smsType: "verification"`.
-   - Channel `sms` and `sms_enabled` on: send through the SMS provider (your Iraqi SMS provider, behind an `SmsSender` interface; OTPIQ SMS works as a second implementation).
+   - Channel `sms` and `sms_enabled` on: send through OTPIQ SMS, behind an `SmsSender` interface so another provider can be added later.
    - WhatsApp call fails right away and `sms_enabled` is on: retry once over SMS, and record `channel_used`.
 3. OTP screen → Server Action `verifyOtp(phone, code)` → `supabase.auth.verifyOtp`. Failures are counted in `otp_requests`; the 5th failure locks the phone for 15 minutes.
 4. Supabase Auth settings: OTP length 6, expiry 300 s.
@@ -693,7 +694,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 **Phase 1 — Accounts and addresses**
 
-- [ ] Schema: profiles, settings, otp\_requests, service\_areas, addresses, tanks; RLS. With the first schema task, add the `db-change` skill, the `rls-auditor` subagent and `supabase/CLAUDE.md` (`docs/claude-code-setup.md` §3.4–3.6)
+- [x] Schema: profiles, settings, otp\_requests, service\_areas, addresses, tanks; RLS. With the first schema task, add the `db-change` skill, the `rls-auditor` subagent and `supabase/CLAUDE.md` (`docs/claude-code-setup.md` §3.4–3.6)
 - [ ] `send-otp` Edge Function (OTPIQ WhatsApp + SMS sender interface + admin toggle)
 - [ ] Screens: Welcome, Login, OTP, Name (N1), Location, address list/picker (N2), My tanks (N3); guest mode
 
@@ -757,8 +758,9 @@ These are assumptions made while writing the spec. Each has a working default, s
 - [ ] **No-show policy (before Phase 3):** no fee or block in v1, only a status and a chat message. OK?
 - [ ] **Subscription details (before Phase 6):** price, number of tanks covered, and whether one visit covers a multi-tank order.
 - [ ] **Operations (before Phase 2):** slot capacity (seeded as 2), working days (seeded Sat–Thu, Friday closed), support hours (seeded 9 AM–9 PM).
-- [ ] **SMS provider (before Phase 1):** name and API docs of your Iraqi SMS provider.
-- [ ] **Districts (before Phase 1):** free text as designed, or an admin-managed list of Karbala districts for cleaner data?
+- [x] **SMS provider (before Phase 1):** OTPIQ for both WhatsApp and SMS (settled Oct 23, 2026). The `SmsSender` interface stays, so another provider can be added later.
+- [ ] **OTP verify bypass (before Phase 1, task 2):** our wrong-code count and lock run in the `verifyOtp` Server Action, but a client can call Supabase Auth's `/verify` endpoint directly and skip them; only Supabase's own per-IP limit (`token_verifications`) applies there. Close it (for example by routing verification only through the server) or accept the risk. The same applies to sends: a client can call Auth's `/otp` directly, so `send-otp` must refuse to deliver a code unless a fresh `otp_requests` row (made by `request_otp`) exists for that phone.
+- [x] **Districts (before Phase 1):** free text as designed, 2–60 characters (settled Oct 23, 2026). An admin-managed list can come later if the data gets messy.
 - [ ] **Media retention (before Phase 6):** delete booking videos 90 days after completion?
 - [ ] **Certificate identity (before Phase 4):** company legal name, stamp/signature image, phone for the footer.
 - [ ] **Crew and admin designs (optional, before Phase 3):** design them in the canvas first, or let Claude Code build them from the kit?
