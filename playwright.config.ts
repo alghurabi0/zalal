@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { OTP_OUTBOX } from "./tests/e2e/helpers/outbox";
+
 const PORT = 3100;
 
 // Cloud sessions ship a Chromium build that may not match this Playwright
@@ -38,5 +40,8 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    // Without an OTPIQ key the app logs login codes; this also writes them
+    // where the tests can read them (src/lib/otp/senders.ts).
+    env: { OTP_DEV_OUTBOX: OTP_OUTBOX },
   },
 });
