@@ -297,6 +297,7 @@ export type Database = {
         };
         Returns: Record<string, unknown>;
       };
+      set_login_password: { Args: { p_password: string; p_user_id: string }; Returns: undefined };
     };
     Enums: {
       address_label: "home" | "family" | "work";

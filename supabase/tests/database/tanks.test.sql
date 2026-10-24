@@ -149,7 +149,14 @@ select throws_ok(
 
 select tests.authenticate_as(tests.user_id('+9647504444444'));
 
-select is((select count(*)::int from public.tanks), 2, 'an admin reads every tank');
+-- Counted over this test's customers only, so rows other suites (or a
+-- local e2e run) left behind don't change the answer.
+select is(
+  (select count(*)::int from public.tanks
+   where user_id in (tests.user_id('+9647801111111'), tests.user_id('+9647802222222'))),
+  2,
+  'an admin reads every tank'
+);
 
 select throws_ok(
   $$ insert into public.tanks (user_id, address_id, type, size)

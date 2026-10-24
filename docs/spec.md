@@ -109,7 +109,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
-Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22.18+ (it runs the `.ts` scripts and hooks directly), Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4. Monitoring adds @sentry/nextjs 11.9.0 (supports Next 16 with `cacheComponents` and Turbopack) and posthog-js 1.438.20. CI uses actions/checkout v7, actions/setup-node v7 (Node 22), pnpm/action-setup v6 and actions/upload-artifact v7.
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22.18+ (it runs the `.ts` scripts and hooks directly), Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4. Monitoring adds @sentry/nextjs 11.9.0 (supports Next 16 with `cacheComponents` and Turbopack) and posthog-js 1.438.20. Phase 1 adds @vis.gl/react-google-maps 1.10.1 (the Location map and Places search) and, for its types, @types/google.maps 3.66.7. CI uses actions/checkout v7, actions/setup-node v7 (Node 22), pnpm/action-setup v6 and actions/upload-artifact v7.
 
 **PWA and caching (Phase 0).** Serwist runs in its "configurator mode": `pnpm build` runs `next build && serwist build`, and the CLI bundles `src/app/sw.ts` into `public/sw.js` (git-ignored) outside the Next.js bundler. The Turbopack integration (`@serwist/turbopack`) is not used, because its route handler exports `dynamic` and `revalidate`, which Next.js rejects when `cacheComponents` is on. The worker is registered in the root layout and is off in `pnpm dev`. Caching policy:
 
@@ -119,6 +119,8 @@ Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, 
 - Phase 5 adds the Web Push handlers to the same `src/app/sw.ts`.
 
 One web app manifest (`src/app/manifest.ts`) covers all three surfaces: crew and admin also start at `/`, and the role picks the surface after login. Its name and description come from `messages/ar.json`, and the theme and splash color is `navy`.
+
+**Sessions and routing (Phase 1).** `src/proxy.ts` runs before every page. It refreshes the Supabase session cookies, sends a guest on a page that needs a login (`loginRequiredPrefixes` in `src/lib/routes.ts`) to Login with `?next=` set, sends a logged-in user away from Welcome and Login, and shows Welcome on first open only (the `zl_welcomed` cookie). Each page checks the session again on the server (`requireViewer` in `src/lib/auth/viewer.ts`), and pages for one role send other roles to their own surface. `next` is accepted only as a path on this site (`safeNext`). Next keeps recently visited pages alive, so forms that must start fresh are keyed by their data, and logout reloads the page so nothing from the account stays in memory on a shared phone.
 
 **Monitoring, analytics and releases (Phase 0).** Owner setup is in `docs/deploy-setup.md`.
 
@@ -184,7 +186,7 @@ Illustration-only colors don't need tokens. Keep them inside the illustration or
 - Radii: inputs and chips 12–14, buttons 16, cards 18, round icon buttons 22 (44×44), bottom sheet 26 top corners.
 - Heights: primary button 56 (54 in footers, 48 inside cards), inputs 56 (46 in compact forms), chips 40–52. Minimum touch target 44.
 - Screen padding 20–24; vertical gaps 8–14.
-- Icons: 24-grid, 2px stroke, round caps. Use `lucide-react` and match the canvas glyphs.
+- Icons: 24-grid, 2px stroke, round caps. Use `lucide-react` and match the canvas glyphs. lucide has no water tank, so Booking's two tank glyphs live in `src/components/icons/tank-icons.tsx`.
 - Logo: the three-wave mark in `Main.dc.html`, extracted to `public/brand/logo.svg`. `pnpm icons` (`scripts/generate-icons.mjs`) generates the rest from it (commit the output): the Welcome tile (`public/brand/logo-tile.svg`, also the favicon `src/app/icon.svg`), the 192 and 512 icons (rounded tile), a 512 maskable icon (full bleed, mark inside the 80% safe zone) and the 180 Apple touch icon (`src/app/apple-icon.png`, full bleed).
 - Numbers: Western digits (0–9) as in the designs; currency written "35,000 د.ع".
 - Phone numbers and times are wrapped in `dir="ltr"` spans, as in the designs.
@@ -234,8 +236,8 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 
 ### 5.1 Welcome — `Main.dc.html`
 
-- Route `/welcome`. Customer URLs are kept in `src/lib/routes.ts`: Home `/`, Login `/login`, Orders `/orders`, Booking `/book`, Chat `/chat`, Profile `/profile`. Until Phase 1 builds Home, `/` redirects to `/welcome` (`next.config.ts`).
-- Shown on first open only. A logged-in user goes straight to Home.
+- Route `/welcome`. Customer URLs are kept in `src/lib/routes.ts`: Home `/`, Login `/login`, OTP `/login/verify`, Name `/onboarding/name`, Location `/addresses/new` and `/addresses/[id]/edit`, My tanks `/tanks`, Orders `/orders`, Booking `/book`, Chat `/chat`, Profile `/profile`, Terms `/terms`, Privacy `/privacy`.
+- Shown on first open only: a guest's first visit to `/` redirects here and sets the `zl_welcomed` cookie (also set when Welcome is opened directly). A logged-in user goes straight to Home (`src/proxy.ts`).
 - "ابدأ الآن" opens Login. "تصفح بدون تسجيل" opens Home in guest mode.
 
 ### 5.2 Login — `Login.dc.html`
@@ -244,7 +246,9 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Channel picker: WhatsApp (default) and SMS. **The SMS button is hidden when the admin toggle `sms_enabled` is off.**
 - "أرسل الرمز" stays disabled until the number is valid.
 - Errors: invalid number; too many requests ("جرب بعد X دقايق"); WhatsApp send failed, which offers SMS if enabled, otherwise "جرب مرة ثانية".
-- Terms and Privacy links open the placeholder pages (N14).
+- Terms and Privacy links open the placeholder pages (N14). Phase 1 shows the settings text as plain paragraphs (an empty state until it is written); Markdown rendering comes with N14 in Phase 6.
+- While `sms_enabled` is off, the intro says "على واتساب" instead of "برسالة SMS أو واتساب".
+- The number being verified travels to OTP in an httpOnly cookie, never in the URL, so it stays out of analytics and logs.
 
 ### 5.3 OTP — `Otp.dc.html`
 
@@ -252,7 +256,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - **Change:** replace the on-screen keypad with the system number keyboard. Keep the 6 boxes, backed by one hidden input with `inputmode="numeric"` and `autocomplete="one-time-code"`, so paste and SMS autofill work.
 - Auto-submit at 6 digits. A wrong code shows "الرمز غلط، باقي X محاولات"; after 5 wrong codes the number is locked for 15 minutes.
 - The resend timer runs 45 s, then offers "أعد الإرسال" and, if SMS is enabled, "أرسل برسالة SMS".
-- Routing after success: a new user goes to Name (N1), then Location; a user without an address goes to Location; everyone else returns to where they were going (e.g., Booking) or to Home.
+- Routing after success: crew and admins go to their surface (§2); a new user goes to Name (N1), then Location; a user without an address goes to Location; everyone else returns to where they were going (e.g., Booking) or to Home. "Where they were going" is the `next` the login started with.
 
 ### 5.4 Location — `Location.dc.html`
 
@@ -262,6 +266,8 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - The label chips (البيت / بيت الأهل / الشغل) are kept; a label may be used once per user.
 - On save, the server checks the pin against the service polygon. Outside the area: "بعد ما نخدم منطقتك، حالياً بس كربلاء", and the address is not saved.
 - Location permission denied: the map stays on Karbala center and search still works.
+- A new address asks for the position on open. Labels the user's other addresses already use are shown disabled, and the first free one is preselected. With all three labels used, the screen explains it instead of the form.
+- **Without a Google Maps key** (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` unset, as locally and in CI): the map is the canvas drawing, the search box is hidden, and the pin is set only by "موقعي الحالي" (or stays on Karbala center). The subtitle says so.
 
 ### 5.5 Home — `Home.dc.html`
 
@@ -277,6 +283,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Quick actions: اشتراك سنوي → Subscription (N8); شهاداتي → Certificates (N12); راسلنا → Chat; بلّغ عن مشكلة → Issue.
 - Tips strip: the 2 newest featured articles, each opening Article (N9).
 - Guest mode: the header shows "سجّل دخول"; there are no order or tank cards; a price-list card appears with a book CTA that goes through login.
+- **Phase 1 builds a shell**: the header (address picker N2, or "سجّل دخول" for guests), the greeting and the tab bar. The bell, cards, quick actions and tips strip come with the phases that own their data (the price list in Phase 2). The address chosen in N2 is kept per device (`zl_address` cookie) and falls back to the default address.
 
 ### 5.6 Tips — `Tips.dc.html`
 
@@ -297,6 +304,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
   - شهادات التعقيم → N12
   - **Add:** بلاغاتي → N11, الإعدادات → N13
 - The reminder toggle saves `profiles.reminders_enabled`. Logout asks for confirmation, then shows Welcome.
+- **Phase 1 builds a shell**: name and phone, عناويني (N2 as a sheet), خزاناتي (N3) and logout. The rest comes in Phase 6.
 
 ### 5.9 Booking step 1 — `Booking.dc.html`
 
@@ -382,9 +390,9 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 
 | # | Screen | Entry | Content and rules |
 | --- | --- | --- | --- |
-| N1 | Name | After OTP, new users | One field "اسمك", 2–40 characters, required |
-| N2 | Address list / picker (sheet) | Home header, Booking, Profile | Label, district, landmark; select, edit, delete (blocked while an active order uses it), add (opens Location), mark default |
-| N3 | My tanks | Profile | Grouped by address: type, size, optional nickname, last cleaned, next due; add, edit, delete |
+| N1 | Name | After OTP, new users | One field "اسمك", 2–40 characters, required. Spaces are trimmed and collapsed. No back button: the user is already logged in |
+| N2 | Address list / picker (sheet) | Home header, Booking, Profile | Label, district, landmark; select, edit, delete (blocked while an active order uses it, from Phase 2), add (opens Location; hidden at three addresses), mark default. Delete asks first and also removes the address's tanks |
+| N3 | My tanks | Profile | Grouped by address: type, size, optional nickname (up to 30 characters), last cleaned, next due (last cleaned + `cleaning_interval_months`); add, edit, delete. Add and edit use a sheet with Booking's type and size tiles; a tank stays on its address |
 | N4 | Order details | Orders, Home card, notifications | Status timeline, summary, price, attachments; buttons by status: cancel, reschedule, track, progress, certificate, help |
 | N5 | Booking success | After checkout | "وصلنا طلبك #1024 · بانتظار تأكيد الشركة"; a soft push-permission card; buttons to Order details and Home |
 | N6 | Cancel sheet | N4, Chat | Reason (تغيرت ظروفي / الموعد ما يناسبني / شي ثاني) + confirm. Within 2 h: blocked, "راسلنا بالمحادثة" |
@@ -464,6 +472,7 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 | `settings` | One row, one typed column per setting | Settings listed below. Readable by everyone, guests included |
 | `otp_requests` | `phone`, `channel` (picked), `channel_used` (after any fallback), `code_hash`, `sent_at`, `provider_message_id`, `send_error`, `failed_attempts`, `locked_until`, `verified_at`, `created_at` | One row per send. `code_hash` is an HMAC of the code keyed with a server secret; admins read every column but it. Server-only RPCs: `request_otp` (limits), `record_otp_sent` / `record_otp_send_failed`, `check_otp` (single use, 5 min, 5 wrong codes lock 15 min), `otp_locked_until`. Purged after 7 days |
 | `admin_audit_log` | `admin_id`, `action`, `entity`, `entity_id`, `diff` | Every admin write |
+| `auth.users` (Supabase Auth's) | — | Guarded by the trigger `guard_auth_user`: a password changes only inside the server-only RPC `set_login_password` (which also ends the user's sessions), otherwise `ZL002`; no new email address or pending email change (`ZL003`; a row that already has an email keeps it). So a stolen session can't add a way in (§9.1) |
 
 Settings (columns of the one `settings` row, migration `settings`): `sms_enabled` (on), `company_phone` (E.164, set before launch), `working_hours_start` / `working_hours_end` / `working_days` (9:00–21:00, Sat–Thu; days use 0 = Sunday … 6 = Saturday), `cleaning_interval_months` (6), `booking_window_days` (14), `cancel_cutoff_hours` (2), `max_tanks_per_order` (6), `terms_md`, `privacy_md`, `min_app_version` (x.y.z), `maintenance_mode` (off). Added by the phase that needs them: `sterilant_text` (Phase 3), `support_response_text` (Phase 5), `subscription_plan` ({price\_iqd, visits, tanks\_covered, description}, Phase 6).
 
@@ -492,7 +501,7 @@ Neither surface has designs. Build both from the same tokens and components as t
 
 | # | Screen | Content and rules |
 | --- | --- | --- |
-| C1 | Login | Same phone + OTP. A crew-role account lands on C2; any other role is refused |
+| C1 | Login | Same phone + OTP. A crew-role account lands on C2; any other role is refused. Until Phase 3, `/crew` and `/admin` are placeholders with logout |
 | C2 | My jobs | Today and tomorrow, grouped by slot. Each card shows the order number, slot, district + landmark, tank lines, a customer-note preview, the customer media count and a status chip |
 | C3 | Job detail | Map pin with "افتح بخرائط كوكل" (deep link), "اتصل بالزبون", tank lines, note, customer photos/videos, timeline |
 | C3a | Status button | One large button that moves the job to its next status: طلعنا → وصلنا → بدينا الشغل (needs a before photo) → خلصنا (opens C4). A secondary action, "الزبون مو موجود", marks a no-show and needs a note |
@@ -535,7 +544,7 @@ Our server makes, sends and checks the code (settled Oct 24, 2026). Supabase Aut
    - WhatsApp fails right away (timeout, network or provider error, number refused) and `sms_enabled` is on: retry once over SMS. Not when the failure is our OTPIQ account or OTPIQ's own rate limit, which SMS would hit too.
    - The outcome goes back through `record_otp_sent` (with `channel_used`) or `record_otp_send_failed`. A failed send doesn't start the 45 s wait, so Login can offer SMS at once.
 2. OTP screen → Server Action → `verifyOtp({ phone, code })`. `check_otp` compares the HMAC with the phone's latest sent code: valid for 5 minutes, usable once, and the 5th wrong code locks the phone for 15 minutes, during which even the right code is refused.
-3. On a correct code the server finds the profile by phone, or creates the user through the Auth admin API (phone confirmed). It then signs in with `signInWithPassword`, using a password derived from the server secret and the user id, which sets the session cookies. That password never changes, because setting a new one through the admin API signs the user out on their other devices. Users created without it (the seed's first admin) get it set on their first login.
+3. On a correct code the server finds the profile by phone, or creates the user through the Auth admin API (phone confirmed). It then signs in with `signInWithPassword`, using a password derived from the server secret and the user id, which sets the session cookies. That password never changes, because setting a new one signs the user out on their other devices. Users created without it (the seed's first admin) get it set on their first login, and so does everyone once after the secret key is rotated. The server sets it with the server-only RPC `set_login_password`, and a trigger on `auth.users` refuses every other password change, and any email address. So someone holding a stolen session can't call Auth's `PUT /auth/v1/user` to give themselves a password or an email, which would be a way in without our code (migration `auth_user_guard`).
 4. Supabase Auth settings (`supabase/config.toml`, and by hand on hosted projects, `docs/supabase-setup.md` step 3): phone provider on with confirmations, sign-ups off, and the Send SMS Hook `private.refuse_auth_sms`, which refuses every send. So `/otp`, `/resend` and phone sign-up called directly deliver nothing, and Supabase never holds a phone code. Every sign-in comes from the app server's IP, so the hosted token-refresh rate limit (which also counts sign-ins) is raised.
 5. OTPIQ problems the owner has to fix (key, credit, spending cap, trial mode, sender ID) go to Sentry without the phone or code. Locally and in CI there is no OTPIQ key and codes are printed in the server terminal; on Vercel a key is required, and Production refuses a dev key.
 
@@ -568,7 +577,7 @@ Push permission: ask with an in-app card on Booking success (N5), never on first
 
 ### 9.3 Other integrations
 
-- Google Maps: one browser key restricted to the app's domains. It enables Maps JavaScript API and Places API (New). The server checks addresses against `service_areas` with PostGIS, with no Google call. No reverse geocoding in v1.
+- Google Maps: one browser key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) restricted to the app's domains. It enables Maps JavaScript API and Places API (New). The key is optional: without it Location falls back to a drawn map (§5.4). Owner setup: `docs/deploy-setup.md` step 6. The server checks addresses against `service_areas` with PostGIS, with no Google call. No reverse geocoding in v1.
 - Sentry for the Next.js app and the Edge Functions; PostHog for funnels (login → address → booking → confirmed).
 - Email: none in v1.
 
@@ -700,7 +709,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 - [x] Schema: profiles, settings, otp\_requests, service\_areas, addresses, tanks; RLS. With the first schema task, add the `db-change` skill, the `rls-auditor` subagent and `supabase/CLAUDE.md` (`docs/claude-code-setup.md` §3.4–3.6)
 - [x] OTP on the server (OTPIQ WhatsApp + SMS behind an `OtpSender` interface + `sms_enabled` toggle): our server makes, sends and checks the code, and Supabase Auth never sends one (§9.1). Replaces the planned `send-otp` Edge Function, which would have left Supabase's `/verify` open to guessing (§13)
-- [ ] Screens: Welcome, Login, OTP, Name (N1), Location, address list/picker (N2), My tanks (N3); guest mode
+- [x] Screens: Welcome, Login, OTP, Name (N1), Location, address list/picker (N2), My tanks (N3); guest mode. Also the Phase 1 shells of Home and Profile (entry points for N2 and N3), `/crew` and `/admin` placeholders, plain-text Terms and Privacy, and `src/proxy.ts`
 
 * Done when: a real Iraqi number logs in over WhatsApp; turning `sms_enabled` off hides SMS; a pin outside Karbala is refused
 
@@ -764,7 +773,7 @@ These are assumptions made while writing the spec. Each has a working default, s
 - [ ] **Operations (before Phase 2):** slot capacity (seeded as 2), working days (seeded Sat–Thu, Friday closed), support hours (seeded 9 AM–9 PM).
 - [x] **SMS provider (before Phase 1):** OTPIQ for both WhatsApp and SMS (settled Oct 23, 2026). The `OtpSender` interface keeps room for another provider later.
 - [x] **OTP verify bypass (before Phase 1, task 2):** closed (settled Oct 24, 2026). Our server makes, sends and checks the code and signs the user in itself, and the Send SMS Hook refuses every Supabase-sent code. So Supabase's `/verify` has no phone code to guess, and calling its `/otp` directly delivers nothing (§9.1).
-- [ ] **Auth gaps for a stolen session (after Phase 1, task 3):** a logged-in user can set their own password (`PUT /auth/v1/user`) and then sign in with it without our code, and can attach an email, which becomes a second way to log in. Both need someone who already holds a valid session; the next code login overwrites a self-set password. Close them (for example a trigger on `auth.users` that accepts only the server-derived password and refuses an email) or accept the risk. Found by the RLS audit of the `otp_server_codes` migration.
+- [x] **Auth gaps for a stolen session (after Phase 1, task 3):** closed (settled Oct 24, 2026). A logged-in user could set their own password (`PUT /auth/v1/user`) and then sign in without our code, or attach an email as a second way in. A trigger on `auth.users` now refuses both: a password changes only inside the server-only RPC `set_login_password`, and no account gets an email (§9.1, §7). An earlier draft with a short window the server opened before calling the Auth admin API could be raced by the stolen session; the RLS audit caught it. Accepted for v1: a stolen session stays usable until it is refreshed away (no "log out on all devices" yet; it could come with Settings, N13), it can edit its own user metadata (nothing reads it; roles come from `profiles`), and it can log its owner out everywhere.
 - [x] **Districts (before Phase 1):** free text as designed, 2–60 characters (settled Oct 23, 2026). An admin-managed list can come later if the data gets messy.
 - [ ] **Media retention (before Phase 6):** delete booking videos 90 days after completion?
 - [ ] **Certificate identity (before Phase 4):** company legal name, stamp/signature image, phone for the footer.

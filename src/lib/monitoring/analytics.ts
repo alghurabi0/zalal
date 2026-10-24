@@ -8,9 +8,9 @@ import { ANALYTICS_PATH } from "./paths";
  * environment sets, so previews and local runs send nothing.
  *
  * Privacy (spec §3): page views and clicks only, with no element text, no
- * session recording and no profile until Phase 1 identifies a logged-in user
- * by their user id (never their phone). Logout must call posthog.reset(),
- * because crew phones are shared.
+ * session recording. Profiles exist only for logged-in users, identified by
+ * user id (never their phone) through identifyUser(); logout calls
+ * resetAnalytics(), because crew phones are shared.
  */
 export function startAnalytics() {
   const key = monitoringEnv().NEXT_PUBLIC_POSTHOG_KEY;
@@ -37,4 +37,20 @@ export function startAnalytics() {
       capture_exceptions: false,
     });
   });
+}
+
+/**
+ * Links later events to the logged-in user. By user id only: never the
+ * phone, name or anything else personal (spec §3).
+ */
+export function identifyUser(userId: string) {
+  if (!monitoringEnv().NEXT_PUBLIC_POSTHOG_KEY) return;
+  void import("posthog-js").then(({ default: posthog }) => posthog.identify(userId));
+}
+
+/** On logout: forgets the user, because crew phones are shared (spec §3). */
+export async function resetAnalytics(): Promise<void> {
+  if (!monitoringEnv().NEXT_PUBLIC_POSTHOG_KEY) return;
+  const { default: posthog } = await import("posthog-js");
+  posthog.reset();
 }

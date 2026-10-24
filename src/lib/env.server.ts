@@ -39,6 +39,9 @@ const otpEnvSchema = z
     OTPIQ_WHATSAPP_ACCOUNT_ID: optional(z.string().min(1)),
     OTPIQ_WHATSAPP_PHONE_ID: optional(z.string().min(1)),
     OTPIQ_WHATSAPP_TEMPLATE: optional(z.string().min(1)),
+    // e2e tests only: a directory where the log sender also writes each
+    // code (src/lib/otp/senders.ts). Refused on Vercel and with an OTPIQ key.
+    OTP_DEV_OUTBOX: optional(z.string().min(1)),
     // Set by Vercel on every deploy; unset locally and in CI.
     VERCEL_ENV: optional(z.enum(["production", "preview", "development"])),
   })
@@ -63,6 +66,13 @@ const otpEnvSchema = z
         message: "required on Vercel",
       });
     }
+    if (env.OTP_DEV_OUTBOX !== undefined && (onVercel || env.OTPIQ_API_KEY !== undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["OTP_DEV_OUTBOX"],
+        message: "for local e2e tests only: not on Vercel and not with an OTPIQ key",
+      });
+    }
     if (env.VERCEL_ENV === "production" && env.OTPIQ_API_KEY?.startsWith("sk_dev_")) {
       ctx.addIssue({
         code: "custom",
@@ -83,6 +93,7 @@ export function otpEnv(): OtpEnv {
     OTPIQ_WHATSAPP_ACCOUNT_ID: process.env.OTPIQ_WHATSAPP_ACCOUNT_ID,
     OTPIQ_WHATSAPP_PHONE_ID: process.env.OTPIQ_WHATSAPP_PHONE_ID,
     OTPIQ_WHATSAPP_TEMPLATE: process.env.OTPIQ_WHATSAPP_TEMPLATE,
+    OTP_DEV_OUTBOX: process.env.OTP_DEV_OUTBOX,
     VERCEL_ENV: process.env.VERCEL_ENV,
   });
   return cachedOtp;

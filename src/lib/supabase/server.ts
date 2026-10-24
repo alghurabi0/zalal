@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import type { Database } from "@/lib/database.types";
 import { publicEnv } from "@/lib/env";
@@ -14,6 +15,10 @@ import { publicEnv } from "@/lib/env";
  */
 export async function createClient() {
   const env = publicEnv();
+  // Everything this client does belongs to one request. Prefetching can
+  // render with the cookies already known, but the auth client also reads
+  // the clock (session expiry), which Next allows only at request time.
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
@@ -30,8 +35,8 @@ export async function createClient() {
               cookieStore.set(name, value, options);
             }
           } catch {
-            // Server Components can't set cookies. That's fine as long as
-            // proxy.ts refreshes the session (added with login in Phase 1).
+            // Server Components can't set cookies. That's fine: proxy.ts
+            // refreshes the session before every page.
           }
         },
       },

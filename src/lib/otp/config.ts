@@ -21,7 +21,8 @@ function reportAccountProblem(problem: OtpiqAccountProblem) {
 export function otpSenders(): OtpSenders {
   const env = otpEnv();
   if (env.OTPIQ_API_KEY === undefined) {
-    return { whatsapp: logSender("whatsapp"), sms: logSender("sms") };
+    const outbox = env.OTP_DEV_OUTBOX;
+    return { whatsapp: logSender("whatsapp", outbox), sms: logSender("sms", outbox) };
   }
 
   const whatsapp =

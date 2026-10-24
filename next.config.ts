@@ -15,11 +15,6 @@ const POSTHOG_ASSETS_HOST = "https://eu-assets.i.posthog.com";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  // "/" is Home (src/lib/routes.ts). Until Phase 1 builds Home and the
-  // first-open check, it shows Welcome.
-  async redirects() {
-    return [{ source: "/", destination: "/welcome", permanent: false }];
-  },
   // PostHog through our own domain (src/lib/monitoring/analytics.ts). The
   // specific rules must come before the catch-all.
   async rewrites() {

@@ -52,5 +52,6 @@ test("shows the offline page when a page can't load, and retries", async ({ page
   await context.setOffline(false);
   await page.getByRole("link", { name: messages.Offline.retry }).click();
 
-  await expect(page.getByRole("heading", { name: messages.Welcome.name })).toBeVisible();
+  // Welcome showed on the first visit, so "/" is now guest Home (spec §5.1).
+  await expect(page.getByRole("heading", { name: messages.Home.headline })).toBeVisible();
 });
