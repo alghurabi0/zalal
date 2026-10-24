@@ -216,7 +216,7 @@ describe("login by phone", () => {
     expect(first.ok).toBe(true);
 
     // A service with another secret derives another password: sign-in fails
-    // once, then the server opens a window and sets the new one.
+    // once, then the server sets the new one with set_login_password.
     const whatsapp = new FakeSender();
     const rotated = createOtpService({
       admin,
