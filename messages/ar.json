@@ -13,6 +13,194 @@
     "start": "ابدأ الآن",
     "browse": "تصفح بدون تسجيل"
   },
+  "Login": {
+    "title": "هلا بيك بزلال",
+    "intro": "اكتب رقم موبايلك، ونرسلك رمز تحقق برسالة SMS أو واتساب.",
+    "introWhatsapp": "اكتب رقم موبايلك، ونرسلك رمز تحقق على واتساب.",
+    "phone": "رقم الموبايل",
+    "countryCode": "+964",
+    "phonePlaceholder": "7XX XXX XXXX",
+    "phoneHint": "مثال: 7801234567",
+    "channelLegend": "أرسل الرمز عن طريق",
+    "whatsapp": "واتساب",
+    "sms": "رسالة SMS",
+    "send": "أرسل الرمز",
+    "terms": "بالمتابعة توافق على <terms>شروط الاستخدام</terms> و<privacy>سياسة الخصوصية</privacy>",
+    "errors": {
+      "invalidPhone": "اكتب رقم موبايل صحيح",
+      "tryAfterSeconds": "جرب بعد {count} ثانية",
+      "tryAfterMinutes": "جرب بعد {n, plural, one {دقيقة} two {دقيقتين} few {{count} دقايق} other {{count} دقيقة}}",
+      "locked": "الرقم مقفول مؤقتاً بسبب محاولات غلط كثيرة. {wait}",
+      "smsDisabled": "الإرسال برسالة SMS متوقف هسه، اختار واتساب.",
+      "whatsappFailed": "ما كدرنا نرسل الرمز على واتساب.",
+      "sendFailed": "ما كدرنا نرسل الرمز، جرب مرة ثانية.",
+      "sendSms": "أرسل برسالة SMS"
+    }
+  },
+  "Otp": {
+    "title": "رمز التحقق",
+    "sentTo": "دزينالك رمز من 6 أرقام {channel, select, sms {برسالة SMS} other {على واتساب}} للرقم <phone></phone>",
+    "changeNumber": "تغيير الرقم",
+    "codeLabel": "رمز التحقق",
+    "notReceived": "ما وصلك الرمز؟",
+    "resendIn": "إعادة الإرسال بعد <time></time>",
+    "resend": "أعد الإرسال",
+    "resendSms": "أرسل برسالة SMS",
+    "resent": "دزينالك رمز جديد.",
+    "verify": "تحقق وكمّل",
+    "errors": {
+      "wrongCode": "الرمز غلط، {n, plural, one {باقي محاولة وحدة} two {باقي محاولتين} other {باقي {count} محاولات}}",
+      "locked": "غلطت بالرمز 5 مرات، الرقم مقفول. {wait}",
+      "expired": "انتهت صلاحية الرمز، اطلب رمز جديد.",
+      "accountUnavailable": "هذا الحساب موقوف. راسلنا إذا تحتاج مساعدة.",
+      "invalidCode": "اكتب الرمز كامل، 6 أرقام."
+    }
+  },
+  "Name": {
+    "title": "شنو اسمك؟",
+    "intro": "حتى نعرف شلون نناديك.",
+    "label": "اسمك",
+    "placeholder": "مثال: أحمد علي",
+    "submit": "كمّل",
+    "errors": {
+      "tooShort": "اكتب اسمك، حرفين على الأقل.",
+      "tooLong": "الاسم طويل، أكثر شي 40 حرف.",
+      "failed": "ما كدرنا نحفظ اسمك، جرب مرة ثانية."
+    }
+  },
+  "Location": {
+    "searchLabel": "ابحث عن منطقة",
+    "searchPlaceholder": "ابحث عن حي أو شارع",
+    "noResults": "ما لكينا نتايج",
+    "myLocation": "موقعي الحالي",
+    "locating": "دنحدد موقعك…",
+    "locationDenied": "ما كدرنا نوصل لموقعك. حرّك الخريطة أو ابحث عن منطقتك.",
+    "locationDeniedNoMap": "ما كدرنا نوصل لموقعك. اسمح للتطبيق يشوف موقعك واضغط \"موقعي الحالي\".",
+    "later": "بعدين",
+    "title": "وين بيتك؟",
+    "subtitle": "حرّك الخريطة لحد ما الدبوس يصير على بيتك",
+    "subtitleNoMap": "اضغط \"موقعي الحالي\" وانت بالبيت حتى نثبّت الدبوس عليه",
+    "editTitle": "تعديل العنوان",
+    "district": "الحي",
+    "districtPlaceholder": "مثال: حي الحسين",
+    "landmark": "أقرب نقطة دالة",
+    "landmarkPlaceholder": "مثال: قرب جامع ... أو مدرسة ...",
+    "labelLegend": "اسم العنوان",
+    "labels": {
+      "home": "البيت",
+      "family": "بيت الأهل",
+      "work": "الشغل"
+    },
+    "labelTaken": "مستخدم",
+    "save": "احفظ العنوان",
+    "allLabelsUsedTitle": "عندك 3 عناوين",
+    "allLabelsUsedBody": "البيت وبيت الأهل والشغل كلها محفوظة. عدّل واحد منها أو احذفه حتى تضيف غيره.",
+    "allLabelsUsedCta": "رجوع",
+    "notFoundTitle": "ما لكينا هذا العنوان",
+    "notFoundBody": "يمكن انحذف. ارجع واختار عنوان ثاني.",
+    "errors": {
+      "outsideArea": "بعد ما نخدم منطقتك، حالياً بس كربلاء",
+      "labelTaken": "هذا الاسم مستخدم لعنوان ثاني، اختار اسم ثاني.",
+      "districtShort": "اكتب اسم الحي.",
+      "districtLong": "اسم الحي طويل، أكثر شي 60 حرف.",
+      "landmarkShort": "اكتب أقرب نقطة دالة.",
+      "landmarkLong": "النقطة الدالة طويلة، أكثر شي 120 حرف.",
+      "failed": "ما كدرنا نحفظ العنوان، جرب مرة ثانية."
+    }
+  },
+  "Addresses": {
+    "title": "عناويني",
+    "pickTitle": "اختار العنوان",
+    "default": "الأساسي",
+    "selected": "مختار",
+    "select": "اختار {label}",
+    "edit": "تعديل",
+    "makeDefault": "خليه الأساسي",
+    "delete": "حذف",
+    "confirmDelete": "تحذف عنوان {label}؟ خزاناته هم تنحذف.",
+    "confirmDeleteYes": "إي، احذف",
+    "confirmDeleteNo": "لا",
+    "add": "أضف عنوان",
+    "emptyTitle": "ما عندك عناوين",
+    "emptyBody": "أضف عنوان بيتك حتى نعرف وين نجيك.",
+    "errors": {
+      "failed": "ما كدرنا نكمّل، جرب مرة ثانية."
+    }
+  },
+  "Tanks": {
+    "title": "خزاناتي",
+    "add": "أضف خزان",
+    "addTitle": "خزان جديد",
+    "editTitle": "تعديل الخزان",
+    "addressLegend": "العنوان",
+    "typeLegend": "نوع الخزان",
+    "types": {
+      "roof": "خزان سطح",
+      "ground": "خزان أرضي"
+    },
+    "typeHints": {
+      "roof": "بلاستيك أو فايبر",
+      "ground": "كونكريت أو حديد"
+    },
+    "sizeLegend": "السعة",
+    "sizes": {
+      "s": "لحد 1,000 لتر",
+      "m": "1,000–2,000",
+      "l": "أكبر"
+    },
+    "nickname": "اسم للخزان (اختياري)",
+    "nicknamePlaceholder": "مثال: خزان المطبخ",
+    "save": "احفظ الخزان",
+    "lastCleaned": "آخر تنظيف: {date}",
+    "neverCleaned": "ما عدنا سجل تنظيف لهذا الخزان",
+    "nextDue": "التنظيف الجاي: {date}",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "confirmDelete": "تحذف هذا الخزان؟",
+    "confirmDeleteYes": "إي، احذف",
+    "confirmDeleteNo": "لا",
+    "noTanksAtAddress": "ما ضايف خزانات لهذا العنوان.",
+    "noAddressTitle": "أضف عنوانك أول",
+    "noAddressBody": "الخزانات تنحفظ على العنوان، فنحتاج عنوان بيتك أول شي.",
+    "noAddressCta": "أضف عنوان",
+    "errors": {
+      "nicknameLong": "الاسم طويل، أكثر شي 30 حرف.",
+      "failed": "ما كدرنا نحفظ الخزان، جرب مرة ثانية."
+    }
+  },
+  "Home": {
+    "deliverTo": "التوصيل إلى",
+    "addressLine": "{label} · {district}",
+    "addAddress": "أضف عنوانك",
+    "changeAddress": "غيّر العنوان",
+    "login": "سجّل دخول",
+    "greetingMorning": "صباح الخير",
+    "greetingEvening": "مساء الخير",
+    "greetingName": "{greeting}، {name}",
+    "headline": "ماي بيتك بأمان وياك"
+  },
+  "Profile": {
+    "title": "حسابي",
+    "addresses": "عناويني",
+    "tanks": "خزاناتي",
+    "tankCount": "{n, plural, zero {ماكو خزانات} one {خزان واحد} two {خزانين} other {{count} خزان}}",
+    "logout": "تسجيل الخروج",
+    "logoutTitle": "تريد تطلع من حسابك؟",
+    "logoutBody": "تكدر ترجع تدخل برقمك بأي وقت.",
+    "logoutConfirm": "إي، اطلع",
+    "logoutCancel": "لا"
+  },
+  "Placeholder": {
+    "crewTitle": "تطبيق الفرق قريباً",
+    "crewBody": "هنا راح تشوفون شغلكم اليومي. ديجهز بالمرحلة الجاية.",
+    "adminTitle": "لوحة الإدارة قريباً",
+    "adminBody": "هنا راح تأكد الطلبات وتوزعها على الفرق. دتجهز بالمرحلة الجاية."
+  },
+  "Legal": {
+    "terms": "شروط الاستخدام",
+    "privacy": "سياسة الخصوصية",
+    "emptyBody": "النص ديجهز، ويكون هنا قبل الإطلاق."
+  },
   "Offline": {
     "title": "ماكو انترنيت",
     "body": "تأكد من اتصالك بالانترنيت واعد المحاولة.",

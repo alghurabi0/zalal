@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { routes } from "@/lib/routes";
 
 /**
- * Welcome (Main.dc.html, spec §5.1). Phase 1 adds the rules: shown on
- * first open only, and a logged-in user goes straight to Home.
+ * Welcome (Main.dc.html, spec §5.1). proxy.ts shows it on first open only
+ * and sends a logged-in user straight to Home.
  */
 export default function WelcomePage() {
   const t = useTranslations("Welcome");
