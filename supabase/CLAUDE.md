@@ -26,8 +26,9 @@ Loaded when Claude works in this folder. The root CLAUDE.md rules still apply. F
 - RPCs the app calls go in `public`; trigger functions and helpers go in `private`.
 - Prefer `security invoker`. Use `security definer` only when the caller must not have the table privilege. Then: `set search_path = ''` (the guards check it), fully qualified names everywhere, and an explicit `auth.uid()` check inside.
 - Server-only RPCs (OTP limits) grant EXECUTE to `service_role` only. The app calls them with the admin client.
+- `auth.users` has a guard trigger (`private.guard_auth_user`, migration `auth_user_guard`): no email, and a password changes only right after the server calls `allow_password_set(user_id)`. Any new server code that sets a password through the Auth admin API must open that window first. Tests that insert into `auth.users` must not set `email`.
 - Auth hooks are Postgres functions in `private`, granted EXECUTE to `supabase_auth_admin` only (which has USAGE on `private` for that). The Send SMS Hook `private.refuse_auth_sms` refuses every send: phone codes are made and checked by the server (spec §9.1), and users are created through the Auth admin API, since sign-ups are off.
-- Errors the app shows: `raise exception using errcode = …, message = '<snake_case_code>'`. The app maps the code to an `ar.json` string. Codes in use: `ZL001` `outside_service_area`; `P0002` for a missing row (`address_not_found`, `otp_request_not_found`). New business errors take the next `ZL0nn`.
+- Errors the app shows: `raise exception using errcode = …, message = '<snake_case_code>'`. The app maps the code to an `ar.json` string. Codes in use: `ZL001` `outside_service_area`; `ZL002` `password_change_not_allowed` and `ZL003` `email_not_allowed` (the `auth.users` guard; Auth's API reports them as a failed update, the app never shows them); `P0002` for a missing row (`address_not_found`, `otp_request_not_found`). New business errors take the next `ZL0nn`.
 - Results the app branches on (allowed or not, retry time) are OUT parameters, not exceptions (see `request_otp`).
 
 ## pgTAP tests (`tests/database/`)
