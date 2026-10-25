@@ -54,3 +54,52 @@ export function addMonths(value: Date | string, months: number): Date {
   local.setUTCDate(Math.min(day, lastDay));
   return new Date(local.getTime() - BAGHDAD_OFFSET_MS);
 }
+
+const weekdayOfDate = new Intl.DateTimeFormat(LOCALE, { timeZone: "UTC", weekday: "long" });
+
+const timeInBaghdad = new Intl.DateTimeFormat("en-GB", {
+  timeZone,
+  hour: "numeric",
+  minute: "numeric",
+  hourCycle: "h23",
+});
+
+/**
+ * A service date ("2026-10-24", a calendar day in Baghdad, as Postgres
+ * `date`) as Booking's day chip shows it: the weekday name and the day of the
+ * month. Read as UTC so the device's time zone can't move it a day.
+ */
+export function serviceDayParts(serviceDate: string): { weekday: string; day: number } {
+  const date = new Date(`${serviceDate}T00:00:00Z`);
+  return { weekday: weekdayOfDate.format(date), day: date.getUTCDate() };
+}
+
+export type DayPeriod = "morning" | "noon" | "afternoon" | "evening";
+
+/**
+ * A slot as the designs write it ("8–10 الصبح"): both ends on a 12-hour
+ * clock in Baghdad ("8", "10", or "8:30" when it isn't on the hour), and the
+ * part of the day its start falls in. The period's words are in ar.json.
+ */
+export function slotParts(
+  startAt: Date | string,
+  endAt: Date | string,
+): { from: string; to: string; period: DayPeriod } {
+  const clock = (value: Date | string) => {
+    const parts = timeInBaghdad.formatToParts(new Date(value));
+    const hour = Number(parts.find((p) => p.type === "hour")?.value);
+    const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    return { hour, text: minute === "00" ? String(hour12) : `${hour12}:${minute}` };
+  };
+  const start = clock(startAt);
+  const period: DayPeriod =
+    start.hour < 10
+      ? "morning"
+      : start.hour < 13
+        ? "noon"
+        : start.hour < 17
+          ? "afternoon"
+          : "evening";
+  return { from: start.text, to: clock(endAt).text, period };
+}
