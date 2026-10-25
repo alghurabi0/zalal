@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import { useId } from "react";
 
 import { AddressPicker } from "@/app/(customer)/addresses/address-picker";
+import { DaySlotPicker } from "@/components/booking/day-slot-picker";
 import { GroundTankIcon, RoofTankIcon } from "@/components/icons/tank-icons";
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
-import { Chip, ChipGroup } from "@/components/ui/chip";
 import { Stepper } from "@/components/ui/stepper";
 import {
   DEFAULT_NEW_TANK,
@@ -22,7 +22,6 @@ import {
 } from "@/lib/booking/draft";
 import type { BookingError } from "@/lib/booking/errors";
 import { cn } from "@/lib/cn";
-import { serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { routes } from "@/lib/routes";
 
@@ -301,75 +300,15 @@ function SavedTankCard({
 }
 
 function DayAndSlot() {
-  const t = useTranslations("Booking");
   const { data, draft, update } = useBooking();
   if (!draft) return null;
-  const day = data.days.find((d) => d.date === draft.serviceDate) ?? null;
-
-  if (data.days.length === 0) {
-    return (
-      <section className="flex flex-col gap-2">
-        <h2 className="text-15 font-extrabold">{t("dateLegend")}</h2>
-        <p className="text-14 text-muted">{t("noDays")}</p>
-      </section>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-2">
-      <ChipGroup
-        legend={t("dateLegend")}
-        // A fieldset is as wide as its content unless told otherwise, so the
-        // scrolling row of days would widen the page.
-        className="min-w-0"
-        bodyClassName="-mx-5 flex-nowrap overflow-x-auto px-5 pt-0.5 pb-1"
-      >
-        {data.days.map((option) => {
-          const { weekday, day: dayOfMonth } = serviceDayParts(option.date);
-          return (
-            <Chip
-              key={option.date}
-              type="radio"
-              name="service-day"
-              value={option.date}
-              checked={draft.serviceDate === option.date}
-              disabled={option.full}
-              onChange={() => update((d) => ({ ...d, serviceDate: option.date, slotId: null }))}
-              className="min-h-15 w-20 shrink-0 gap-0 px-1"
-            >
-              <span className="text-12">{weekday}</span>
-              <span className="text-18 leading-tight font-black">{dayOfMonth}</span>
-              {option.full && <span className="text-11">{t("dayFull")}</span>}
-            </Chip>
-          );
-        })}
-      </ChipGroup>
-
-      {day && (
-        <ChipGroup
-          legend={t("slotLegend")}
-          legendClassName="sr-only"
-          bodyClassName="grid grid-cols-3 gap-2"
-        >
-          {day.slots.map((slot) => (
-            <Chip
-              key={slot.slotId}
-              type="radio"
-              name="slot"
-              value={slot.slotId}
-              checked={draft.slotId === slot.slotId}
-              disabled={!slot.bookable}
-              onChange={() => update((d) => ({ ...d, slotId: slot.slotId }))}
-              className="gap-0 leading-snug"
-            >
-              <span>{t("slot", slotParts(slot.startAt, slot.endAt))}</span>
-              <span className="text-11 font-semibold">
-                {slot.bookable ? t("remaining", { count: slot.remaining }) : t("slotFull")}
-              </span>
-            </Chip>
-          ))}
-        </ChipGroup>
-      )}
-    </div>
+    <DaySlotPicker
+      days={data.days}
+      serviceDate={draft.serviceDate}
+      slotId={draft.slotId}
+      onDayChange={(serviceDate) => update((d) => ({ ...d, serviceDate, slotId: null }))}
+      onSlotChange={(slotId) => update((d) => ({ ...d, slotId }))}
+    />
   );
 }

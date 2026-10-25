@@ -13,19 +13,25 @@ import { baghdadHour } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
 import { AddressPicker } from "./addresses/address-picker";
+import { HomeCards, HomeCardsSkeleton } from "./home-cards";
 
 /**
- * Home (Home.dc.html, spec §5.5), Phase 1 shell: the header with the address
- * picker (N2) or, for guests, "سجّل دخول"; the greeting; the tab bar. The
- * order, tank, quick-action and tips cards come with their phases.
+ * Home (Home.dc.html, spec §5.5): the header with the address picker (N2) or,
+ * for guests, "سجّل دخول"; the greeting; the cards (home-cards.tsx); the tab
+ * bar. The bell, quick actions and tips strip come with their phases.
  */
 export default function HomePage() {
   return (
-    <Screen>
+    <Screen className="bg-bg">
       <Suspense fallback={<HomeSkeleton />}>
         <HomeHeader />
       </Suspense>
-      <div className="flex-1" />
+      {/* The first card overlaps the navy header, as in the design. */}
+      <div className="-mt-10 flex flex-1 flex-col gap-3 px-4 pb-6">
+        <Suspense fallback={<HomeCardsSkeleton />}>
+          <HomeCards />
+        </Suspense>
+      </div>
       <TabBar active="home" />
     </Screen>
   );
@@ -41,7 +47,7 @@ async function HomeHeader() {
   const firstName = viewer?.fullName?.split(" ")[0];
 
   return (
-    <header className="flex flex-col gap-6 bg-navy px-5 pt-5 pb-8 text-white">
+    <header className="flex flex-col gap-6 bg-navy px-5 pt-5 pb-13.5 text-white">
       <div className="flex min-h-11 items-center">
         {viewer ? <AddressButton /> : <GuestLogin label={t("login")} />}
       </div>
@@ -102,7 +108,7 @@ async function AddressButton() {
 
 function HomeSkeleton() {
   return (
-    <SkeletonGroup className="flex flex-col gap-6 bg-navy px-5 pt-5 pb-8">
+    <SkeletonGroup className="flex flex-col gap-6 bg-navy px-5 pt-5 pb-13.5">
       <Skeleton className="h-11 w-48 bg-navy-2" />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-5 w-32 bg-navy-2" />

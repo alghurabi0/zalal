@@ -200,6 +200,7 @@
     "slot": "{from}–{to} {period, select, morning {الصبح} noon {الظهر} afternoon {العصر} other {المسا}}",
     "remaining": "{count, plural, one {باقي مكان واحد} two {باقي مكانين} few {باقي # أماكن} other {باقي # مكان}}",
     "slotFull": "ممتلئ",
+    "currentSlot": "موعدك الحالي",
     "noDays": "ما في مواعيد فارغة بالأيام الجاية. جرب بعدين.",
     "pickSlot": "اختار وقت",
     "price": "السعر",
@@ -306,7 +307,144 @@
     "greetingMorning": "صباح الخير",
     "greetingEvening": "مساء الخير",
     "greetingName": "{greeting}، {name}",
-    "headline": "ماي بيتك بأمان وياك"
+    "headline": "ماي بيتك بأمان وياك",
+    "activeOrder": {
+      "label": "طلبك الحالي",
+      "pending_confirmation": "بانتظار التأكيد",
+      "confirmed": "مؤكد · {when}",
+      "on_the_way": "الفريق بالطريق إلك",
+      "arrived": "الفريق وصل",
+      "in_progress": "الشغل شغال",
+      "number": "طلب <num>#{number}</num>",
+      "numberWhen": "طلب <num>#{number}</num> · {when}",
+      "when": "{weekday} {day} · {slot}",
+      "open": "التفاصيل"
+    },
+    "tank": {
+      "title": "حالة خزانك",
+      "ok": "نظيف",
+      "due_soon": "قرب موعده",
+      "overdue": "يحتاج تنظيف",
+      "noHistory": "ما عدنا سجل لخزانك",
+      "noHistoryBody": "احجز أول تنظيف وراح نذكرك بالموعد الجاي.",
+      "lastCleaned": "آخر تنظيف: {months, plural, =0 {هذا الشهر} one {قبل شهر} two {قبل شهرين} few {قبل # أشهر} other {قبل # شهر}}",
+      "every": "الموصى به: كل {months} أشهر",
+      "nextDue": "الجاي: {date}",
+      "book": "احجز تنظيف الآن"
+    },
+    "prices": {
+      "title": "الأسعار",
+      "body": "سعر ثابت لكل خزان، وفحص الكلور والشهادة مجاناً.",
+      "row": "{type} · {size}",
+      "book": "احجز تنظيف"
+    }
+  },
+  "Orders": {
+    "title": "طلباتي",
+    "tabs": {
+      "label": "الطلبات",
+      "current": "الحالية",
+      "past": "السابقة"
+    },
+    "number": "طلب <num>#{number}</num> · {date}",
+    "when": "{weekday} {day} · {slot}",
+    "tankOne": "{type} · {size}",
+    "tankQty": "{type} × {qty}",
+    "tanksMany": "{count, plural, one {خزان واحد} two {خزانين} few {# خزانات} other {# خزان}}",
+    "where": "{label} · {district}",
+    "details": "تفاصيل الطلب",
+    "rebook": "أعد الحجز",
+    "more": "عرض المزيد",
+    "emptyCurrentTitle": "ما عندك طلبات حالية",
+    "emptyCurrentBody": "احجز تنظيف لخزانك وتابع طلبك من هنا.",
+    "emptyPastTitle": "ما عندك طلبات سابقة",
+    "emptyPastBody": "الطلبات اللي تخلص أو تنلغي تبين هنا.",
+    "book": "احجز تنظيف",
+    "status": {
+      "pending_confirmation": "بانتظار التأكيد",
+      "confirmed": "مؤكد",
+      "on_the_way": "الفريق بالطريق",
+      "arrived": "الفريق وصل",
+      "in_progress": "الشغل شغال",
+      "completed": "مكتمل",
+      "cancelled": "ملغي",
+      "no_show": "ما لكينا أحد"
+    }
+  },
+  "Order": {
+    "title": "طلب <num>#{number}</num>",
+    "notFound": "ما لكينا هذا الطلب",
+    "notFoundBody": "يمكن انمسح أو مو من طلباتك.",
+    "toOrders": "طلباتي",
+    "when": "الموعد",
+    "whenValue": "{weekday} {day} · {slot}",
+    "address": "العنوان",
+    "addressValue": "{label} · {district}",
+    "service": "الخدمة",
+    "line": "تنظيف وتعقيم {type} · <keep>{size}</keep> × {qty}",
+    "certificate": "فحص كلور وشهادة",
+    "free": "مجاناً",
+    "total": "المجموع",
+    "payment": "الدفع",
+    "payments": {
+      "cash": "كاش للفريق بعد الشغل"
+    },
+    "note": "ملاحظتك",
+    "files": "المرفقات",
+    "photo": "صورة {n}",
+    "video": "فيديو {n}",
+    "fileMissing": "ما كدرنا نفتح الملف",
+    "timeline": "مراحل الطلب",
+    "events": {
+      "booked": "سجلت الطلب",
+      "rescheduled": "{by, select, you {غيّرت الموعد} other {الشركة غيّرت الموعد}}",
+      "rescheduledTo": "{by, select, you {غيّرت الموعد إلى {date}} other {الشركة غيّرت الموعد إلى {date}}}",
+      "cancelled": "{by, select, you {ألغيت الطلب} other {الشركة ألغت الطلب}}",
+      "pending_confirmation": "رجع الطلب لانتظار التأكيد",
+      "confirmed": "الشركة أكدت الطلب",
+      "on_the_way": "الفريق طلع لبيتك",
+      "arrived": "الفريق وصل",
+      "in_progress": "بدأ الشغل",
+      "completed": "خلص الشغل",
+      "cancelledStatus": "انلغى الطلب",
+      "no_show": "الفريق ما لكه أحد بالبيت"
+    },
+    "dayDate": "{weekday} {day}",
+    "reasons": {
+      "plans_changed": "تغيرت ظروفي",
+      "time_unsuitable": "الموعد ما يناسبني",
+      "other": "شي ثاني"
+    },
+    "reschedule": "تغيير الموعد",
+    "cancel": "إلغاء الطلب",
+    "rebook": "أعد الحجز",
+    "changeHint": "تكدر تلغي أو تغير الموعد لحد ساعتين قبل",
+    "tooLateHint": "باقي أقل من ساعتين على الموعد. للتغيير راسلنا بالمحادثة.",
+    "cancelSheet": {
+      "title": "إلغاء الطلب",
+      "description": "ليش تريد تلغي؟",
+      "legend": "السبب",
+      "confirm": "ألغِ الطلب",
+      "keep": "لا، خلي الطلب"
+    },
+    "rescheduleSheet": {
+      "title": "تغيير الموعد",
+      "description": "اختار يوم ووقت جديد. الطلب يرجع لانتظار تأكيد الشركة.",
+      "current": "موعدك الحالي: <b>{when}</b>",
+      "confirm": "ثبّت الموعد الجديد"
+    },
+    "blocked": {
+      "title": "ما تكدر تغير هسه",
+      "body": "باقي أقل من ساعتين على الموعد، فما نكدر نغيره من التطبيق. راسلنا بالمحادثة.",
+      "ok": "تمام"
+    },
+    "errors": {
+      "too_late": "باقي أقل من ساعتين على الموعد، فما نكدر نغيره من التطبيق. راسلنا بالمحادثة.",
+      "slot_full": "الموعد انحجز، اختار موعد ثاني",
+      "slot_unavailable": "هذا الموعد ما بقى متاح، اختار موعد ثاني",
+      "invalid_transition": "تغيرت حالة الطلب، ما نكدر نغيره هسه.",
+      "failed": "ما كدرنا نحفظ التغيير، جرب مرة ثانية."
+    }
   },
   "Profile": {
     "title": "حسابي",
