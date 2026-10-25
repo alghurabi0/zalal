@@ -217,7 +217,7 @@ Built in Phase 0 from the canvas. Screens compose these before writing new marku
 | `IconButton`, `BackButton` | 44px circle: `surface`, `floating` (map), `dark` (navy header), `soft`, `primary`; optional unread dot; `label` (aria-label) is required |
 | `Chip`, `ChipGroup`, `ChipButton` | `option` (tile), `pill` (filter), `tag` (rating); real radio/checkbox inputs in a `<fieldset>`. `ChipButton` = chat quick reply |
 | `Card` | `outline`, `raised` (shadow), `dark` (navy); `href` renders a link |
-| `Input`, `Textarea`, `Field` | `default` 56px, `compact` 46px (sheet forms); `Field` wires label, hint and error |
+| `Input`, `Textarea`, `Select`, `Field` | `default` 56px, `compact` 46px (sheet forms, admin forms); `Select` is a native select with the inputs' look (Phase 3, admin); `Field` wires label, hint and error |
 | `Sheet` (modal), `SheetPanel` (in-page, under a map) | 26px top corners, handle, safe-area padding. No drag-to-dismiss |
 | `TabBar` | 4 tabs + raised احجز; `active`, `chatUnread` |
 | `Stepper` | Quantity − / + with min/max |
@@ -430,7 +430,7 @@ The main path runs from booking to the certificate. Reschedule loops back to pen
 
 | From → To | Who | Guard | Side effects |
 | --- | --- | --- | --- |
-| (new) → `pending_confirmation` | Customer | Address inside the service area; slot has capacity; uploads done | Reserve slot capacity; alert admins (dashboard sound + push) |
+| (new) → `pending_confirmation` | Customer | Address inside the service area; slot has capacity; uploads done | Reserve slot capacity; alert admins (dashboard sound from Phase 3, push in Phase 5) |
 | `pending_confirmation` → `confirmed` | Admin | Subscription coverage verified if `uses_subscription` | Push "تأكد حجزك"; crew may be assigned now or later |
 | `pending_confirmation` or `confirmed` → `pending_confirmation` (reschedule) | Customer (≥ 2 h before slot start), Admin (any time) | New slot has capacity | Release the old slot, reserve the new one; push to admins |
 | `pending_confirmation` or `confirmed` → `cancelled` | Customer (≥ 2 h before slot start, reason required), Admin (any time, reason required) | — | Release slot; push to the other side |
@@ -498,7 +498,8 @@ Access rules (RLS):
 
 - A customer reads and writes only their own rows. Their order rows can be written only through RPC functions.
 - A crew reads orders, their lines, events, staff notes and media only for orders assigned to it, while the crew is active. It reads the address copy on the order, never the `addresses` table. It writes media, live location and status, all through RPC functions.
-- An admin reads and writes everything. Every admin write goes to `admin_audit_log`. `transition_order` is the first audited admin RPC (Phase 2); the others (prices, slots, crews, settings, assignment) come in Phase 3. Until then admins only read those tables; the owner changes them with SQL.
+- An admin reads and writes everything. Every admin write goes to `admin_audit_log`. Audited admin RPCs so far: `transition_order` (Phase 2) and `assign_crew(order_id, crew_id)` (Phase 3, part A: sets a crew while the order is pending, confirmed or on the way, removes it only while pending or confirmed; the crew must be active with a crew-role account, `ZL013`; other statuses `ZL014`; logged as `order.assign_crew` with the old and new crew, since crew changes are not status events). Prices, slots, blocked dates, crews and settings get theirs in Phase 3 parts B and C; until then admins only read those tables and the owner changes them with SQL.
+- `admin_slot_board(from, to)` (admins, at most 62 days): places taken per day and slot for the A2 board and the admin reschedule picker. It lists every slot that runs that day plus any switched-off slot that still holds places, and marks blocked days. `bookable` uses staff rules (any slot that hasn't started), unlike `booking_availability()`, which applies the customer window and cutoff.
 - Orders: `create_order(request_id, address_id, service_date, slot_id, items, note, media)` (customers), `transition_order(order_id, to_status, payload)` (all roles, per §6) and `booking_availability()` (logged-in users: days × slots in the window with places left and whether each can be booked) are the only ways in. `delete_address` refuses while an active order uses the address (`ZL012`).
 - How it's built: every table revokes Supabase's default grants and grants only what each role needs, with column grants for server-owned columns. Policies read the role from `profiles` through `private.current_user_role()` and `private.is_admin()`, so a role change applies at once. Conventions are in `supabase/CLAUDE.md`.
 
@@ -514,7 +515,7 @@ Until a phase adds the storage policies for its bucket (with pgTAP tests), only 
 
 ## 8. Crew app and admin dashboard
 
-Neither surface has designs. Build both from the same tokens and components as the customer app, in Arabic RTL, keeping them plain and functional. A short design pass in the canvas before phase 3 is optional.
+Neither surface has designs. Both are built from the same tokens and kit as the customer app, in Arabic RTL, plain and functional (settled Oct 25, 2026: no canvas pass). Admin is desktop-first: a sidebar on the start side from 1024px, a top bar with a scrolling row of links below that, and a wide content column.
 
 ### 8.1 Crew app (`/crew`, mobile PWA)
 
@@ -550,6 +551,12 @@ GPS rule for v1:
 | A12 | Ratings | List with a star filter and the average; a link to any ticket it opened |
 | A13 | Settings | SMS fallback toggle; company phone; working hours; response text; cleaning interval; booking window; cancel cutoff; subscription plan; Terms/Privacy markdown; service area polygon editor on a map; maintenance mode |
 | A14 | Admins | Invite or remove admins by phone |
+
+Phase 3, part A (built):
+
+- **Shell:** `src/app/admin/layout.tsx`, admins only. Every admin page stays live through Realtime on `orders` (`AdminLive`): any change refetches the page, and a new booking shows a link to it and plays a short chime. Sound starts off; the admin turns it on with "شغّل صوت التنبيه" (browsers allow sound only after a click), and the choice is remembered on that browser. Push comes in Phase 5.
+- **A1:** today's orders (Baghdad) counted by status, each count opening the filtered list, and the 10 soonest pending confirmations. Unread chats, open tickets and subscription requests are "coming soon" cards until Phases 5–6.
+- **A2:** `/admin/orders`, filters in the URL (status, with "active" as the default and "all"; day; district text; crew or "no crew"; slot from the board). Active orders sort soonest first, others newest first; 50 rows at a time. The drawer (`?order=`) shows the customer, slot, address with a Google Maps link, lines and total, payment and cash, customer note, every photo and video (signed links), the crew and its changes (from the audit log), and the timeline with staff notes and override tags. Actions by status: confirm (optionally assigning a crew first), crew, reschedule (any slot in the next 30 days that hasn't started; keeps the crew), cancel (reason), no-show (note; §6 lets admins do it, so it is its own action rather than an override), and override (any other status, reason). "Verify subscription" waits for Phase 6. The board (`/admin/orders/board`) shows a week of slots, places taken out of capacity, full and blocked days; a cell opens that slot's orders.
 
 ## 9. OTP, notifications and integrations
 
@@ -746,6 +753,9 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 **Phase 3 — Admin core and crew app**
 
 - [ ] Admin shell + A1, A2 (confirm, assign, cancel, reschedule, override), A8, A9, A10, A13, A14; admin audit log
+  - [x] Part A: admin shell, A1, A2 with the order drawer and the date × slot board; `assign_crew` and `admin_slot_board`; in-page sound for new bookings
+  - [ ] Part B: A8 prices, A9 schedule (slots, blocked dates), A13 settings with the service-area editor (Google Maps with a key; without one, a drawn preview plus GeoJSON import and export)
+  - [ ] Part C: A10 crews, A14 admins (a phone that already has an account can't become a crew; an existing account can be made an admin), audit log screen
 - [ ] Crew app C1–C4 with media capture, retry queue and GPS sharing
 
 * Done when: the whole path booking → confirm → assign → on the way → arrived → in progress → completed runs across three devices
@@ -803,4 +813,4 @@ These are assumptions made while writing the spec. Each has a working default, s
 - [x] **Districts (before Phase 1):** free text as designed, 2–60 characters (settled Oct 23, 2026). An admin-managed list can come later if the data gets messy.
 - [ ] **Media retention (before Phase 6):** delete booking videos 90 days after completion?
 - [ ] **Certificate identity (before Phase 4):** company legal name, stamp/signature image, phone for the footer.
-- [ ] **Crew and admin designs (optional, before Phase 3):** design them in the canvas first, or let Claude Code build them from the kit?
+- [x] **Crew and admin designs (before Phase 3):** settled Oct 25, 2026: no canvas pass; both are built from the kit and tokens (§8).
