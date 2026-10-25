@@ -1,0 +1,87 @@
+import type { Database } from "@/lib/database.types";
+
+// Order statuses as the customer screens show them: Orders' tabs and
+// buttons (spec §5.12), Order details (N4) and Home's active-order card
+// (§5.5). The database decides what may change (transition_order, spec §6);
+// these only choose what to show.
+
+export type OrderStatus = Database["public"]["Enums"]["order_status"];
+export type CancelReason = Database["public"]["Enums"]["cancel_reason"];
+
+export const CANCEL_REASONS = [
+  "plans_changed",
+  "time_unsuitable",
+  "other",
+] as const satisfies readonly CancelReason[];
+
+/** الحالية: from booking until the work is done. */
+export const CURRENT_STATUSES = [
+  "pending_confirmation",
+  "confirmed",
+  "on_the_way",
+  "arrived",
+  "in_progress",
+] as const satisfies readonly OrderStatus[];
+
+/** السابقة: the end states. */
+export const PAST_STATUSES = [
+  "completed",
+  "cancelled",
+  "no_show",
+] as const satisfies readonly OrderStatus[];
+
+export type OrdersTab = "current" | "past";
+
+export function ordersTab(status: OrderStatus): OrdersTab {
+  return (CURRENT_STATUSES as readonly OrderStatus[]).includes(status) ? "current" : "past";
+}
+
+/** The badge colours from Orders.dc.html, by status. */
+export type BadgeTone = "info" | "warn" | "ok" | "neutral";
+
+export function badgeTone(status: OrderStatus): BadgeTone {
+  switch (status) {
+    case "on_the_way":
+    case "arrived":
+    case "in_progress":
+      return "warn";
+    case "completed":
+      return "ok";
+    case "cancelled":
+    case "no_show":
+      return "neutral";
+    default:
+      return "info";
+  }
+}
+
+/**
+ * The main button on an order card (spec §5.12). The spec's تتبّع, تابع الشغل
+ * and الشهادة open Tracking, Job progress and the certificate, which come in
+ * Phase 4; until then those orders get تفاصيل الطلب, which opens Order
+ * details. A cancelled order offers أعد الحجز.
+ */
+export type OrderAction = "details" | "rebook";
+
+export function primaryAction(status: OrderStatus): OrderAction {
+  return status === "cancelled" ? "rebook" : "details";
+}
+
+/**
+ * Whether the customer can still cancel or reschedule (spec §6, N6, N7):
+ * only while pending or confirmed, and until `cutoffHours` before the slot
+ * starts. At exactly the cutoff it is still allowed, as in transition_order.
+ * `now` is the server's clock; the database checks again.
+ */
+export type ChangeState = "allowed" | "too_late" | "closed";
+
+export function changeState(
+  status: OrderStatus,
+  slotStartAt: string | Date,
+  now: Date,
+  cutoffHours: number,
+): ChangeState {
+  if (status !== "pending_confirmation" && status !== "confirmed") return "closed";
+  const deadline = new Date(slotStartAt).getTime() - cutoffHours * 60 * 60 * 1000;
+  return now.getTime() > deadline ? "too_late" : "allowed";
+}

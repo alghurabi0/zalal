@@ -103,3 +103,17 @@ export function slotParts(
           : "evening";
   return { from: start.text, to: clock(endAt).text, period };
 }
+
+const dayMonthTime = new Intl.DateTimeFormat(LOCALE, {
+  timeZone,
+  day: "numeric",
+  month: "long",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** "26 تشرين الأول في 9:15 ص", for Order details' timeline. */
+export function formatDayTime(value: Date | string): string {
+  return dayMonthTime.format(new Date(value));
+}
