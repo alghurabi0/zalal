@@ -146,7 +146,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
   - `ci.yml` on every PR and push to `main`: Prettier check, lint, typecheck, unit tests, `supabase start` + `supabase test db`, a check that `database.types.ts` matches the schema, and Playwright.
   - `deploy-dev.yml` after CI passes on `main` (or by hand from `main`): `supabase link` → `supabase db push` → `supabase functions deploy`, with the `SUPABASE_DEV_*` repository secrets. The steps live in `.github/actions/supabase-deploy/`.
   - `deploy-prod.yml`, manual (`workflow_dispatch`, `main` only), uses the `production` environment so you approve it: the same steps against prod, then the Vercel deploy hook releases the app (`docs/deploy-setup.md`).
-- `supabase/seed.sql` loads into local and dev only, never into prod. Prod gets its first admin from the `ADMIN_PHONE` seed script (spec §10.2) and real prices and slots from the dashboard.
+- `supabase/seed.sql` loads into local databases only (`pnpm db:reset`, CI). Hosted dev and prod never load it: the deploy runs migrations only, so rows a hosted project needs (the settings row, the starting service area) come from migrations. Prod gets its first admin from the `ADMIN_PHONE` seed script (spec §10.2) and real prices and slots from the dashboard.
 
 ## Checklist
 

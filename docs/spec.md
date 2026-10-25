@@ -446,7 +446,7 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 | --- | --- | --- |
 | `profiles` | `id` (= `auth.users.id`), `role` (`app_role`: customer \| crew \| admin), `full_name` (null until N1), `phone` (E.164 copy of the Auth phone), `reminders_enabled`, `deleted_at` | Created by a trigger on signup; the phone check refuses any non-07X signup. Users edit only `full_name` and `reminders_enabled` |
 | `crews` | `id`, `name` ("فريق 1"), `user_id`, `active` | One login per crew |
-| `service_areas` | `id`, `name`, `area` (geography MultiPolygon), `active` | Karbala placeholder seeded; edited in admin (A13). `in_service_area(lat, lng)` checks a point against the active areas |
+| `service_areas` | `id`, `name`, `area` (geography MultiPolygon), `active` | A placeholder Karbala area comes from a migration (`default_service_area`), so every environment has one: the city with Al-Hurr, Al-Hussainiya, the Karbala–Hindiya road and Hindiya, plus Ain al-Tamr as a second part. Edited in admin (A13). `in_service_area(lat, lng)` checks a point against the active areas |
 | `addresses` | `id`, `user_id`, `label` (home \| family \| work), `district` (free text), `landmark`, `lat`, `lng`, `location` (point generated from lat/lng), `is_default`, `deleted_at` | Pin must be in an active service area (error `ZL001`). Unique (`user_id`, `label`) and one default among live rows. Soft delete through `delete_address()`, which also removes the address's tanks |
 | `tanks` | `id`, `user_id`, `address_id`, `type` (roof \| ground), `size` (s \| m \| l), `nickname`, `last_cleaned_at` | Foreign key on (`address_id`, `user_id`), so a tank sits only on its owner's address. `last_cleaned_at` is set only by order completion |
 | `price_list` | `tank_type`, `size`, `price_iqd`, `updated_by` | Primary key (type, size); 6 rows |
@@ -601,13 +601,15 @@ The on-screen Report and the public page N15 use the same data, so all three alw
 
 ### 10.2 Seed data (`supabase/seed.sql`)
 
+`seed.sql` loads only into local databases (`pnpm db:reset`, CI). Hosted dev and prod never load it: the deploy runs migrations only. So any row a hosted project needs to work goes in a migration, written to skip itself when the row already exists (the settings row, the service area). Phase 2 must do the same for the starting prices and slots, or booking on dev has nothing to offer.
+
 | Item | Seed value | Source |
 | --- | --- | --- |
 | Prices, roof s / m / l | 25,000 / 35,000 / 50,000 IQD | `Booking.dc.html` script |
 | Prices, ground s / m / l | 60,000 / 80,000 / 120,000 IQD | `Booking.dc.html` script |
 | Size labels | لحد 1,000 لتر / 1,000–2,000 / أكبر | Booking design |
 | Slots | 8–10 الصبح, 10–12 الظهر, 4–6 العصر; capacity 2 each; Sat–Thu | Booking design; capacity is a placeholder |
-| Service area | Karbala city polygon, drawn in A13 before launch | Placeholder rectangle in the seed |
+| Service area | Karbala city polygon, drawn in A13 before launch | Placeholder from migration `default_service_area` (city, Al-Hurr, Al-Hussainiya, Karbala–Hindiya road, Hindiya, and Ain al-Tamr) |
 | Article categories | صحة, نصائح, الصيف, أسئلة شائعة | Tips design + 1 |
 | Subscription plan | 2 visits / 12 months, 1 tank, price \[YOUR PRICE\] | To be set by you |
 | First admin | Your phone number, via `ADMIN_PHONE` env | — |

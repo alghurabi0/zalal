@@ -26,7 +26,7 @@ Follow CLAUDE.md and `supabase/CLAUDE.md` throughout. Schema, RLS and auth chang
 - `pnpm exec supabase migration new <name>`, one file per area. Header comment with the spec sections and departures.
 - Per table: `enable row level security`, `revoke all … from anon, authenticated`, minimal (column) grants, policies with `(select …)` wrappers, indexes on foreign keys and policy columns, `updated_at` trigger.
 - Per function: `search_path = ''`, qualified names, explicit EXECUTE grants after revoking the Supabase defaults.
-- Seed rows for local and dev go in `supabase/seed.sql`; rows prod also needs (like the settings row) go in the migration.
+- `supabase/seed.sql` loads only into local databases; hosted dev and prod never load it (the deploy runs migrations only). Rows any hosted project needs to work (the settings row, the starting service area, later prices and slots) go in a migration that skips itself when the row exists. Test-only sample data goes in `seed.sql`.
 
 ## 4. Verify
 
