@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useId } from "react";
 
 import { Chip, ChipGroup } from "@/components/ui/chip";
-import type { DayOption } from "@/lib/booking/availability";
+import type { DayOption, SlotOption } from "@/lib/booking/availability";
 import { serviceDayParts, slotParts } from "@/lib/dates";
 
 type DaySlotPickerProps = {
@@ -36,6 +36,8 @@ export function DaySlotPicker({
   // keeps visited pages mounted, so each picker gets its own names.
   const name = useId();
   const day = days.find((d) => d.date === serviceDate) ?? null;
+  const isCurrent = (date: string, slot: SlotOption) =>
+    current?.serviceDate === date && current.slotId === slot.slotId;
 
   if (days.length === 0) {
     return (
@@ -58,6 +60,8 @@ export function DaySlotPicker({
       >
         {days.map((option) => {
           const { weekday, day: dayOfMonth } = serviceDayParts(option.date);
+          // When rescheduling, the order's own slot doesn't count as a choice.
+          const full = !option.slots.some((slot) => slot.bookable && !isCurrent(option.date, slot));
           return (
             <Chip
               key={option.date}
@@ -65,13 +69,13 @@ export function DaySlotPicker({
               name={`${name}-day`}
               value={option.date}
               checked={serviceDate === option.date}
-              disabled={option.full}
+              disabled={full}
               onChange={() => onDayChange(option.date)}
               className="min-h-15 w-20 shrink-0 gap-0 px-1"
             >
               <span className="text-12">{weekday}</span>
               <span className="text-18 leading-tight font-black">{dayOfMonth}</span>
-              {option.full && <span className="text-11">{t("dayFull")}</span>}
+              {full && <span className="text-11">{t("dayFull")}</span>}
             </Chip>
           );
         })}
@@ -84,7 +88,7 @@ export function DaySlotPicker({
           bodyClassName="grid grid-cols-3 gap-2"
         >
           {day.slots.map((slot) => {
-            const isCurrent = current?.serviceDate === day.date && current.slotId === slot.slotId;
+            const currentSlot = isCurrent(day.date, slot);
             return (
               <Chip
                 key={slot.slotId}
@@ -92,13 +96,13 @@ export function DaySlotPicker({
                 name={`${name}-slot`}
                 value={slot.slotId}
                 checked={slotId === slot.slotId}
-                disabled={!slot.bookable || isCurrent}
+                disabled={!slot.bookable || currentSlot}
                 onChange={() => onSlotChange(slot.slotId)}
                 className="gap-0 leading-snug"
               >
                 <span>{t("slot", slotParts(slot.startAt, slot.endAt))}</span>
                 <span className="text-11 font-semibold">
-                  {isCurrent
+                  {currentSlot
                     ? t("currentSlot")
                     : slot.bookable
                       ? t("remaining", { count: slot.remaining })

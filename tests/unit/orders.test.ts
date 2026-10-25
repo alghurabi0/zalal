@@ -7,6 +7,7 @@ import {
   changeState,
   type OrderStatus,
   ordersTab,
+  pickActiveOrder,
   primaryAction,
 } from "@/lib/orders/status";
 import { buildTimeline, type OrderEventRow } from "@/lib/orders/timeline";
@@ -224,5 +225,60 @@ describe("tankStatus", () => {
       6,
     );
     expect(status).toMatchObject({ health: "overdue", lastCleanedAt: "2026-03-20T09:00:00Z" });
+  });
+});
+
+describe("pickActiveOrder", () => {
+  const now = new Date("2026-10-26T09:00:00Z");
+  const order = (id: string, status: OrderStatus, end: string) => ({
+    id,
+    status,
+    slot_end_at: end,
+  });
+
+  it("prefers an order the crew is working on", () => {
+    const picked = pickActiveOrder(
+      [
+        order("a", "confirmed", "2026-10-26T10:00:00Z"),
+        order("b", "on_the_way", "2026-10-26T12:00:00Z"),
+      ],
+      now,
+    );
+    expect(picked?.id).toBe("b");
+  });
+
+  it("skips a pending order whose slot already ended", () => {
+    const picked = pickActiveOrder(
+      [
+        order("old", "pending_confirmation", "2026-10-25T07:00:00Z"),
+        order("next", "confirmed", "2026-10-27T07:00:00Z"),
+      ],
+      now,
+    );
+    expect(picked?.id).toBe("next");
+  });
+
+  it("still shows a stale order when it is the only one", () => {
+    expect(pickActiveOrder([order("old", "confirmed", "2026-10-25T07:00:00Z")], now)?.id).toBe(
+      "old",
+    );
+    expect(pickActiveOrder([], now)).toBeNull();
+  });
+});
+
+describe("buildTimeline ordering", () => {
+  it("compares instants, not strings", () => {
+    const base = {
+      from_status: "pending_confirmation" as const,
+      actor_role: "admin" as const,
+      cancel_reason: null,
+      is_override: false,
+      details: {},
+    };
+    const timeline = buildTimeline([
+      { ...base, id: 9, to_status: "confirmed", created_at: "2026-10-25T10:00:00.4+00:00" },
+      { ...base, id: 10, to_status: "on_the_way", created_at: "2026-10-25T10:00:00+00:00" },
+    ]);
+    expect(timeline.map((e) => e.id)).toEqual([10, 9]);
   });
 });

@@ -70,7 +70,8 @@ export function RescheduleSheet({
         // Fresh places for the chips.
         router.refresh();
       }
-      if (result.error === "invalid_transition") router.refresh();
+      // The page behind the sheet shows the new state too.
+      if (result.error === "invalid_transition" || result.error === "too_late") router.refresh();
     });
   };
 

@@ -23,7 +23,7 @@ export type RescheduleOrderInput = z.input<typeof rescheduleOrderSchema>;
 
 /** Orders (spec §5.12): `?tab=past&n=40`. Lists load 20 at a time. */
 export const ORDERS_PAGE = 20;
-const ORDERS_MAX = 500;
+export const ORDERS_MAX = 500;
 
 export const ordersQuerySchema = z.object({
   tab: z.enum(["current", "past"]).catch("current"),

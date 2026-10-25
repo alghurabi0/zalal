@@ -29,7 +29,7 @@ export async function HomeCards() {
   // Staff are sent to their surface by the header.
   if (viewer.role !== "customer") return null;
 
-  const [order, tank] = await Promise.all([activeOrder(), chosenTankStatus()]);
+  const [order, tank] = await Promise.all([activeOrder(new Date()), chosenTankStatus()]);
   return (
     <>
       <LiveOrders customerId={viewer.id} />

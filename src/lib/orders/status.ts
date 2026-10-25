@@ -85,3 +85,20 @@ export function changeState(
   const deadline = new Date(slotStartAt).getTime() - cutoffHours * 60 * 60 * 1000;
   return now.getTime() > deadline ? "too_late" : "allowed";
 }
+
+/**
+ * Home's active-order card (spec §5.5): the soonest order from pending to
+ * in progress. An order the crew is working on comes first, and a pending
+ * or confirmed one whose slot has already ended (staff haven't acted on it
+ * yet) only shows when there is nothing else. `orders` are soonest first.
+ */
+export function pickActiveOrder<T extends { status: OrderStatus; slot_end_at: string }>(
+  orders: T[],
+  now: Date,
+): T | null {
+  const live = orders.find(
+    (o) => o.status === "on_the_way" || o.status === "arrived" || o.status === "in_progress",
+  );
+  if (live) return live;
+  return orders.find((o) => new Date(o.slot_end_at).getTime() > now.getTime()) ?? orders[0] ?? null;
+}

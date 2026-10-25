@@ -285,7 +285,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Guest mode: the header shows "سجّل دخول"; there are no order or tank cards; a price-list card appears with a book CTA that goes through login.
 - **Phase 1 builds a shell**: the header (address picker N2, or "سجّل دخول" for guests), the greeting and the tab bar. The bell, cards, quick actions and tips strip come with the phases that own their data (the price list in Phase 2). The address chosen in N2 is kept per device (`zl_address` cookie) and falls back to the default address.
 - **Phase 2 adds the cards** (settled Oct 25, 2026):
-  - The active order card updates live through Realtime. Until Tracking exists (Phase 4) it always opens Order details, says "الفريق بالطريق إلك" without the distance, and its link reads "التفاصيل".
+  - The active order card updates live through Realtime. An order the crew is working on comes first. A pending or confirmed order whose slot has already ended (staff haven't acted on it yet) shows only when there is no other. Until Tracking exists (Phase 4) it always opens Order details, says "الفريق بالطريق إلك" without the distance, and its link reads "التفاصيل".
   - The tank status card follows the cleaned tank due soonest at the chosen address. Tanks we never cleaned have no date, so with none cleaned the card shows "ما عدنا سجل لخزانك". Its book button shows in every state.
   - Guests get the price list (the 6 rows of `price_list`) with "احجز تنظيف", which goes through login.
   - The bell, quick actions and tips strip still wait for the screens they open (Phases 5–6).

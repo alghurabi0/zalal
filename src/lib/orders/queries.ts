@@ -3,7 +3,7 @@ import "server-only";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-import { CURRENT_STATUSES, type OrdersTab, PAST_STATUSES } from "./status";
+import { CURRENT_STATUSES, type OrdersTab, PAST_STATUSES, pickActiveOrder } from "./status";
 import type { OrderEventRow } from "./timeline";
 
 // The customer's orders, read as the customer: RLS returns only their own.
@@ -69,10 +69,10 @@ export async function listOrders(
   return { orders: data.slice(0, limit).map(toSummary), more: data.length > limit };
 }
 
-/** Home's active-order card (spec §5.5): the soonest current order. */
-export async function activeOrder(): Promise<OrderSummary | null> {
-  const { orders } = await listOrders("current", 1);
-  return orders[0] ?? null;
+/** Home's active-order card (spec §5.5), chosen by pickActiveOrder(). */
+export async function activeOrder(now: Date): Promise<OrderSummary | null> {
+  const { orders } = await listOrders("current", 20);
+  return pickActiveOrder(orders, now);
 }
 
 export type OrderMedia = {
@@ -130,7 +130,7 @@ export async function getOrder(id: string): Promise<OrderDetails | null> {
   // The customer's own photos and videos; the crew's come with Job progress (Phase 4).
   const files = order_media
     .filter((file) => file.kind === "customer")
-    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
 
   let urls = new Map<string, string>();
   if (files.length > 0) {

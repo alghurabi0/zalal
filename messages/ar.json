@@ -406,7 +406,6 @@
       "arrived": "الفريق وصل",
       "in_progress": "بدأ الشغل",
       "completed": "خلص الشغل",
-      "cancelledStatus": "انلغى الطلب",
       "no_show": "الفريق ما لكه أحد بالبيت"
     },
     "dayDate": "{weekday} {day}",

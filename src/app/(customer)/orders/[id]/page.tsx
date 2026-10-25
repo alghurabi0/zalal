@@ -46,7 +46,10 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
   const viewer = await requireViewer(routes.order(id));
   const t = await getTranslations("Order");
   const orderId = z.uuid().safeParse(id);
-  const order = orderId.success ? await getOrder(orderId.data) : null;
+  const [order, cutoff] = await Promise.all([
+    orderId.success ? getOrder(orderId.data) : null,
+    cancelCutoffHours(),
+  ]);
 
   if (!order) {
     return (
@@ -89,7 +92,7 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
         {order.media.length > 0 && <Files order={order} />}
         <Timeline entries={buildTimeline(order.events)} />
       </div>
-      <Actions order={order} />
+      <Actions order={order} cutoff={cutoff} />
     </>
   );
 }
@@ -240,9 +243,7 @@ async function Timeline({ entries }: { entries: TimelineEntry[] }) {
           : t("events.cancelled", { by });
       }
       case "status":
-        return entry.status === "cancelled"
-          ? t("events.cancelledStatus")
-          : t(`events.${entry.status}`);
+        return t(`events.${entry.status}`);
     }
   };
 
@@ -277,7 +278,14 @@ async function Timeline({ entries }: { entries: TimelineEntry[] }) {
 }
 
 /** The buttons the order's status allows, in a footer. */
-async function Actions({ order }: { order: OrderDetails }) {
+async function cancelCutoffHours(): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("settings").select("cancel_cutoff_hours").single();
+  if (error) throw new Error(`Settings read failed: ${error.message}`);
+  return data.cancel_cutoff_hours;
+}
+
+async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number }) {
   const t = await getTranslations("Order");
   const tBooking = await getTranslations("Booking");
 
@@ -291,19 +299,13 @@ async function Actions({ order }: { order: OrderDetails }) {
     );
   }
 
-  const supabase = await createClient();
-  const { data: settings, error } = await supabase
-    .from("settings")
-    .select("cancel_cutoff_hours")
-    .single();
-  if (error) throw new Error(`Settings read failed: ${error.message}`);
-  const cutoff = settings.cancel_cutoff_hours;
   // The server's clock, never the device's; the database checks again.
   const now = new Date();
   const state = changeState(order.status, order.slot_start_at, now, cutoff);
   if (state === "closed") return null;
 
   const tooLate = state === "too_late";
+  const supabase = await createClient();
   const { data: availability, error: availabilityError } = tooLate
     ? { data: [], error: null }
     : await supabase.rpc("booking_availability");

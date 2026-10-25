@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 import { listOrders } from "@/lib/orders/queries";
 import type { OrdersTab } from "@/lib/orders/status";
 import { routes } from "@/lib/routes";
-import { ORDERS_PAGE, ordersQuerySchema } from "@/lib/schemas/order";
+import { ORDERS_MAX, ORDERS_PAGE, ordersQuerySchema } from "@/lib/schemas/order";
 
 import { OrderCard } from "./order-card";
 
@@ -65,7 +65,7 @@ async function OrdersContent({ searchParams }: PageProps<"/orders">) {
             ))}
           </ul>
         )}
-        {more && (
+        {more && query.n < ORDERS_MAX && (
           <Button
             href={ordersHref(query.tab, query.n + ORDERS_PAGE)}
             variant="secondary"
