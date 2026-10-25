@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import type { AddressSummary } from "@/app/(customer)/addresses/address-picker";
 import { HOME_ADDRESS_COOKIE } from "@/lib/cookies";
@@ -8,9 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * The logged-in customer's live addresses for the picker (N2): the default
- * first, then newest. RLS returns only their own live rows.
+ * first, then newest. RLS returns only their own live rows. One read per
+ * request (Home's header and cards both need them).
  */
-export async function listAddresses(): Promise<AddressSummary[]> {
+export const listAddresses = cache(async (): Promise<AddressSummary[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("addresses")
@@ -25,7 +27,7 @@ export async function listAddresses(): Promise<AddressSummary[]> {
     landmark: row.landmark,
     isDefault: row.is_default,
   }));
-}
+});
 
 /**
  * The address Home and Booking use: the one picked in the picker (N2, the

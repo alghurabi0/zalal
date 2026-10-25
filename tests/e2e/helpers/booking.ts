@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { expect, type Page } from "@playwright/test";
+
 import { e164 } from "./auth";
 import { admin } from "./supabase";
 
@@ -114,4 +116,117 @@ export async function fillSlot(slot: TestSlot, date: string, phone: string) {
       .insert({ service_date: date, slot_id: slot.id, seat, order_id: order.id })
       .throwOnError();
   }
+}
+
+/** Picks the day (by date) and the test's slot in the day and slot chips. */
+export async function pickSlot(page: Page, date: string, label: string) {
+  await page
+    .locator("label")
+    .filter({ visible: true })
+    .filter({ has: page.locator(`input[name$="-day"][value="${date}"]`) })
+    .click();
+  // The radio itself is visually hidden; tap its chip like a customer would.
+  await page.locator("label").filter({ visible: true }).filter({ hasText: label }).click();
+  await expect(
+    page.getByRole("radio", { name: new RegExp(label) }).filter({ visible: true }),
+  ).toBeChecked();
+}
+
+type OrderStatus =
+  "pending_confirmation" | "confirmed" | "on_the_way" | "in_progress" | "cancelled" | "completed";
+
+type TestLine = {
+  tank_type: "roof" | "ground";
+  size: "s" | "m" | "l";
+  qty: number;
+  unit_price_iqd: number;
+};
+
+/**
+ * An order for this customer at their first address, written directly, as
+ * booking and staff would have left it: its booking event, a place in the
+ * slot unless cancelled, and an event for a status past pending.
+ * `startAt` overrides the slot's start time (to sit near the cutoff).
+ */
+export async function createOrder(
+  phone: string,
+  {
+    slot,
+    date,
+    status = "pending_confirmation",
+    startAt,
+    lines = [{ tank_type: "roof", size: "m", qty: 1, unit_price_iqd: 35000 }],
+  }: { slot: TestSlot; date: string; status?: OrderStatus; startAt?: Date; lines?: TestLine[] },
+): Promise<{ id: string; number: number }> {
+  const customerId = await userIdFor(phone);
+  const { data: address } = await admin
+    .from("addresses")
+    .select("id, district, landmark, lat, lng")
+    .eq("user_id", customerId)
+    .limit(1)
+    .single()
+    .throwOnError();
+  const slotStart = startAt ?? new Date(`${date}T${slot.startTime}:00+03:00`);
+  const { data: order } = await admin
+    .from("orders")
+    .insert({
+      customer_id: customerId,
+      address_id: address.id,
+      district: address.district,
+      landmark: address.landmark,
+      lat: address.lat,
+      lng: address.lng,
+      service_date: date,
+      slot_id: slot.id,
+      slot_start_at: slotStart.toISOString(),
+      slot_end_at: new Date(slotStart.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+      status,
+      total_iqd: lines.reduce((sum, l) => sum + l.qty * l.unit_price_iqd, 0),
+      client_request_id: randomUUID(),
+    })
+    .select("id, number")
+    .single()
+    .throwOnError();
+  await admin
+    .from("order_items")
+    .insert(lines.map((line) => ({ ...line, order_id: order.id })))
+    .throwOnError();
+  await admin
+    .from("order_events")
+    .insert({
+      order_id: order.id,
+      from_status: null,
+      to_status: "pending_confirmation",
+      actor_id: customerId,
+      actor_role: "customer",
+      created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    })
+    .throwOnError();
+  if (status !== "pending_confirmation") {
+    await admin
+      .from("order_events")
+      .insert({
+        order_id: order.id,
+        from_status: "pending_confirmation",
+        to_status: status,
+        actor_role: "admin",
+      })
+      .throwOnError();
+  }
+  if (status !== "cancelled") {
+    const { data: taken } = await admin
+      .from("slot_bookings")
+      .select("seat")
+      .eq("slot_id", slot.id)
+      .eq("service_date", date)
+      .throwOnError();
+    const seats = new Set(taken.map((row) => row.seat));
+    let seat = 1;
+    while (seats.has(seat)) seat++;
+    await admin
+      .from("slot_bookings")
+      .insert({ service_date: date, slot_id: slot.id, seat, order_id: order.id })
+      .throwOnError();
+  }
+  return order;
 }
