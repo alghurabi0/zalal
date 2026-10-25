@@ -109,7 +109,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 
 Versions: Next.js 16 is decided (Oct 23, 2026). For every other tool, use the current stable release in Phase 0 and pin it in `package.json`. If Serwist or Sentry does not yet support Next.js 16 cleanly, say so before working around it. Tailwind v4 keeps theme tokens in CSS (`@theme` in `globals.css`), not in a `tailwind.config` file.
 
-Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22.18+ (it runs the `.ts` scripts and hooks directly), Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4. Monitoring adds @sentry/nextjs 11.9.0 (supports Next 16 with `cacheComponents` and Turbopack) and posthog-js 1.438.20. Phase 1 adds @vis.gl/react-google-maps 1.10.1 (the Location map and Places search) and, for its types, @types/google.maps 3.66.7. CI uses actions/checkout v7, actions/setup-node v7 (Node 22), pnpm/action-setup v6 and actions/upload-artifact v7.
+Pinned in Phase 0 (Oct 23, 2026): Next.js 16.4.2, React 19.3.1, Tailwind 4.3.3, next-intl 4.14.9, Vitest 5.0.5, Playwright 1.64.1, pnpm 10.28.0, Node 22.18+ (it runs the `.ts` scripts and hooks directly), Supabase CLI 2.122.0 (dev dependency), supabase-js 2.118.0, @supabase/ssr 0.12.7, Zod 4.6.7, Postgres 17. Two tools are held one major version back because Next's ESLint config doesn't support the newest yet: **TypeScript 6.0.3** (typescript-eslint supports < 6.1, and 7.0 is out) and **ESLint 9.39** (`eslint-plugin-react` doesn't support ESLint 10). Upgrade both when `eslint-config-next` does. The app keeps the Next 16.4 defaults `cacheComponents` and `partialPrefetching` on. Serwist 9.5.13 (`@serwist/next`, `@serwist/cli`, `serwist`) and esbuild 0.28.2 build the service worker; sharp 0.35.5 generates the icons. The UI kit adds lucide-react 1.61.0 (icons), radix-ui 1.8.1 (Dialog for the bottom sheet), tailwind-merge 3.7.0 (the `cn()` helper) and, for component tests, happy-dom 21.0.4. Monitoring adds @sentry/nextjs 11.9.0 (supports Next 16 with `cacheComponents` and Turbopack) and posthog-js 1.438.20. Phase 1 adds @vis.gl/react-google-maps 1.10.1 (the Location map and Places search) and, for its types, @types/google.maps 3.66.7. Phase 2 adds tus-js-client 4.3.1 (resumable uploads to Supabase Storage, with progress) and browser-image-compression 2.0.2 (photos scaled down before upload; run on the main thread, because its web worker would load the library from a CDN). CI uses actions/checkout v7, actions/setup-node v7 (Node 22), pnpm/action-setup v6 and actions/upload-artifact v7.
 
 **PWA and caching (Phase 0).** Serwist runs in its "configurator mode": `pnpm build` runs `next build && serwist build`, and the CLI bundles `src/app/sw.ts` into `public/sw.js` (git-ignored) outside the Next.js bundler. The Turbopack integration (`@serwist/turbopack`) is not used, because its route handler exports `dynamic` and `revalidate`, which Next.js rejects when `cacheComponents` is on. The worker is registered in the root layout and is off in `pnpm dev`. Caching policy:
 
@@ -314,12 +314,16 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Slots: admin-defined, each showing remaining capacity. A full slot is disabled.
 - **Change:** the price label "السعر التقريبي" becomes "السعر"; prices are fixed. Total = Σ line price × qty, using the price table from the database.
 - A guest tapping Book goes through login, then returns here.
+- Built (Phase 2): `/book`, `/book/photos`, `/book/confirm` share one layout that loads the address (Home's choice, else the default), its saved tanks, the price list, `booking_availability()` and the tank limit once. The booking in progress is kept per user in `sessionStorage`, so a reload or a trip to Location keeps it; uploads still running are lost on a reload.
+- A first booking at an address with no saved tanks starts with one new line, the design's choice (خزان سطح, 1,000–2,000, ×1), which the customer can edit or remove (settled Oct 25, 2026). Changing the address drops the saved-tank lines and keeps the new-tank lines. Slots that start within the cutoff are left out, and a day left with none is hidden; a slot's places left show under its time.
 
 ### 5.10 Booking step 2 — `Upload.dc.html`
 
 - Optional. Up to 4 files. Videos: 60 s and 100 MB maximum. Photos are compressed in the browser to about 1600 px.
 - Uploads start right away, with progress, retry on failure, and remove (×). The note allows 500 characters.
 - Confirming the booking waits until uploads finish. "تخطي" goes to Checkout.
+- **Change (copy):** the intro drops "ويعطيك سعر أدق", since prices are fixed with no re-quotes (decisions 21–22; settled Oct 25, 2026).
+- Built (Phase 2): files go from the phone straight to `order-media/customer/<user id>/<random>` over TUS (resumable, `tus-js-client`). Videos are checked on the device (length from the file's metadata; the server can't check it in v1) and photos are scaled to 1600 px on the longer edge. × stops an upload or deletes the finished file. Unbooked uploads are not cleaned up yet (§7).
 
 ### 5.11 Booking step 3 — `Checkout.dc.html`
 
@@ -329,6 +333,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - **Change:** "أكّد الحجز" creates the order as `pending_confirmation` and opens Booking success (N5), not Tracking.
 - The slot is re-checked on submit. If it filled up, the user sees "الموعد انحجز، اختار موعد ثاني" and returns to step 1.
 - **Change (footer text):** "تكدر تلغي أو تغير الموعد لحد ساعتين قبل".
+- Built (Phase 2): "أكّد الحجز" makes a request id once and keeps it with the booking, so a retry or a double tap returns the same order (`create_order`'s `client_request_id`); any change to the booking makes a new one. A slot that filled up or closed sends the customer back to step 1 with the slot cleared; a missing upload sends them to step 2.
 
 ### 5.12 Orders — `Orders.dc.html`
 
@@ -394,7 +399,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 | N2 | Address list / picker (sheet) | Home header, Booking, Profile | Label, district, landmark; select, edit, delete (blocked while an active order uses it, from Phase 2), add (opens Location; hidden at three addresses), mark default. Delete asks first and also removes the address's tanks |
 | N3 | My tanks | Profile | Grouped by address: type, size, optional nickname (up to 30 characters), last cleaned, next due (last cleaned + `cleaning_interval_months`); add, edit, delete. Add and edit use a sheet with Booking's type and size tiles; a tank stays on its address |
 | N4 | Order details | Orders, Home card, notifications | Status timeline, summary, price, attachments; buttons by status: cancel, reschedule, track, progress, certificate, help |
-| N5 | Booking success | After checkout | "وصلنا طلبك #1024 · بانتظار تأكيد الشركة"; a soft push-permission card; buttons to Order details and Home |
+| N5 | Booking success | After checkout | "وصلنا طلبك #1024 · بانتظار تأكيد الشركة", with the day and slot; a soft push-permission card (Phase 5, with Web Push: settled Oct 25, 2026); buttons to Order details and Home. Route `/book/done/[id]` |
 | N6 | Cancel sheet | N4, Chat | Reason (تغيرت ظروفي / الموعد ما يناسبني / شي ثاني) + confirm. Within 2 h: blocked, "راسلنا بالمحادثة" |
 | N7 | Reschedule sheet | N4, Chat | Date + slot picker with the same rules as Booking; the order goes back to `pending_confirmation`; blocked within 2 h |
 | N8 | Subscription | Home, Profile | Plan card: price and contents from settings (2 cleanings a year + reminders). "اطلب الاشتراك" creates a request; then a status view (requested / active / expired) |
@@ -725,6 +730,8 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 - [x] Schema: price\_list, slots, blocked\_dates, slot\_bookings, orders, order\_items, order\_events, order\_media; `create_order` + `transition_order` RPC. Also `crews` and `admin_audit_log` (which `transition_order` needs), `booking_availability()`, and the `order-media` upload rules
 - [ ] Screens: Booking 1–3, Upload with resumable upload, Booking success (N5), Orders, Order details (N4), Cancel (N6), Reschedule (N7); Home with live cards
+  - [x] Part A: Booking 1–3, Upload with resumable upload, Booking success (N5)
+  - [ ] Part B: Orders, Order details (N4), Cancel (N6), Reschedule (N7), Home with live cards
 
 * Done when: two parallel bookings cannot overbook the last seat (test); cancelling at 1 h 59 min is refused
 

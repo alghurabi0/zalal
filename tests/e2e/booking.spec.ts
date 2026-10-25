@@ -32,7 +32,9 @@ async function pickSlot(page: Page, date: string, label: string) {
     .locator("label")
     .filter({ has: page.locator(`input[name="service-day"][value="${date}"]`) })
     .click();
-  await page.getByRole("radio", { name: new RegExp(label) }).check({ force: true });
+  // The radio itself is visually hidden; tap its chip like a customer would.
+  await page.locator("label").filter({ hasText: label }).click();
+  await expect(page.getByRole("radio", { name: new RegExp(label) })).toBeChecked();
 }
 
 async function expectTouchTargets(page: Page, names: (string | RegExp)[]) {
