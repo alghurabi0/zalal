@@ -34,7 +34,7 @@ select is(
     where p.pronamespace = 'private'::regnamespace
       and has_function_privilege('authenticated', p.oid, 'execute')
   ),
-  array['current_user_role', 'is_admin'],
+  array['current_crew_id', 'current_user_role', 'is_admin'],
   'authenticated can execute only the role helpers'
 );
 

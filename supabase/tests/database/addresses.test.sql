@@ -4,7 +4,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(42);
+select plan(44);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -226,7 +226,7 @@ select tests.authenticate_as(tests.user_id('+9647703333333'));
 
 select is_empty(
   $$ select 1 from public.addresses $$,
-  'a crew reads no customer addresses (Phase 2/3 adds assigned orders)'
+  'a crew reads no customer addresses (it reads the copy on its orders)'
 );
 
 select throws_ok(
@@ -308,6 +308,29 @@ select is(
 );
 
 select has_index('public', 'addresses', 'addresses_user_id_idx', 'user_id is indexed');
+
+-- Addresses in use (N2, Phase 2) -------------------------------------------
+
+-- Customer A's remaining address ('work') gets an active order.
+select tests.clear_authentication();
+insert into tests.addresses
+values ('active_order', tests.create_order(tests.user_id('+9647801111111'), 'confirmed'));
+select tests.authenticate_as(tests.user_id('+9647801111111'));
+
+select throws_ok(
+  $$ select public.delete_address((select id from public.addresses where label = 'work')) $$,
+  'ZL012', 'address_in_use',
+  'an address with an active order cannot be deleted'
+);
+
+select tests.clear_authentication();
+update public.orders set status = 'completed' where id = tests.address_id('active_order');
+select tests.authenticate_as(tests.user_id('+9647801111111'));
+
+select lives_ok(
+  $$ select public.delete_address((select id from public.addresses where label = 'work')) $$,
+  'an address whose orders are finished can be deleted'
+);
 
 select * from finish();
 rollback;

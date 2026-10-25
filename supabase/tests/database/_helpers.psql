@@ -108,4 +108,155 @@ begin
 end;
 $$;
 
+-- Ids by name, so tests can refer to rows they made from inside $$-quoted SQL
+-- and from any role: insert into tests.ids, read with tests.id(name).
+create table tests.ids (name text primary key, id uuid not null);
+grant select, insert on tests.ids to anon, authenticated, service_role;
+
+create function tests.id(p_name text)
+returns uuid
+language sql
+stable
+as $$
+  select id from tests.ids where name = p_name;
+$$;
+
+-- Booking fixtures (Phase 2). They insert as the test runner (postgres),
+-- past RLS and the booking functions, so a test can set up any order state
+-- directly. Call them before tests.authenticate_as.
+
+-- A live address for the user at 32.616 N, 44.024 E (inside Karbala and inside
+-- the test areas the tests draw). Returns its id.
+create function tests.create_address(p_user_id uuid, p_label text default 'home')
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.addresses (user_id, label, district, landmark, lat, lng)
+  values (p_user_id, p_label::public.address_label, 'حي الحسين', 'قرب الجامع', 32.616, 44.024)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- A crew-role account and its crews row. Returns the crew id.
+create function tests.create_crew(p_phone text)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.crews (name, user_id)
+  values ('فريق ' || right(p_phone, 4), tests.create_user(p_phone, 'crew'))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- A slot open every day of the week. Returns its id.
+create function tests.create_slot(p_start time, p_end time, p_capacity int default 2)
+returns bigint
+language plpgsql
+as $$
+declare
+  v_id bigint;
+begin
+  insert into public.slots (start_time, end_time, capacity, weekdays)
+  values (p_start, p_end, p_capacity, '{0,1,2,3,4,5,6}')
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- An order for the customer at their default address (made if missing): one
+-- saved roof/m tank at 35,000 IQD, starting at p_slot_start_at. It holds the
+-- next seat in its slot unless cancelled. Without p_slot_id it uses a
+-- fixture slot (05:00-06:00, 20 places); slot_start_at is taken as given, so
+-- a test can place the start anywhere relative to now(). Returns the id.
+create function tests.create_order(
+  p_customer_id uuid,
+  p_status text default 'pending_confirmation',
+  p_slot_start_at timestamptz default now() + interval '3 days',
+  p_crew_id uuid default null,
+  p_slot_id bigint default null
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_address public.addresses;
+  v_slot_id bigint := p_slot_id;
+  v_date date := (p_slot_start_at at time zone 'Asia/Baghdad')::date;
+  v_order_id uuid;
+  v_tank_id uuid;
+begin
+  select * into v_address
+  from public.addresses
+  where user_id = p_customer_id and deleted_at is null and is_default;
+  if not found then
+    perform tests.create_address(p_customer_id);
+    select * into v_address
+    from public.addresses
+    where user_id = p_customer_id and deleted_at is null and is_default;
+  end if;
+
+  if v_slot_id is null then
+    select id into v_slot_id from public.slots where start_time = '05:00' and end_time = '06:00';
+    if not found then
+      v_slot_id := tests.create_slot('05:00', '06:00', 20);
+    end if;
+  end if;
+
+  insert into public.orders (
+    customer_id, address_id, district, landmark, lat, lng, service_date, slot_id,
+    slot_start_at, slot_end_at, status, crew_id, total_iqd, client_request_id
+  )
+  values (
+    p_customer_id, v_address.id, v_address.district, v_address.landmark, v_address.lat,
+    v_address.lng, v_date, v_slot_id, p_slot_start_at, p_slot_start_at + interval '2 hours',
+    p_status::public.order_status, p_crew_id, 35000, gen_random_uuid()
+  )
+  returning id into v_order_id;
+
+  insert into public.tanks (user_id, address_id, type, size)
+  values (p_customer_id, v_address.id, 'roof', 'm')
+  returning id into v_tank_id;
+
+  insert into public.order_items (order_id, tank_id, tank_type, size, qty, unit_price_iqd)
+  values (v_order_id, v_tank_id, 'roof', 'm', 1, 35000);
+
+  if p_status <> 'cancelled' then
+    insert into public.slot_bookings (service_date, slot_id, seat, order_id)
+    select v_date, v_slot_id, coalesce(max(b.seat), 0) + 1, v_order_id
+    from public.slot_bookings as b
+    where b.service_date = v_date and b.slot_id = v_slot_id;
+  end if;
+
+  return v_order_id;
+end;
+$$;
+
+-- A finished upload in Storage, as the Storage API leaves it.
+create function tests.create_object(
+  p_bucket text,
+  p_name text,
+  p_owner uuid,
+  p_mimetype text default 'image/jpeg',
+  p_size bigint default 1000
+)
+returns void
+language plpgsql
+as $$
+begin
+  insert into storage.objects (bucket_id, name, owner, owner_id, metadata)
+  values (
+    p_bucket, p_name, p_owner, p_owner::text,
+    jsonb_build_object('mimetype', p_mimetype, 'size', p_size)
+  );
+end;
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated, service_role;

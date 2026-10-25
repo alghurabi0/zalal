@@ -430,8 +430,12 @@ The main path runs from booking to the certificate. Reschedule loops back to pen
 
 Rules:
 
-- "2 hours before" is measured from the slot start in `Asia/Baghdad` time, computed on the server.
-- Slot capacity is held in `slot_bookings` with a unique constraint, so two customers cannot take the last place at once.
+- "2 hours before" is measured from the slot start in `Asia/Baghdad` time, computed on the server (`cancel_cutoff_hours`). At exactly 2 h a change is still allowed. The same cutoff applies to a new booking: a slot can be booked only if it starts at least 2 h from now (settled Oct 25, 2026).
+- The booking window is today (Baghdad) plus the next 13 days (`booking_window_days` = 14, today included; settled Oct 25, 2026).
+- Slot capacity is held in `slot_bookings` with a unique key (`service_date`, `slot_id`, `seat`), so two customers cannot take the last place at once. Bookings for one slot and day also queue on a transaction lock, so a lowered capacity is respected too (`tests/integration/booking-capacity.test.ts`).
+- Reschedule keeps the assigned crew; the admin can change it when confirming again. A no-show keeps its place. An admin override out of `cancelled` takes a place again and fails if the slot is full.
+- Error codes the app maps to messages: `ZL004` slot not bookable, `ZL005` slot full ("الموعد انحجز، اختار موعد ثاني"), `ZL006` too late to change (N6/N7 "راسلنا بالمحادثة"), `ZL010` move not allowed, `ZL011` a requirement is missing (before photo, after photo, cash, reason, crew). The full list is in `supabase/CLAUDE.md`.
+- Phase 2 builds `transition_order` with every move in the table and its checks. The side effects that need later tables are added by their phases: certificate and PDF (Phase 4), notifications and push (Phase 5), subscription coverage and visits (Phase 6). Completion already sets `tanks.last_cleaned_at`.
 - Rating is separate from status. A completed order can be rated once, any time later.
 
 ## 7. Data model
@@ -445,18 +449,19 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 | Table | Key columns | Notes |
 | --- | --- | --- |
 | `profiles` | `id` (= `auth.users.id`), `role` (`app_role`: customer \| crew \| admin), `full_name` (null until N1), `phone` (E.164 copy of the Auth phone), `reminders_enabled`, `deleted_at` | Created by a trigger on signup; the phone check refuses any non-07X signup. Users edit only `full_name` and `reminders_enabled` |
-| `crews` | `id`, `name` ("فريق 1"), `user_id`, `active` | One login per crew |
+| `crews` | `id`, `name` ("فريق 1", unique), `user_id` (unique, must be a crew-role account), `active` | One login per crew. Created in Phase 2 because `transition_order` needs it; A10 writes come in Phase 3. `private.current_crew_id()` names the caller's crew while it is active and the account is still a crew |
 | `service_areas` | `id`, `name`, `area` (geography MultiPolygon), `active` | A placeholder Karbala area comes from a migration (`default_service_area`), so every environment has one: the city with Al-Hurr, Al-Hussainiya, the Karbala–Hindiya road and Hindiya, plus Ain al-Tamr as a second part. Edited in admin (A13). `in_service_area(lat, lng)` checks a point against the active areas |
 | `addresses` | `id`, `user_id`, `label` (home \| family \| work), `district` (free text), `landmark`, `lat`, `lng`, `location` (point generated from lat/lng), `is_default`, `deleted_at` | Pin must be in an active service area (error `ZL001`). Unique (`user_id`, `label`) and one default among live rows. Soft delete through `delete_address()`, which also removes the address's tanks |
 | `tanks` | `id`, `user_id`, `address_id`, `type` (roof \| ground), `size` (s \| m \| l), `nickname`, `last_cleaned_at` | Foreign key on (`address_id`, `user_id`), so a tank sits only on its owner's address. `last_cleaned_at` is set only by order completion |
-| `price_list` | `tank_type`, `size`, `price_iqd`, `updated_by` | Primary key (type, size); 6 rows |
-| `slots` | `id`, `label`, `start_time`, `end_time`, `capacity`, `weekdays` int\[\], `active` | e.g. "8–10 الصبح" |
-| `blocked_dates` | `date`, `reason` | Holidays such as Arbaeen and Ashura |
-| `slot_bookings` | `date`, `slot_id`, `seat`, `order_id` | Unique (`date`, `slot_id`, `seat`); seat ≤ capacity |
-| `orders` | `id`, `number` (serial, shown as #1024), `customer_id`, `address_id` + snapshot (`district`, `landmark`, `location`), `date`, `slot_id`, `slot_start_at`, `status`, `crew_id`, `total_iqd`, `uses_subscription`, `subscription_id`, `payment_method` ('cash'), `cash_collected`, `customer_note`, `cancel_reason` |  |
-| `order_items` | `order_id`, `tank_id`, `tank_type`, `size`, `qty`, `unit_price_iqd` | Price snapshot |
-| `order_events` | `order_id`, `from_status`, `to_status`, `actor_id`, `actor_role`, `reason`, `is_override`, `created_at` | Audit trail and timeline |
-| `order_media` | `id`, `order_id`, `kind` (customer \| before \| after \| clip), `media_type` (photo \| video), `path`, `duration_s`, `bytes`, `uploaded_by` |  |
+| `price_list` | `tank_type`, `size`, `price_iqd`, `updated_at` | Primary key (type, size); 6 rows from migration `booking_catalog`. No `updated_by`: `admin_audit_log` records who changed a price. Everyone reads it, guests too |
+| `slots` | `id`, `start_time`, `end_time` (Baghdad), `capacity` 1–20, `weekdays` smallint\[\] (0 = Sunday), `active` | No `label`: the app builds "8–10 الصبح" from the times. Unique (`start_time`, `end_time`). Switched off, never deleted. Three seeded by migration (8–10, 10–12, 16–18; 2 places; Sat–Thu). Everyone reads active slots |
+| `blocked_dates` | `date`, `reason` | Holidays such as Arbaeen and Ashura. Admins read it; customers see its effect through `booking_availability()` |
+| `slot_bookings` | `service_date`, `slot_id`, `seat`, `order_id` (unique) | Primary key (`service_date`, `slot_id`, `seat`). One row per order holding a place; cancelled orders hold none. "Seat ≤ capacity" is checked by the booking functions, not a constraint, so a lowered capacity never breaks existing bookings. Admin-only |
+| `orders` | `id`, `number` (identity from 1001, shown as #1024), `customer_id`, `address_id` + copy (`district`, `landmark`, `lat`, `lng`, generated `location`), `service_date`, `slot_id`, `slot_start_at`, `slot_end_at`, `status` (`order_status`), `crew_id`, `total_iqd`, `payment_method` (`cash`), `cash_collected`, `customer_note` (≤ 500), `client_request_id` | `client_request_id` makes `create_order` retry-safe (unique per customer). No `cancel_reason` (it is on the cancel event). `uses_subscription` and `subscription_id` come with subscriptions in Phase 6. In the Realtime publication |
+| `order_items` | `order_id`, `tank_id` (set null if the tank is deleted), `tank_type`, `size`, `qty`, `unit_price_iqd` | Price snapshot. A new tank line is saved to the address as one tank; `qty` stays on the line (settled Oct 25, 2026) |
+| `order_events` | `order_id`, `from_status` (null for the booking), `to_status`, `actor_id`, `actor_role`, `cancel_reason` (`plans_changed` \| `time_unsuitable` \| `other`, the N6 choice), `is_override`, `details` (old and new slot of a reschedule; `cash_collected` on completion), `created_at` | Audit trail and timeline; written only by the order functions. No free-text reason: staff reasons are internal notes (next row) |
+| `order_event_notes` | `event_id` (key), `order_id`, `note` (≤ 500), `created_at` | The reason staff give with an event: an admin's cancel reason, a no-show note, an override reason. Internal (settled Oct 25, 2026): admins and the assigned crew read them, the customer never does. Foreign key (`event_id`, `order_id`) → `order_events`. Its own table because RLS can't hide one column from customers while staff read it |
+| `order_media` | `id`, `order_id`, `kind` (customer \| before \| after \| clip), `media_type` (photo \| video), `path` (unique object name in `order-media`), `duration_s` (videos only, ≤ 60), `bytes`, `uploaded_by` | `media_type` and `bytes` come from Storage when `create_order` attaches a file |
 | `crew_live_location` | `order_id` (PK), `crew_id`, `location`, `accuracy_m`, `updated_at` | One row per order, upserted; customers subscribe through Realtime |
 | `certificates` | `id`, `order_id` (unique), `number` (ZL-1024), `public_code` (8 chars), `issued_at`, `sterilant`, `residual_chlorine_mg_l` (nullable), `next_due_at`, `pdf_path` |  |
 | `ratings` | `order_id` (unique), `stars` 1–5, `tags` text\[\], `comment` | ≤ 3 stars opens a ticket |
@@ -471,7 +476,7 @@ All tables live in Postgres with RLS on. Money is stored as integer IQD. Times a
 | `articles` | `id`, `slug`, `title`, `category_id`, `cover_path`, `body_md`, `read_minutes`, `featured`, `status` (draft \| published), `published_at` | Seeded |
 | `settings` | One row, one typed column per setting | Settings listed below. Readable by everyone, guests included |
 | `otp_requests` | `phone`, `channel` (picked), `channel_used` (after any fallback), `code_hash`, `sent_at`, `provider_message_id`, `send_error`, `failed_attempts`, `locked_until`, `verified_at`, `created_at` | One row per send. `code_hash` is an HMAC of the code keyed with a server secret; admins read every column but it. Server-only RPCs: `request_otp` (limits), `record_otp_sent` / `record_otp_send_failed`, `check_otp` (single use, 5 min, 5 wrong codes lock 15 min), `otp_locked_until`. Purged after 7 days |
-| `admin_audit_log` | `admin_id`, `action`, `entity`, `entity_id`, `diff` | Every admin write |
+| `admin_audit_log` | `admin_id`, `action` (e.g. `order.transition`), `entity`, `entity_id` (text), `diff` (jsonb), `created_at` | Every admin write, written by the RPC that makes it (`private.log_admin_action`). Admins read it; nobody writes it directly. Created in Phase 2 for `transition_order` |
 | `auth.users` (Supabase Auth's) | — | Guarded by the trigger `guard_auth_user`: a password changes only inside the server-only RPC `set_login_password` (which also ends the user's sessions), otherwise `ZL002`; no new email address or pending email change (`ZL003`; a row that already has an email keeps it). So a stolen session can't add a way in (§9.1) |
 
 Settings (columns of the one `settings` row, migration `settings`): `sms_enabled` (on), `company_phone` (E.164, set before launch), `working_hours_start` / `working_hours_end` / `working_days` (9:00–21:00, Sat–Thu; days use 0 = Sunday … 6 = Saturday), `cleaning_interval_months` (6), `booking_window_days` (14), `cancel_cutoff_hours` (2), `max_tanks_per_order` (6), `terms_md`, `privacy_md`, `min_app_version` (x.y.z), `maintenance_mode` (off). Added by the phase that needs them: `sterilant_text` (Phase 3), `support_response_text` (Phase 5), `subscription_plan` ({price\_iqd, visits, tanks\_covered, description}, Phase 6).
@@ -479,8 +484,9 @@ Settings (columns of the one `settings` row, migration `settings`): `sms_enabled
 Access rules (RLS):
 
 - A customer reads and writes only their own rows. Their order rows can be written only through RPC functions.
-- A crew reads orders, media and addresses only for orders assigned to it. It writes media, live location and status, all through RPC functions.
-- An admin reads and writes everything. Every admin write goes to `admin_audit_log`. Until Phase 3 adds those audited RPCs, admins only read; the owner changes settings with SQL.
+- A crew reads orders, their lines, events, staff notes and media only for orders assigned to it, while the crew is active. It reads the address copy on the order, never the `addresses` table. It writes media, live location and status, all through RPC functions.
+- An admin reads and writes everything. Every admin write goes to `admin_audit_log`. `transition_order` is the first audited admin RPC (Phase 2); the others (prices, slots, crews, settings, assignment) come in Phase 3. Until then admins only read those tables; the owner changes them with SQL.
+- Orders: `create_order(request_id, address_id, service_date, slot_id, items, note, media)` (customers), `transition_order(order_id, to_status, payload)` (all roles, per §6) and `booking_availability()` (logged-in users: days × slots in the window with places left and whether each can be booked) are the only ways in. `delete_address` refuses while an active order uses the address (`ZL012`).
 - How it's built: every table revokes Supabase's default grants and grants only what each role needs, with column grants for server-owned columns. Policies read the role from `profiles` through `private.current_user_role()` and `private.is_admin()`, so a role change applies at once. Conventions are in `supabase/CLAUDE.md`.
 
 Storage buckets: `order-media`, `chat-media`, `ticket-media` and `certificates` are private, with signed URLs that last 1 hour. `public-content` (article covers) is public. Each bucket also has a size cap and a file-type allow-list (migration `storage_buckets`):
@@ -491,7 +497,7 @@ Storage buckets: `order-media`, `chat-media`, `ticket-media` and `certificates` 
 | `certificates` | No | 10 MB | PDF |
 | `public-content` | Yes | 5 MB | JPEG, PNG, WebP |
 
-Until a phase adds the storage policies for its bucket (with pgTAP tests), only the service role can read or write it. Hosted projects on the Supabase Free plan cap every upload at 50 MB whatever the bucket says, so 50–100 MB videos fail there until the project is on Pro.
+Until a phase adds the storage policies for its bucket (with pgTAP tests), only the service role can read or write it. `order-media` (Phase 2, migration `order_media_storage`): a customer uploads to `customer/<user id>/<file>` and may delete a file there until `create_order` attaches it; an attached file is read by whoever reads its order (the customer, the assigned crew, admins). Crew uploads come in Phase 3. Files uploaded but never booked are not cleaned up yet; that needs the Storage API, so it will be a scheduled job outside Postgres. Hosted projects on the Supabase Free plan cap every upload at 50 MB whatever the bucket says, so 50–100 MB videos fail there until the project is on Pro.
 
 ## 8. Crew app and admin dashboard
 
@@ -717,7 +723,7 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 **Phase 2 — Booking**
 
-- [ ] Schema: price\_list, slots, blocked\_dates, slot\_bookings, orders, order\_items, order\_events, order\_media; `create_order` + `transition_order` RPC
+- [x] Schema: price\_list, slots, blocked\_dates, slot\_bookings, orders, order\_items, order\_events, order\_media; `create_order` + `transition_order` RPC. Also `crews` and `admin_audit_log` (which `transition_order` needs), `booking_availability()`, and the `order-media` upload rules
 - [ ] Screens: Booking 1–3, Upload with resumable upload, Booking success (N5), Orders, Order details (N4), Cancel (N6), Reschedule (N7); Home with live cards
 
 * Done when: two parallel bookings cannot overbook the last seat (test); cancelling at 1 h 59 min is refused
@@ -772,7 +778,10 @@ These are assumptions made while writing the spec. Each has a working default, s
 - [ ] **Crew calls the customer (before Phase 3):** the crew app has "اتصل بالزبون" from the company-owned crew phone, to help find the house. OK?
 - [ ] **No-show policy (before Phase 3):** no fee or block in v1, only a status and a chat message. OK?
 - [ ] **Subscription details (before Phase 6):** price, number of tanks covered, and whether one visit covers a multi-tank order.
-- [ ] **Operations (before Phase 2):** slot capacity (seeded as 2), working days (seeded Sat–Thu, Friday closed), support hours (seeded 9 AM–9 PM).
+- [x] **Operations (before Phase 2):** settled Oct 25, 2026: slot capacity 2, slots Saturday to Thursday (Friday closed), support hours 9 AM–9 PM, as seeded. All are editable later (A9, A13).
+- [x] **Booking rules (Phase 2, task 1):** settled Oct 25, 2026. The window is today plus 13 days. A new booking needs the slot to start at least 2 h from now, like cancel and reschedule. A new tank line saves one tank to the address, and its quantity stays on the order line. `transition_order` covers the whole §6 table now, so `crews` and `admin_audit_log` moved up from Phase 3.
+- [x] **Staff notes on the order timeline (Phase 2, task 1):** settled Oct 25, 2026: internal. The reason staff give when they cancel, mark a no-show or override goes to `order_event_notes`, which admins and the assigned crew read and the customer never does. The customer's timeline (N4) shows what happened and who did it (company or crew), without the note.
+- [x] **Active orders per customer (Phase 2, task 1):** settled Oct 25, 2026: no limit. Admins confirm every booking, so they can cancel abuse by hand. A limit would be one check in `create_order`.
 - [x] **SMS provider (before Phase 1):** OTPIQ for both WhatsApp and SMS (settled Oct 23, 2026). The `OtpSender` interface keeps room for another provider later.
 - [x] **OTP verify bypass (before Phase 1, task 2):** closed (settled Oct 24, 2026). Our server makes, sends and checks the code and signs the user in itself, and the Send SMS Hook refuses every Supabase-sent code. So Supabase's `/verify` has no phone code to guess, and calling its `/otp` directly delivers nothing (§9.1).
 - [x] **Auth gaps for a stolen session (after Phase 1, task 3):** closed (settled Oct 24, 2026). A logged-in user could set their own password (`PUT /auth/v1/user`) and then sign in without our code, or attach an email as a second way in. A trigger on `auth.users` now refuses both: a password changes only inside the server-only RPC `set_login_password`, and no account gets an email (§9.1, §7). An earlier draft with a short window the server opened before calling the Auth admin API could be raced by the stolen session; the RLS audit caught it. Accepted for v1: a stolen session stays usable until it is refreshed away (no "log out on all devices" yet; it could come with Settings, N13), it can edit its own user metadata (nothing reads it; roles come from `profiles`), and it can log its owner out everywhere.
