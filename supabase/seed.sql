@@ -1,12 +1,8 @@
--- Local and dev seed data (spec §10.2). Never loaded into prod.
--- `supabase db reset` runs this after the migrations. Each phase adds the seed
--- rows for its own tables (prices, slots, service area, articles, ...).
--- The settings row comes from its migration, so prod has it too.
+-- Local seed data (spec §10.2). `supabase db reset` runs this after the
+-- migrations, locally and in CI. Hosted dev and prod never load it: the
+-- deploy runs migrations only. So rows a hosted project needs (the settings
+-- row, the service area, later prices and slots) come from migrations; this
+-- file is for local-only sample data.
 
--- Service area: a placeholder rectangle around Karbala city (about 32.53–32.68 N,
--- 43.95–44.10 E). The real polygon is drawn in A13 before launch.
-insert into public.service_areas (name, area)
-values (
-  'كربلاء',
-  'SRID=4326;MULTIPOLYGON(((43.95 32.53, 44.10 32.53, 44.10 32.68, 43.95 32.68, 43.95 32.53)))'
-);
+-- Service area: comes from migration default_service_area, so hosted
+-- projects (which never load this file) have it too.

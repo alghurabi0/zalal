@@ -10,6 +10,7 @@ Loaded when Claude works in this folder. The root CLAUDE.md rules still apply. F
 - Text columns get a length check and `= btrim(col)`; the app trims before sending.
 - Every table with `updated_at` gets the `private.set_updated_at()` trigger.
 - PostGIS lives in `extensions`: write `extensions.geography(point, 4326)`, `extensions.st_covers(…)`. Store `lat`/`lng` and generate the geography from them, so the app never handles PostGIS binary.
+- `seed.sql` loads only locally (`db reset`, CI); hosted dev and prod never load it. A row any hosted project needs to work (the settings row, the starting service area, later prices and slots) goes in a migration that skips itself when the row already exists.
 - Scheduled jobs: `cron.schedule` in the migration that owns the table. The schedule is UTC; comment the Baghdad time (UTC+3).
 
 ## Access: privileges, then RLS
