@@ -255,10 +255,13 @@ begin
 
   select * into v_settings from public.settings;
 
-  -- Address: the caller's, live, and still inside the service area.
+  -- Address: the caller's, live, and still inside the service area. The
+  -- share lock makes a delete_address() at the same moment wait for this
+  -- booking, and then refuse (address_in_use).
   select * into v_address
   from public.addresses as a
-  where a.id = p_address_id and a.user_id = v_user_id and a.deleted_at is null;
+  where a.id = p_address_id and a.user_id = v_user_id and a.deleted_at is null
+  for share;
   if not found then
     raise exception using errcode = 'P0002', message = 'address_not_found';
   end if;
