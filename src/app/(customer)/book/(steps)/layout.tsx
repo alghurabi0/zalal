@@ -1,16 +1,14 @@
 import { MapPin } from "lucide-react";
-import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { type ReactNode, Suspense } from "react";
 
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { listAddresses } from "@/lib/addresses";
+import { chosenAddress, listAddresses } from "@/lib/addresses";
 import { requireViewer } from "@/lib/auth/viewer";
 import { bookingDays } from "@/lib/booking/availability";
 import type { PriceTable } from "@/lib/booking/draft";
-import { HOME_ADDRESS_COOKIE } from "@/lib/cookies";
 import { routes, withNext } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,21 +32,24 @@ export default function BookingLayout({ children }: { children: ReactNode }) {
 
 async function BookingData({ children }: { children: ReactNode }) {
   const viewer = await requireViewer(routes.book);
+  const supabase = await createClient();
+  // These don't depend on the address, so they start right away.
+  const shared = Promise.all([
+    supabase.from("price_list").select("tank_type, size, price_iqd"),
+    supabase.rpc("booking_availability"),
+    supabase.from("settings").select("max_tanks_per_order, cancel_cutoff_hours").single(),
+  ]);
   const addresses = await listAddresses();
-  const chosen = (await cookies()).get(HOME_ADDRESS_COOKIE)?.value;
-  const address = addresses.find((a) => a.id === chosen) ?? addresses[0] ?? null;
+  const address = await chosenAddress(addresses);
   if (!address) return <NoAddress />;
 
-  const supabase = await createClient();
-  const [tanks, prices, availability, settings] = await Promise.all([
+  const [tanks, [prices, availability, settings]] = await Promise.all([
     supabase
       .from("tanks")
       .select("id, type, size, nickname")
       .eq("address_id", address.id)
       .order("created_at"),
-    supabase.from("price_list").select("tank_type, size, price_iqd"),
-    supabase.rpc("booking_availability"),
-    supabase.from("settings").select("max_tanks_per_order, cancel_cutoff_hours").single(),
+    shared,
   ]);
   if (tanks.error) throw new Error(`Tanks read failed: ${tanks.error.message}`);
   if (prices.error) throw new Error(`Prices read failed: ${prices.error.message}`);

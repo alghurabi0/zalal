@@ -18,6 +18,7 @@ import {
   type PriceTable,
   reconcileDraft,
   type SavedTank,
+  withRequestReset,
 } from "@/lib/booking/draft";
 import { getDraft, setDraft, subscribeDraft } from "@/lib/booking/draft-store";
 import type { BookingError } from "@/lib/booking/errors";
@@ -48,7 +49,10 @@ type BookingContextValue = {
   data: BookingData;
   /** Null until the stored draft is read (after hydration). */
   draft: BookingDraft | null;
+  /** Applies `change` to the latest draft (not the one this render saw). */
   update: (change: (draft: BookingDraft) => BookingDraft) => void;
+  /** The latest draft, for code that resumes after an await. */
+  latestDraft: () => BookingDraft;
   uploads: UploadItem[];
   /** Waits until no file is being checked or uploaded. */
   uploadsSettled: () => Promise<UploadItem[]>;
@@ -76,19 +80,30 @@ export function BookingProvider({ data, children }: { data: BookingData; childre
   const uploads = useSyncExternalStore(subscribeUploads, () => getUploads(userId), noUploads);
   const [notice, setNotice] = useState<BookingError | null>(null);
 
+  const context = useMemo(
+    () => ({ addressId: data.address.id, savedTanks: data.savedTanks, days: data.days }),
+    [data.address.id, data.savedTanks, data.days],
+  );
   // The stored draft, brought in line with the address, tanks and slots the
   // server just sent. Pure, so it runs while rendering.
   const draft = useMemo(() => {
     if (stored === undefined) return null;
-    const context = { addressId: data.address.id, savedTanks: data.savedTanks, days: data.days };
     return stored ? reconcileDraft(stored, context) : newDraft(context);
-  }, [stored, data.address.id, data.savedTanks, data.days]);
+  }, [stored, context]);
+
+  const latestDraft = useCallback(() => {
+    const current = getDraft(userId);
+    return current ? reconcileDraft(current, context) : newDraft(context);
+  }, [userId, context]);
 
   const update = useCallback(
     (change: (draft: BookingDraft) => BookingDraft) => {
-      if (draft) setDraft(userId, change(draft));
+      const current = latestDraft();
+      setDraft(userId, withRequestReset(current, change(current)));
+      // A notice from Checkout is about the booking as it was.
+      setNotice(null);
     },
-    [draft, userId],
+    [latestDraft, userId],
   );
 
   const value = useMemo<BookingContextValue>(
@@ -96,6 +111,7 @@ export function BookingProvider({ data, children }: { data: BookingData; childre
       data,
       draft,
       update,
+      latestDraft,
       uploads,
       uploadsSettled: () => uploadsSettled(userId),
       addFiles: (files) => addFiles(userId, files),
@@ -104,7 +120,7 @@ export function BookingProvider({ data, children }: { data: BookingData; childre
       notice,
       setNotice,
     }),
-    [data, draft, update, uploads, notice, userId],
+    [data, draft, update, latestDraft, uploads, notice, userId],
   );
 
   return <BookingContext value={value}>{children}</BookingContext>;

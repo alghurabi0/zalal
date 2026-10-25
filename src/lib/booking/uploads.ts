@@ -64,6 +64,8 @@ type Running = { file: File; contentType: string; upload?: Upload };
 const listeners = new Set<Listener>();
 const running = new Map<string, Running>();
 let state: { key: string; items: UploadItem[] } | null = null;
+/** The finished files last written to sessionStorage. */
+let saved: string | null = null;
 
 const EMPTY: UploadItem[] = [];
 const storageKey = (userId: string) => `zl_booking_files:${userId}`;
@@ -77,6 +79,7 @@ export function getUploads(userId: string): UploadItem[] {
     // Another account on this tab: drop the previous one's uploads.
     for (const job of running.values()) void job.upload?.abort();
     running.clear();
+    saved = null;
     state = { key, items: restore(key) };
   }
   return state.items;
@@ -102,13 +105,19 @@ function restore(key: string): UploadItem[] {
 function update(userId: string, change: (items: UploadItem[]) => UploadItem[]) {
   const items = change(getUploads(userId));
   state = { key: storageKey(userId), items };
-  try {
-    const done = items
+  // Only finished files are kept, so progress ticks don't touch storage.
+  const done = JSON.stringify(
+    items
       .filter((item) => item.status === "done")
-      .map(({ id, n, kind, bytes, durationS, path }) => ({ id, n, kind, bytes, durationS, path }));
-    window.sessionStorage.setItem(storageKey(userId), JSON.stringify(done));
-  } catch {
-    // Storage blocked: the uploads still work until a reload.
+      .map(({ id, n, kind, bytes, durationS, path }) => ({ id, n, kind, bytes, durationS, path })),
+  );
+  if (done !== saved) {
+    saved = done;
+    try {
+      window.sessionStorage.setItem(storageKey(userId), done);
+    } catch {
+      // Storage blocked: the uploads still work until a reload.
+    }
   }
   for (const listener of listeners) listener();
 }
@@ -123,15 +132,16 @@ function patch(userId: string, id: string, changes: Partial<UploadItem>) {
  */
 export async function addFiles(userId: string, files: File[]): Promise<AddProblem[]> {
   const problems: AddProblem[] = [];
-  const room = MAX_BOOKING_FILES - getUploads(userId).length;
-  if (files.length > room) problems.push("too_many");
-
-  const checks = files.slice(0, Math.max(room, 0)).map(async (file) => {
+  const supported = files.flatMap((file) => {
     const contentType = contentTypeOf(file);
-    if (!contentType) {
-      problems.push("unsupported");
-      return;
-    }
+    if (contentType) return [{ file, contentType }];
+    problems.push("unsupported");
+    return [];
+  });
+  const room = MAX_BOOKING_FILES - getUploads(userId).length;
+  if (supported.length > room) problems.push("too_many");
+
+  const checks = supported.slice(0, Math.max(room, 0)).map(async ({ file, contentType }) => {
     const kind = mediaKindOf(contentType);
     const id = crypto.randomUUID();
     const items = getUploads(userId);
@@ -220,11 +230,21 @@ export function uploadsSettled(userId: string): Promise<UploadItem[]> {
 
 /** After booking: the files now belong to the order, so forget them without deleting. */
 export function clearUploads(userId: string) {
+  for (const job of running.values()) void job.upload?.abort().catch(() => undefined);
   running.clear();
   update(userId, () => EMPTY);
 }
 
 async function start(userId: string, id: string) {
+  try {
+    await startUpload(userId, id);
+  } catch {
+    // The library didn't load (offline) or the upload couldn't start.
+    if (running.has(id)) patch(userId, id, { status: "failed" });
+  }
+}
+
+async function startUpload(userId: string, id: string) {
   const job = running.get(id);
   const item = getUploads(userId).find((i) => i.id === id);
   if (!job || !item) return;
@@ -240,7 +260,10 @@ async function start(userId: string, id: string) {
     // Supabase's TUS server takes 6 MB chunks only.
     chunkSize: 6 * 1024 * 1024,
     uploadDataDuringCreation: true,
-    removeFingerprintOnSuccess: true,
+    // tus would resume a stored upload of the same file (by name, size and
+    // date), even one made for another item's object name. Each item makes
+    // its own upload; retry resumes that one from memory.
+    storeFingerprintForResuming: false,
     headers: { apikey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, "x-upsert": "false" },
     metadata: {
       bucketName: ORDER_MEDIA_BUCKET,
@@ -269,9 +292,6 @@ async function start(userId: string, id: string) {
     },
   });
   job.upload = upload;
-
-  const previous = await upload.findPreviousUploads();
-  if (previous[0]) upload.resumeFromPreviousUpload(previous[0]);
   if (running.get(id) === job) upload.start();
 }
 

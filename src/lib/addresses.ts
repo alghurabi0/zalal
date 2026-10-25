@@ -1,6 +1,9 @@
 import "server-only";
 
+import { cookies } from "next/headers";
+
 import type { AddressSummary } from "@/app/(customer)/addresses/address-picker";
+import { HOME_ADDRESS_COOKIE } from "@/lib/cookies";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -22,4 +25,13 @@ export async function listAddresses(): Promise<AddressSummary[]> {
     landmark: row.landmark,
     isDefault: row.is_default,
   }));
+}
+
+/**
+ * The address Home and Booking use: the one picked in the picker (N2, the
+ * zl_address cookie), else the default (listAddresses puts it first).
+ */
+export async function chosenAddress(addresses: AddressSummary[]): Promise<AddressSummary | null> {
+  const chosen = (await cookies()).get(HOME_ADDRESS_COOKIE)?.value;
+  return addresses.find((a) => a.id === chosen) ?? addresses[0] ?? null;
 }

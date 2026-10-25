@@ -302,7 +302,7 @@ function SavedTankCard({
 
 function DayAndSlot() {
   const t = useTranslations("Booking");
-  const { data, draft, update, notice, setNotice } = useBooking();
+  const { data, draft, update } = useBooking();
   if (!draft) return null;
   const day = data.days.find((d) => d.date === draft.serviceDate) ?? null;
 
@@ -359,10 +359,7 @@ function DayAndSlot() {
               value={slot.slotId}
               checked={draft.slotId === slot.slotId}
               disabled={!slot.bookable}
-              onChange={() => {
-                if (notice === "slot_full" || notice === "slot_unavailable") setNotice(null);
-                update((d) => ({ ...d, slotId: slot.slotId }));
-              }}
+              onChange={() => update((d) => ({ ...d, slotId: slot.slotId }))}
               className="gap-0 leading-snug"
             >
               <span>{t("slot", slotParts(slot.startAt, slot.endAt))}</span>

@@ -159,3 +159,16 @@ export function orderItems(lines: DraftLine[]) {
       : { type: line.type, size: line.size, qty: line.qty },
   );
 }
+
+/**
+ * A booking that changed after its request id was made is a new request:
+ * create_order() would answer the old id with the order it already made
+ * (when a response was lost), at the old slot. So any change to what is
+ * being booked drops the id, and the next "أكّد الحجز" makes a new one.
+ */
+export function withRequestReset(before: BookingDraft, after: BookingDraft): BookingDraft {
+  const booking = (d: BookingDraft) =>
+    JSON.stringify([d.addressId, d.lines, d.serviceDate, d.slotId, d.note.trim()]);
+  if (after.requestId === null || after.requestId !== before.requestId) return after;
+  return booking(before) === booking(after) ? after : { ...after, requestId: null };
+}

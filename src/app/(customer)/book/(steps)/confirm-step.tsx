@@ -44,7 +44,7 @@ export function ConfirmStep() {
   const tLabels = useTranslations("Location.labels");
   const tUI = useTranslations("UI");
   const router = useRouter();
-  const { data, draft, update, uploads, uploadsSettled, setNotice } = useBooking();
+  const { data, draft, update, latestDraft, uploads, uploadsSettled, setNotice } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   // The booking just made: the button stays busy until N5 opens and clears
   // the draft. Next keeps this page alive, so a plain flag would stay set
@@ -67,47 +67,54 @@ export function ConfirmStep() {
   const confirm = async () => {
     setError(null);
     setSubmitting(true);
-    const files = await uploadsSettled();
-    if (files.some((file) => file.status === "failed")) {
-      setSubmitting(false);
-      return;
-    }
-    // Kept with the draft, so sending again can't book twice.
-    const requestId = draft.requestId ?? crypto.randomUUID();
-    if (!draft.requestId) update((d) => ({ ...d, requestId }));
+    try {
+      const files = await uploadsSettled();
+      if (files.some((file) => file.status === "failed")) return;
+      // The booking as it is now: the customer may have changed it while
+      // the uploads finished.
+      const current = latestDraft();
+      if (!detailsComplete(current, data.days, data.maxTanks)) return;
+      // Kept with the draft, so sending again can't book twice.
+      const requestId = current.requestId ?? crypto.randomUUID();
+      if (!current.requestId) update((d) => ({ ...d, requestId }));
 
-    const result = await createBooking({
-      requestId,
-      addressId: data.address.id,
-      serviceDate: draft.serviceDate ?? "",
-      slotId: draft.slotId ?? 0,
-      items: orderItems(draft.lines),
-      note: draft.note,
-      media: files.map((file) => ({
-        path: file.path,
-        durationS: file.kind === "video" ? file.durationS : null,
-      })),
-    });
+      const result = await createBooking({
+        requestId,
+        addressId: current.addressId,
+        serviceDate: current.serviceDate ?? "",
+        slotId: current.slotId ?? 0,
+        items: orderItems(current.lines),
+        note: current.note,
+        media: files.map((file) => ({
+          path: file.path,
+          durationS: file.kind === "video" ? file.durationS : null,
+        })),
+      });
 
-    setSubmitting(false);
-    if (result.status === "booked") {
-      // N5 forgets the draft once it opens (ForgetBooking).
-      setBookedRequest(requestId);
-      router.replace(routes.booked(result.orderId));
-      return;
-    }
-    const step = stepFor(result.error);
-    if (step === "details") {
-      if (result.error === "slot_full" || result.error === "slot_unavailable") {
-        update((d) => ({ ...d, slotId: null }));
+      if (result.status === "booked") {
+        // N5 forgets the draft once it opens (ForgetBooking).
+        setBookedRequest(requestId);
+        router.replace(routes.booked(result.orderId));
+        return;
       }
-      setNotice(result.error);
-      // Fresh places and tanks for step 1.
-      router.refresh();
-      router.push(routes.book);
-      return;
+      if (stepFor(result.error) === "details") {
+        if (result.error === "slot_full" || result.error === "slot_unavailable") {
+          update((d) => ({ ...d, slotId: null }));
+        }
+        setNotice(result.error);
+        // Fresh places and tanks for step 1.
+        router.refresh();
+        router.push(routes.book);
+        return;
+      }
+      setError(result.error);
+    } catch {
+      // The request never got an answer (offline). The same requestId is
+      // sent again on retry, so a booking that did go through isn't doubled.
+      setError("failed");
+    } finally {
+      setSubmitting(false);
     }
-    setError(result.error);
   };
 
   const day = draft.serviceDate ? serviceDayParts(draft.serviceDate) : null;

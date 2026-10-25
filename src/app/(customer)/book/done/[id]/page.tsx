@@ -40,7 +40,7 @@ async function Done({ params }: PageProps<"/book/done/[id]">) {
   const { data: order, error } = orderId.success
     ? await supabase
         .from("orders")
-        .select("id, number, service_date, slot_start_at, slot_end_at")
+        .select("id, number, service_date, slot_start_at, slot_end_at, client_request_id")
         .eq("id", orderId.data)
         .maybeSingle()
     : { data: null, error: null };
@@ -64,7 +64,7 @@ async function Done({ params }: PageProps<"/book/done/[id]">) {
   const { weekday, day } = serviceDayParts(order.service_date);
   return (
     <>
-      <ForgetBooking userId={viewer.id} />
+      <ForgetBooking userId={viewer.id} requestId={order.client_request_id} />
       <EmptyState
         icon={CircleCheck}
         tone="success"

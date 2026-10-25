@@ -12,6 +12,7 @@ import {
   reconcileDraft,
   type SavedTank,
   tankCount,
+  withRequestReset,
 } from "@/lib/booking/draft";
 import { bookingErrorFor, stepFor } from "@/lib/booking/errors";
 import {
@@ -202,6 +203,16 @@ describe("booking draft", () => {
     const kept = reconcileDraft(draft, { addressId: ADDRESS, savedTanks: saved, days });
     expect(kept.serviceDate).toBe("2026-10-25");
     expect(kept.slotId).toBe(3);
+  });
+
+  it("drops the request id when what is being booked changes", () => {
+    expect(withRequestReset(draft, { ...draft, slotId: 1 }).requestId).toBeNull();
+    expect(withRequestReset(draft, { ...draft, note: "قرب الباب" }).requestId).toBeNull();
+    expect(withRequestReset(draft, { ...draft, lines: draft.lines.slice(1) }).requestId).toBeNull();
+    // Unchanged, or only the id itself set: kept, so a retry returns the same order.
+    expect(withRequestReset(draft, { ...draft }).requestId).toBe(REQUEST);
+    const fresh = { ...draft, requestId: null };
+    expect(withRequestReset(fresh, { ...fresh, requestId: REQUEST }).requestId).toBe(REQUEST);
   });
 
   it("refuses a stored draft that doesn't match the shape", () => {
