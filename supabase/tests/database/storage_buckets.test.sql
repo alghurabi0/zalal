@@ -52,10 +52,16 @@ select ok(
 );
 
 -- Fails as soon as someone adds a storage policy, so that each new policy
--- comes with its own allow and deny tests (CLAUDE.md).
+-- comes with its own allow and deny tests (CLAUDE.md). The order-media ones
+-- are tested in order_media_storage.test.sql.
 select policies_are(
-  'storage', 'objects', array[]::name[],
-  'storage.objects has no policies yet'
+  'storage', 'objects',
+  array[
+    'Customers upload booking media to their own folder',
+    'Customers read their uploads; media is read with its order',
+    'Customers delete their uploads until they are attached'
+  ]::name[],
+  'storage.objects has only the order-media policies'
 );
 
 -- One file in every bucket, written the way the server would write it.

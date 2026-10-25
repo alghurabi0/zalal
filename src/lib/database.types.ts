@@ -57,6 +57,361 @@ export type Database = {
           },
         ];
       };
+      admin_audit_log: {
+        Row: {
+          action: string;
+          admin_id: string;
+          created_at: string;
+          diff: NonNullable<Json>;
+          entity: string;
+          entity_id: string;
+          id: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          action: string;
+          admin_id: string;
+          created_at?: string;
+          diff?: NonNullable<Json>;
+          entity: string;
+          entity_id: string;
+          id?: never;
+        };
+        Update: {
+          action?: string;
+          admin_id?: string;
+          created_at?: string;
+          diff?: NonNullable<Json>;
+          entity?: string;
+          entity_id?: string;
+          id?: never;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      blocked_dates: {
+        Row: {
+          created_at: string;
+          date: string;
+          reason: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          date: string;
+          reason?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          date?: string;
+          reason?: string | null;
+        };
+        Relationships: [];
+      };
+      crews: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "crews_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_events: {
+        Row: {
+          actor_id: string | null;
+          actor_role: Database["public"]["Enums"]["app_role"] | null;
+          cancel_reason: Database["public"]["Enums"]["cancel_reason"] | null;
+          created_at: string;
+          details: NonNullable<Json>;
+          from_status: Database["public"]["Enums"]["order_status"] | null;
+          id: number;
+          is_override: boolean;
+          order_id: string;
+          reason: string | null;
+          to_status: Database["public"]["Enums"]["order_status"];
+        };
+        ComputedFields: never;
+        Insert: {
+          actor_id?: string | null;
+          actor_role?: Database["public"]["Enums"]["app_role"] | null;
+          cancel_reason?: Database["public"]["Enums"]["cancel_reason"] | null;
+          created_at?: string;
+          details?: NonNullable<Json>;
+          from_status?: Database["public"]["Enums"]["order_status"] | null;
+          id?: never;
+          is_override?: boolean;
+          order_id: string;
+          reason?: string | null;
+          to_status: Database["public"]["Enums"]["order_status"];
+        };
+        Update: {
+          actor_id?: string | null;
+          actor_role?: Database["public"]["Enums"]["app_role"] | null;
+          cancel_reason?: Database["public"]["Enums"]["cancel_reason"] | null;
+          created_at?: string;
+          details?: NonNullable<Json>;
+          from_status?: Database["public"]["Enums"]["order_status"] | null;
+          id?: never;
+          is_override?: boolean;
+          order_id?: string;
+          reason?: string | null;
+          to_status?: Database["public"]["Enums"]["order_status"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_events_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_events_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_items: {
+        Row: {
+          id: number;
+          order_id: string;
+          qty: number;
+          size: Database["public"]["Enums"]["tank_size"];
+          tank_id: string | null;
+          tank_type: Database["public"]["Enums"]["tank_type"];
+          unit_price_iqd: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: never;
+          order_id: string;
+          qty: number;
+          size: Database["public"]["Enums"]["tank_size"];
+          tank_id?: string | null;
+          tank_type: Database["public"]["Enums"]["tank_type"];
+          unit_price_iqd: number;
+        };
+        Update: {
+          id?: never;
+          order_id?: string;
+          qty?: number;
+          size?: Database["public"]["Enums"]["tank_size"];
+          tank_id?: string | null;
+          tank_type?: Database["public"]["Enums"]["tank_type"];
+          unit_price_iqd?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_tank_id_fkey";
+            columns: ["tank_id"];
+            isOneToOne: false;
+            referencedRelation: "tanks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_media: {
+        Row: {
+          bytes: number;
+          created_at: string;
+          duration_s: number | null;
+          id: string;
+          kind: Database["public"]["Enums"]["order_media_kind"];
+          media_type: Database["public"]["Enums"]["media_type"];
+          order_id: string;
+          path: string;
+          uploaded_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          bytes: number;
+          created_at?: string;
+          duration_s?: number | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["order_media_kind"];
+          media_type: Database["public"]["Enums"]["media_type"];
+          order_id: string;
+          path: string;
+          uploaded_by?: string | null;
+        };
+        Update: {
+          bytes?: number;
+          created_at?: string;
+          duration_s?: number | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["order_media_kind"];
+          media_type?: Database["public"]["Enums"]["media_type"];
+          order_id?: string;
+          path?: string;
+          uploaded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_media_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_media_uploaded_by_fkey";
+            columns: ["uploaded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orders: {
+        Row: {
+          address_id: string;
+          cash_collected: boolean;
+          client_request_id: string;
+          created_at: string;
+          crew_id: string | null;
+          customer_id: string;
+          customer_note: string | null;
+          district: string;
+          id: string;
+          landmark: string;
+          lat: number;
+          lng: number;
+          location: unknown;
+          number: number;
+          payment_method: Database["public"]["Enums"]["payment_method"];
+          service_date: string;
+          slot_end_at: string;
+          slot_id: number;
+          slot_start_at: string;
+          status: Database["public"]["Enums"]["order_status"];
+          total_iqd: number;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          address_id: string;
+          cash_collected?: boolean;
+          client_request_id: string;
+          created_at?: string;
+          crew_id?: string | null;
+          customer_id: string;
+          customer_note?: string | null;
+          district: string;
+          id?: string;
+          landmark: string;
+          lat: number;
+          lng: number;
+          location?: never;
+          number?: never;
+          payment_method?: Database["public"]["Enums"]["payment_method"];
+          service_date: string;
+          slot_end_at: string;
+          slot_id: number;
+          slot_start_at: string;
+          status?: Database["public"]["Enums"]["order_status"];
+          total_iqd: number;
+          updated_at?: string;
+        };
+        Update: {
+          address_id?: string;
+          cash_collected?: boolean;
+          client_request_id?: string;
+          created_at?: string;
+          crew_id?: string | null;
+          customer_id?: string;
+          customer_note?: string | null;
+          district?: string;
+          id?: string;
+          landmark?: string;
+          lat?: number;
+          lng?: number;
+          location?: never;
+          number?: never;
+          payment_method?: Database["public"]["Enums"]["payment_method"];
+          service_date?: string;
+          slot_end_at?: string;
+          slot_id?: number;
+          slot_start_at?: string;
+          status?: Database["public"]["Enums"]["order_status"];
+          total_iqd?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_address_id_customer_id_fkey";
+            columns: ["address_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "addresses";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "orders_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: false;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_slot_id_fkey";
+            columns: ["slot_id"];
+            isOneToOne: false;
+            referencedRelation: "slots";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       otp_requests: {
         Row: {
           channel: Database["public"]["Enums"]["otp_channel"];
@@ -100,6 +455,28 @@ export type Database = {
           send_error?: string | null;
           sent_at?: string | null;
           verified_at?: string | null;
+        };
+        Relationships: [];
+      };
+      price_list: {
+        Row: {
+          price_iqd: number;
+          size: Database["public"]["Enums"]["tank_size"];
+          tank_type: Database["public"]["Enums"]["tank_type"];
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          price_iqd: number;
+          size: Database["public"]["Enums"]["tank_size"];
+          tank_type: Database["public"]["Enums"]["tank_type"];
+          updated_at?: string;
+        };
+        Update: {
+          price_iqd?: number;
+          size?: Database["public"]["Enums"]["tank_size"];
+          tank_type?: Database["public"]["Enums"]["tank_type"];
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -220,6 +597,80 @@ export type Database = {
         };
         Relationships: [];
       };
+      slot_bookings: {
+        Row: {
+          created_at: string;
+          order_id: string;
+          seat: number;
+          service_date: string;
+          slot_id: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          order_id: string;
+          seat: number;
+          service_date: string;
+          slot_id: number;
+        };
+        Update: {
+          created_at?: string;
+          order_id?: string;
+          seat?: number;
+          service_date?: string;
+          slot_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "slot_bookings_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "slot_bookings_slot_id_fkey";
+            columns: ["slot_id"];
+            isOneToOne: false;
+            referencedRelation: "slots";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      slots: {
+        Row: {
+          active: boolean;
+          capacity: number;
+          created_at: string;
+          end_time: string;
+          id: number;
+          start_time: string;
+          updated_at: string;
+          weekdays: number[];
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          capacity: number;
+          created_at?: string;
+          end_time: string;
+          id?: never;
+          start_time: string;
+          updated_at?: string;
+          weekdays: number[];
+        };
+        Update: {
+          active?: boolean;
+          capacity?: number;
+          created_at?: string;
+          end_time?: string;
+          id?: never;
+          start_time?: string;
+          updated_at?: string;
+          weekdays?: number[];
+        };
+        Relationships: [];
+      };
       tanks: {
         Row: {
           address_id: string;
@@ -270,8 +721,32 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      booking_availability: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          bookable: boolean;
+          capacity: number;
+          end_at: string;
+          remaining: number;
+          service_date: string;
+          slot_id: number;
+          start_at: string;
+        }[];
+      };
       check_otp: {
         Args: { p_code_hash: string; p_phone: string };
+        Returns: Record<string, unknown>;
+      };
+      create_order: {
+        Args: {
+          p_address_id: string;
+          p_items: Json;
+          p_media?: Json;
+          p_note?: string;
+          p_request_id: string;
+          p_service_date: string;
+          p_slot_id: number;
+        };
         Returns: Record<string, unknown>;
       };
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
@@ -298,11 +773,32 @@ export type Database = {
         Returns: Record<string, unknown>;
       };
       set_login_password: { Args: { p_password: string; p_user_id: string }; Returns: undefined };
+      transition_order: {
+        Args: {
+          p_order_id: string;
+          p_payload?: Json;
+          p_to_status: Database["public"]["Enums"]["order_status"];
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       address_label: "home" | "family" | "work";
       app_role: "customer" | "crew" | "admin";
+      cancel_reason: "plans_changed" | "time_unsuitable" | "other";
+      media_type: "photo" | "video";
+      order_media_kind: "customer" | "before" | "after" | "clip";
+      order_status:
+        | "pending_confirmation"
+        | "confirmed"
+        | "on_the_way"
+        | "arrived"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "no_show";
       otp_channel: "whatsapp" | "sms";
+      payment_method: "cash";
       tank_size: "s" | "m" | "l";
       tank_type: "roof" | "ground";
     };
@@ -418,7 +914,21 @@ export const Constants = {
     Enums: {
       address_label: ["home", "family", "work"],
       app_role: ["customer", "crew", "admin"],
+      cancel_reason: ["plans_changed", "time_unsuitable", "other"],
+      media_type: ["photo", "video"],
+      order_media_kind: ["customer", "before", "after", "clip"],
+      order_status: [
+        "pending_confirmation",
+        "confirmed",
+        "on_the_way",
+        "arrived",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
       otp_channel: ["whatsapp", "sms"],
+      payment_method: ["cash"],
       tank_size: ["s", "m", "l"],
       tank_type: ["roof", "ground"],
     },
