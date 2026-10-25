@@ -10,6 +10,7 @@ import {
   createSlot,
   disableSlot,
   fillSlot,
+  pickSlot,
   type TestSlot,
   userIdFor,
 } from "./helpers/booking";
@@ -25,17 +26,6 @@ test.afterEach(async () => {
   if (slot) await disableSlot(slot.id);
   slot = null;
 });
-
-/** Picks the day (by date) and the test's slot on step 1. */
-async function pickSlot(page: Page, date: string, label: string) {
-  await page
-    .locator("label")
-    .filter({ has: page.locator(`input[name="service-day"][value="${date}"]`) })
-    .click();
-  // The radio itself is visually hidden; tap its chip like a customer would.
-  await page.locator("label").filter({ hasText: label }).click();
-  await expect(page.getByRole("radio", { name: new RegExp(label) })).toBeChecked();
-}
 
 async function expectTouchTargets(page: Page, names: (string | RegExp)[]) {
   for (const name of names) {
