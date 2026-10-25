@@ -96,7 +96,7 @@ One Next.js app on Vercel serves all three surfaces. Supabase provides the datab
 | Database | Supabase Postgres + Row Level Security | Migrations in `supabase/migrations`; generated TS types |
 | Auth | Supabase Auth for users and sessions; phone OTP made, sent (OTPIQ) and checked by our server | After a correct code the server signs the user in with a server-only password. A **Send SMS Hook** refuses every Supabase-sent code (section 9.1) |
 | Storage | Supabase Storage, private buckets + signed URLs | Resumable (TUS) uploads for video |
-| Realtime | Supabase Realtime | Chat messages, order status, crew location |
+| Realtime | Supabase Realtime | Chat messages, order status, crew location. Browser channels join with the user's token (`LiveOrders` sets it before subscribing), or Realtime treats them as guests and RLS refuses the subscription |
 | Jobs | `pg_cron` + Edge Functions | Reminders, subscription expiry, stale-slot cleanup |
 | Maps | Google Maps JS API (`@vis.gl/react-google-maps`), Places Autocomplete | Service-area polygon check on the server (PostGIS `ST_Contains`) |
 | Push | Web Push (VAPID, `web-push`) | iPhone users must add the app to the home screen (iOS 16.4+) |
@@ -284,6 +284,11 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Tips strip: the 2 newest featured articles, each opening Article (N9).
 - Guest mode: the header shows "سجّل دخول"; there are no order or tank cards; a price-list card appears with a book CTA that goes through login.
 - **Phase 1 builds a shell**: the header (address picker N2, or "سجّل دخول" for guests), the greeting and the tab bar. The bell, cards, quick actions and tips strip come with the phases that own their data (the price list in Phase 2). The address chosen in N2 is kept per device (`zl_address` cookie) and falls back to the default address.
+- **Phase 2 adds the cards** (settled Oct 25, 2026):
+  - The active order card updates live through Realtime. Until Tracking exists (Phase 4) it always opens Order details, says "الفريق بالطريق إلك" without the distance, and its link reads "التفاصيل".
+  - The tank status card follows the cleaned tank due soonest at the chosen address. Tanks we never cleaned have no date, so with none cleaned the card shows "ما عدنا سجل لخزانك". Its book button shows in every state.
+  - Guests get the price list (the 6 rows of `price_list`) with "احجز تنظيف", which goes through login.
+  - The bell, quick actions and tips strip still wait for the screens they open (Phases 5–6).
 
 ### 5.6 Tips — `Tips.dc.html`
 
@@ -345,6 +350,9 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
   - completed → الشهادة
   - cancelled → أعد الحجز
 - Tapping a card opens Order details (N4). "مساعدة" opens Chat tagged with the order. Lists load 20 at a time.
+- **Until Phase 4/5** (settled Oct 25, 2026): Tracking, Job progress and the certificate don't exist yet, so every order except a cancelled one gets "تفاصيل الطلب" (Order details). `primaryAction()` in `src/lib/orders/status.ts` is the one place Phase 4 changes. "مساعدة" is hidden until Chat (Phase 5). Labels follow the canvas where it has them (تفاصيل الطلب, تتبّع الفريق) and the spec elsewhere. The canvas's "الشهادة والفيديو" becomes "الشهادة", and "أعد الحجز" starts a fresh booking.
+- The tab is in the URL (`?tab=past`), and "عرض المزيد" loads 20 more (`&n=40`). Current orders show soonest first, past ones newest first. The list updates live through Realtime.
+- Status badges: بانتظار التأكيد / مؤكد / الفريق بالطريق / الفريق وصل / الشغل شغال / مكتمل / ملغي / ما لكينا أحد (no-show).
 
 ### 5.13 Tracking — `Tracking.dc.html`
 
@@ -398,10 +406,10 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 | N1 | Name | After OTP, new users | One field "اسمك", 2–40 characters, required. Spaces are trimmed and collapsed. No back button: the user is already logged in |
 | N2 | Address list / picker (sheet) | Home header, Booking, Profile | Label, district, landmark; select, edit, delete (blocked while an active order uses it, from Phase 2), add (opens Location; hidden at three addresses), mark default. Delete asks first and also removes the address's tanks |
 | N3 | My tanks | Profile | Grouped by address: type, size, optional nickname (up to 30 characters), last cleaned, next due (last cleaned + `cleaning_interval_months`); add, edit, delete. Add and edit use a sheet with Booking's type and size tiles; a tank stays on its address |
-| N4 | Order details | Orders, Home card, notifications | Status timeline, summary, price, attachments; buttons by status: cancel, reschedule, track, progress, certificate, help |
+| N4 | Order details | Orders, Home card, notifications | Status timeline, summary, price, attachments; buttons by status: cancel, reschedule, track, progress, certificate, help. Route `/orders/[id]`. The timeline says who acted (you, the company, the crew) and never shows staff notes. Track, progress and certificate come with Phase 4, help with Chat (Phase 5). Live through Realtime |
 | N5 | Booking success | After checkout | "وصلنا طلبك #1024 · بانتظار تأكيد الشركة", with the day and slot; a soft push-permission card (Phase 5, with Web Push: settled Oct 25, 2026); buttons to Order details and Home. Route `/book/done/[id]` |
-| N6 | Cancel sheet | N4, Chat | Reason (تغيرت ظروفي / الموعد ما يناسبني / شي ثاني) + confirm. Within 2 h: blocked, "راسلنا بالمحادثة" |
-| N7 | Reschedule sheet | N4, Chat | Date + slot picker with the same rules as Booking; the order goes back to `pending_confirmation`; blocked within 2 h |
+| N6 | Cancel sheet | N4, Chat | Reason (تغيرت ظروفي / الموعد ما يناسبني / شي ثاني) + confirm. Within 2 h: blocked, "راسلنا بالمحادثة" (by the server clock when N4 loads, and again from `ZL006` if the cutoff passes while the sheet is open) |
+| N7 | Reschedule sheet | N4, Chat | Date + slot picker with the same rules as Booking; the order goes back to `pending_confirmation`; blocked within 2 h. Uses Booking's day and slot chips (`DaySlotPicker`); the current slot is shown but can't be picked |
 | N8 | Subscription | Home, Profile | Plan card: price and contents from settings (2 cleanings a year + reminders). "اطلب الاشتراك" creates a request; then a status view (requested / active / expired) |
 | N9 | Article | Home, Tips | Cover, category, read time, rendered body, CTA "احجز تنظيف" |
 | N10 | Edit profile | Profile | Name; "تغيير الرقم" runs OTP on the new number |
@@ -729,9 +737,9 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 **Phase 2 — Booking**
 
 - [x] Schema: price\_list, slots, blocked\_dates, slot\_bookings, orders, order\_items, order\_events, order\_media; `create_order` + `transition_order` RPC. Also `crews` and `admin_audit_log` (which `transition_order` needs), `booking_availability()`, and the `order-media` upload rules
-- [ ] Screens: Booking 1–3, Upload with resumable upload, Booking success (N5), Orders, Order details (N4), Cancel (N6), Reschedule (N7); Home with live cards
+- [x] Screens: Booking 1–3, Upload with resumable upload, Booking success (N5), Orders, Order details (N4), Cancel (N6), Reschedule (N7); Home with live cards
   - [x] Part A: Booking 1–3, Upload with resumable upload, Booking success (N5)
-  - [ ] Part B: Orders, Order details (N4), Cancel (N6), Reschedule (N7), Home with live cards
+  - [x] Part B: Orders, Order details (N4), Cancel (N6), Reschedule (N7), Home with live cards
 
 * Done when: two parallel bookings cannot overbook the last seat (test); cancelling at 1 h 59 min is refused
 
