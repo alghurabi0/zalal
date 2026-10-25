@@ -16,7 +16,16 @@ export const routes = {
   /** My tanks (N3). */
   tanks: "/tanks",
   orders: "/orders",
+  /** Order details (N4). */
+  order: (id: string) => `/orders/${id}`,
+  /** Booking step 1 (§5.9): tanks, date and slot. */
   book: "/book",
+  /** Booking step 2 (§5.10): photos, videos and a note. */
+  bookPhotos: "/book/photos",
+  /** Booking step 3 (§5.11): summary and payment. */
+  bookConfirm: "/book/confirm",
+  /** Booking success (N5). */
+  booked: (id: string) => `/book/done/${id}`,
   chat: "/chat",
   profile: "/profile",
   /** POST only: ends the session, then Welcome. */

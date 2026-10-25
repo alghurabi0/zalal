@@ -1,5 +1,4 @@
 import { ChevronDown, MapPin } from "lucide-react";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -8,9 +7,8 @@ import { Suspense } from "react";
 import { Screen } from "@/components/layout/screen";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { TabBar } from "@/components/ui/tab-bar";
-import { listAddresses } from "@/lib/addresses";
+import { chosenAddress, listAddresses } from "@/lib/addresses";
 import { getViewer, surfaceFor } from "@/lib/auth/viewer";
-import { HOME_ADDRESS_COOKIE } from "@/lib/cookies";
 import { baghdadHour } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
@@ -72,8 +70,7 @@ async function AddressButton() {
   const t = await getTranslations("Home");
   const tLabels = await getTranslations("Location.labels");
   const addresses = await listAddresses();
-  const chosen = (await cookies()).get(HOME_ADDRESS_COOKIE)?.value;
-  const current = addresses.find((a) => a.id === chosen) ?? addresses[0] ?? null;
+  const current = await chosenAddress(addresses);
 
   return (
     <AddressPicker
