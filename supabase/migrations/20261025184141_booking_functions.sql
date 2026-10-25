@@ -419,7 +419,8 @@ to authenticated;
 -- - completed: {"cash_collected": true}.
 -- - no_show: {"reason": text}.
 -- - admin override (any other move): {"override": true, "reason": text}.
--- Security definer because nobody may update orders directly; the caller is
+-- A staff reason is kept as an internal note (order_event_notes), which the
+-- customer never reads. Security definer because nobody may update orders directly; the caller is
 -- checked against the order (a hidden order reads as order_not_found).
 create function public.transition_order(
   p_order_id uuid,
@@ -447,6 +448,7 @@ declare
   v_new_slot public.slots;
   v_cash boolean;
   v_details jsonb := '{}';
+  v_event_id bigint;
 begin
   if v_user_id is null or v_role is null then
     raise exception using errcode = '42501', message = 'not_allowed';
@@ -597,14 +599,18 @@ begin
   where o.id = v_order.id;
 
   insert into public.order_events (
-    order_id, from_status, to_status, actor_id, actor_role, reason, cancel_reason,
-    is_override, details
+    order_id, from_status, to_status, actor_id, actor_role, cancel_reason, is_override, details
   )
   values (
-    v_order.id, v_from, p_to_status, v_user_id, v_role,
-    case when v_role = 'customer' then null else v_reason end,
-    v_cancel_reason, v_override, v_details
-  );
+    v_order.id, v_from, p_to_status, v_user_id, v_role, v_cancel_reason, v_override, v_details
+  )
+  returning id into v_event_id;
+
+  -- Staff reasons are internal notes; customers send no free text here.
+  if v_reason is not null and v_role <> 'customer' then
+    insert into public.order_event_notes (event_id, order_id, note)
+    values (v_event_id, v_order.id, v_reason);
+  end if;
 
   if v_role = 'admin' then
     perform private.log_admin_action(

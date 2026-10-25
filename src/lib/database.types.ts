@@ -151,6 +151,36 @@ export type Database = {
           },
         ];
       };
+      order_event_notes: {
+        Row: {
+          created_at: string;
+          event_id: number;
+          note: string;
+          order_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          event_id: number;
+          note: string;
+          order_id: string;
+        };
+        Update: {
+          created_at?: string;
+          event_id?: number;
+          note?: string;
+          order_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_event_notes_event_id_order_id_fkey";
+            columns: ["event_id", "order_id"];
+            isOneToOne: false;
+            referencedRelation: "order_events";
+            referencedColumns: ["id", "order_id"];
+          },
+        ];
+      };
       order_events: {
         Row: {
           actor_id: string | null;
@@ -162,7 +192,6 @@ export type Database = {
           id: number;
           is_override: boolean;
           order_id: string;
-          reason: string | null;
           to_status: Database["public"]["Enums"]["order_status"];
         };
         ComputedFields: never;
@@ -176,7 +205,6 @@ export type Database = {
           id?: never;
           is_override?: boolean;
           order_id: string;
-          reason?: string | null;
           to_status: Database["public"]["Enums"]["order_status"];
         };
         Update: {
@@ -189,7 +217,6 @@ export type Database = {
           id?: never;
           is_override?: boolean;
           order_id?: string;
-          reason?: string | null;
           to_status?: Database["public"]["Enums"]["order_status"];
         };
         Relationships: [

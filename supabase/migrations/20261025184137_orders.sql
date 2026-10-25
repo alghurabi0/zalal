@@ -1,5 +1,5 @@
 -- Orders (spec §5.9-5.15, §6, §7): orders, the places they hold
--- (slot_bookings), their tank lines, events and media.
+-- (slot_bookings), their tank lines, events, staff notes and media.
 --
 -- Nobody writes these tables through the API. create_order() and
 -- transition_order() (migration booking_functions) are the only writers, so
@@ -12,9 +12,14 @@
 -- - orders.client_request_id: create_order() returns the same order when the
 --   app retries a request, so a lost response on a bad network can't book
 --   twice.
--- - No cancel_reason column on orders: the reason lives on the cancel event
---   (order_events.reason for staff, order_events.cancel_reason for the N6
---   choice), so it is stored once. No uses_subscription / subscription_id
+-- - No cancel_reason column on orders: the customer's N6 choice lives on the
+--   cancel event (order_events.cancel_reason), so it is stored once.
+-- - order_event_notes (new): staff write a reason when they cancel, mark a
+--   no-show or override. These notes are internal (settled with the owner
+--   on Oct 25, 2026): admins and the assigned crew read them, the customer
+--   never does. They sit in their own table because RLS can't hide one
+--   column from customers while crews and admins read it, and the customer
+--   reads the rest of the timeline. No uses_subscription / subscription_id
 --   yet: they come with subscriptions (Phase 6).
 -- - order_items.tank_id is cleared if the saved tank is deleted later; the
 --   line keeps its type, size and price.
@@ -150,18 +155,37 @@ create table public.order_events (
   to_status public.order_status not null,
   actor_id uuid references public.profiles (id) on delete set null,
   actor_role public.app_role,
-  -- Staff cancel reason, no-show note, or override reason.
-  reason text check (reason is null or (char_length(reason) between 1 and 500 and reason = btrim(reason))),
+  -- The customer's choice on the N6 cancel sheet.
   cancel_reason public.cancel_reason,
   is_override boolean not null default false,
   details jsonb not null default '{}' check (jsonb_typeof(details) = 'object'),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Target of the order_event_notes (event_id, order_id) foreign key.
+  constraint order_events_id_order_key unique (id, order_id)
 );
 
 alter table public.order_events enable row level security;
 
 create index order_events_order_id_idx on public.order_events (order_id);
 create index order_events_actor_id_idx on public.order_events (actor_id);
+
+-- Staff notes ------------------------------------------------------------------
+
+-- The reason staff give with an event: an admin's cancel reason, a no-show
+-- note, an override reason. Internal: never shown to the customer.
+create table public.order_event_notes (
+  event_id bigint primary key,
+  order_id uuid not null,
+  note text not null check (char_length(note) between 1 and 500 and note = btrim(note)),
+  created_at timestamptz not null default now(),
+  -- The note's order is its event's order, so the crew policy below can't be
+  -- pointed at the wrong order.
+  foreign key (event_id, order_id) references public.order_events (id, order_id) on delete cascade
+);
+
+alter table public.order_event_notes enable row level security;
+
+create index order_event_notes_order_id_idx on public.order_event_notes (order_id);
 
 -- Media --------------------------------------------------------------------------
 
@@ -223,6 +247,21 @@ on public.order_events
 for select
 to authenticated
 using (exists (select 1 from public.orders as o where o.id = order_id));
+
+revoke all on public.order_event_notes from anon, authenticated;
+grant select on public.order_event_notes to authenticated;
+
+create policy "Admins and the assigned crew read staff notes; customers never do"
+on public.order_event_notes
+for select
+to authenticated
+using (
+  (select private.is_admin())
+  or exists (
+    select 1 from public.orders as o
+    where o.id = order_id and o.crew_id = (select private.current_crew_id())
+  )
+);
 
 revoke all on public.order_media from anon, authenticated;
 grant select on public.order_media to authenticated;

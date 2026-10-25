@@ -11,10 +11,13 @@
 -- the place, rescheduling moves it, and an override out of cancelled takes a
 -- place again (ZL005 if full). Completion marks the order's tanks cleaned.
 -- Moves outside the table fail with ZL010; missing requirements with ZL011.
+-- Staff notes (an admin's cancel reason, a no-show note, an override reason)
+-- go to order_event_notes, which only admins and the assigned crew read,
+-- never the customer (settled Oct 25, 2026).
 begin;
 \ir _helpers.psql
 
-select plan(65);
+select plan(70);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -253,8 +256,19 @@ select lives_ok(
   'the crew marks a no-show'
 );
 select isnt(tests.seat_of('ns'), null, 'a no-show keeps its place');
+select results_eq(
+  $$ select n.note from public.order_event_notes as n
+     join public.order_events as e on e.id = n.event_id
+     where e.order_id = tests.id('ns') $$,
+  $$ values ('ما احد فتح الباب'::text) $$,
+  'the crew reads the no-show note on its order'
+);
 
 select tests.authenticate_as(tests.user_id('+9647703333334'));
+select is_empty(
+  $$ select * from public.order_event_notes $$,
+  'another crew reads no notes on orders it is not assigned'
+);
 select throws_ok(
   $$ select tests.go('otw', 'arrived') $$,
   'P0002', 'order_not_found', 'another crew cannot move the order'
@@ -307,10 +321,18 @@ select lives_ok(
   'an admin overrides with a reason'
 );
 select results_eq(
-  $$ select from_status::text, to_status::text, actor_role::text, is_override, reason
+  $$ select from_status::text, to_status::text, actor_role::text, is_override
      from public.order_events where order_id = tests.id('adm_o') $$,
-  $$ values ('pending_confirmation', 'completed', 'admin', true, 'الفريق نسى يسكر الطلب') $$,
+  $$ values ('pending_confirmation', 'completed', 'admin', true) $$,
   'the override is recorded as one'
+);
+select results_eq(
+  $$ select e.order_id, n.note from public.order_event_notes as n
+     join public.order_events as e on e.id = n.event_id
+     where e.order_id in (tests.id('adm_c'), tests.id('adm_o')) order by n.event_id $$,
+  $$ values (tests.id('adm_c'), 'طلب الزبون بالمحادثة'::text),
+            (tests.id('adm_o'), 'الفريق نسى يسكر الطلب'::text) $$,
+  'staff reasons are kept as internal notes'
 );
 select lives_ok(
   $$ select tests.go('cancelled', 'confirmed', '{"override": true, "reason": "الزبون رجع"}') $$,
@@ -357,6 +379,14 @@ select results_eq(
 select is_empty(
   $$ select * from public.admin_audit_log $$,
   'the customer does not read the audit log'
+);
+select is_empty(
+  $$ select * from public.order_event_notes $$,
+  'the customer reads no staff notes on their orders'
+);
+select hasnt_column(
+  'public', 'order_events', 'reason',
+  'the timeline customers read has no free-text staff reason'
 );
 
 -- Deleted accounts and roles ---------------------------------------------------------
