@@ -55,3 +55,22 @@ export function Textarea({ className, rows = 3, ...props }: TextareaProps) {
     />
   );
 }
+
+type SelectProps = Omit<ComponentProps<"select">, "className"> & {
+  variant?: InputVariant;
+  className?: string;
+};
+
+/**
+ * A native select with the inputs' look (admin filters and forms). The
+ * arrow sits on the end side; native, so it works with every keyboard and
+ * screen reader.
+ */
+export function Select({ variant = "default", className, ...props }: SelectProps) {
+  return (
+    <select
+      className={cn(fieldClasses, variantClasses[variant], "cursor-pointer pe-9", className)}
+      {...props}
+    />
+  );
+}

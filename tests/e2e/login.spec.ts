@@ -168,7 +168,9 @@ for (const role of ["crew", "admin"] as const) {
     await requestCode(page, phone);
     await enterCode(page, phone);
     await page.waitForURL(`**/${role}`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(Placeholder[`${role}Title`]);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      role === "crew" ? Placeholder.crewTitle : messages.Admin.overview.title,
+    );
 
     // Customer pages send them back to their own surface.
     await page.goto("/");

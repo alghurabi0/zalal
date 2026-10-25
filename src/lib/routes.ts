@@ -32,9 +32,16 @@ export const routes = {
   logout: "/logout",
   terms: "/terms",
   privacy: "/privacy",
-  /** Crew and admin surfaces (spec §2); placeholders until Phase 3. */
+  /** Crew surface (spec §2, §8.1); a placeholder until Phase 3 task 2. */
   crew: "/crew",
+  /** Admin dashboard (spec §8.2): Overview (A1). */
   admin: "/admin",
+  /** Orders (A2), filtered by its query string (see adminOrdersQuery). */
+  adminOrders: "/admin/orders",
+  /** The order drawer opens over the orders list. */
+  adminOrder: (id: string) => `/admin/orders?order=${encodeURIComponent(id)}`,
+  /** The date × slot board (A2). */
+  adminBoard: "/admin/orders/board",
 } as const;
 
 /**
