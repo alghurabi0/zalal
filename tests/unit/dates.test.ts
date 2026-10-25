@@ -4,6 +4,7 @@ import {
   addDays,
   addMonths,
   baghdadHour,
+  baghdadMinutes,
   baghdadToday,
   formatDate,
   formatMonthYear,
@@ -41,5 +42,12 @@ describe("baghdadToday and addDays", () => {
     expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
     expect(addDays("2027-01-01", -1)).toBe("2026-12-31");
     expect(addDays("2026-10-25", 0)).toBe("2026-10-25");
+  });
+});
+
+describe("baghdadMinutes", () => {
+  it("counts minutes since midnight in Baghdad", () => {
+    expect(baghdadMinutes("2026-10-26T05:30:00Z")).toBe(8 * 60 + 30);
+    expect(baghdadMinutes("2026-10-26T21:15:00Z")).toBe(15);
   });
 });

@@ -11,8 +11,8 @@ export const staffReasonSchema = z.string().trim().min(1).max(500);
 
 export const confirmOrderSchema = z.object({
   orderId: z.uuid(),
-  /** Assign this crew first, or keep the current one. */
-  crewId: z.uuid().nullable(),
+  /** Then assign this crew; left out, the current crew (or none) stays. */
+  crewId: z.uuid().optional(),
 });
 
 export const assignCrewSchema = z.object({

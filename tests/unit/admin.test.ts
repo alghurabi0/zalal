@@ -85,6 +85,8 @@ describe("filters", () => {
     ]);
     expect(statusesFor("all")).toHaveLength(8);
     expect(statusesFor("cancelled")).toEqual(["cancelled"]);
+    expect(statusesFor("booked")).toHaveLength(7);
+    expect(statusesFor("booked")).not.toContain("cancelled");
   });
 
   it("sorts upcoming work soonest first and the rest newest first", () => {

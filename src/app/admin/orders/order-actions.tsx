@@ -61,7 +61,7 @@ export function OrderActions({
   orderId: string;
   status: OrderStatus;
   crewId: string | null;
-  /** Active crews, for confirm and assign. */
+  /** Active crews, plus the order's own crew if it was switched off. */
   crews: CrewOption[];
   /** From admin_slot_board, for reschedule. */
   days: DayOption[];
@@ -120,12 +120,23 @@ export function OrderActions({
 
       {mode === "confirm" && (
         <Panel>
-          <CrewSelect crews={crews} value={crewId} allowNone label={t("confirmCrew")} name="crew">
+          <CrewSelect
+            crews={crews}
+            value={crewId}
+            // Removing a crew is the crew action's job.
+            allowNone={crewId === null}
+            label={t("confirmCrew")}
+            name="crew"
+          >
             {(crew) => (
               <Button
                 size="card"
                 loading={pending}
-                onClick={() => run(() => confirmOrder({ orderId, crewId: crew }))}
+                onClick={() =>
+                  run(() =>
+                    confirmOrder({ orderId, crewId: crew && crew !== crewId ? crew : undefined }),
+                  )
+                }
               >
                 {t("confirm")}
               </Button>
@@ -256,8 +267,8 @@ function CrewSelect({
           >
             {(allowNone || crew === null) && <option value="">{t("noCrew")}</option>}
             {crews.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
+              <option key={option.id} value={option.id} disabled={!option.active}>
+                {option.active ? option.name : t("inactiveCrew", { name: option.name })}
               </option>
             ))}
           </Select>

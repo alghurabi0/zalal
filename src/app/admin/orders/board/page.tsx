@@ -139,7 +139,7 @@ async function Board({ searchParams }: PageProps<"/admin/orders/board">) {
                     return (
                       <td key={date} className="p-1">
                         <Link
-                          href={adminOrdersHref({ status: "all", date, slot: slot.slotId })}
+                          href={adminOrdersHref({ status: "booked", date, slot: slot.slotId })}
                           aria-label={t("cellLabel", {
                             taken: cell.taken,
                             capacity: cell.capacity,

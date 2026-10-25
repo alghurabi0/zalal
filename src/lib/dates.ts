@@ -136,3 +136,11 @@ export function addDays(serviceDate: string, days: number): string {
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
+
+/** Minutes since midnight in Baghdad (0–1439), to order slots by time of day. */
+export function baghdadMinutes(value: Date | string): number {
+  const parts = timeInBaghdad.formatToParts(new Date(value));
+  const hour = Number(parts.find((p) => p.type === "hour")?.value);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value);
+  return hour * 60 + minute;
+}

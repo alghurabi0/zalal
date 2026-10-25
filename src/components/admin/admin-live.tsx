@@ -105,11 +105,24 @@ export function AdminLive() {
     let channel: RealtimeChannel | null = null;
     let closed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    // Several changes in a row (confirm + assign) refetch once.
+    let stale = false;
+    // A burst of changes (confirm + assign, a crew moving on) refetches once;
+    // a hidden tab waits until it is shown again.
     const refresh = () => {
+      if (document.hidden) {
+        stale = true;
+        return;
+      }
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 300);
+      timer = setTimeout(() => router.refresh(), 1000);
     };
+    const onVisible = () => {
+      if (!document.hidden && stale) {
+        stale = false;
+        router.refresh();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     void (async () => {
       // Join with the admin's token, or Realtime treats the channel as a
@@ -135,6 +148,7 @@ export function AdminLive() {
     return () => {
       closed = true;
       clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       if (channel) void supabase.removeChannel(channel);
     };
   }, [router]);

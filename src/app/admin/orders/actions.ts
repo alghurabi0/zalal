@@ -38,17 +38,19 @@ function failure(rpc: string, error: { code?: string; message?: string }): Admin
   return { status: "error", error: code };
 }
 
-async function admin(orderId: string) {
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+async function admin(orderId: string): Promise<Client> {
   await requireViewer(routes.adminOrder(orderId), "admin");
   return createClient();
 }
 
-async function transition(
+async function transitionWith(
+  supabase: Client,
   orderId: string,
   toStatus: OrderStatus,
   payload: { [key: string]: Json },
 ): Promise<AdminOrderResult> {
-  const supabase = await admin(orderId);
   const { error } = await supabase.rpc("transition_order", {
     p_order_id: orderId,
     p_to_status: toStatus,
@@ -57,28 +59,46 @@ async function transition(
   return error ? failure("transition_order", error) : { status: "done" };
 }
 
-/** Confirms, assigning the chosen crew first when one is picked. */
+async function assignWith(
+  supabase: Client,
+  orderId: string,
+  crewId: string | null,
+): Promise<AdminOrderResult> {
+  const { error } = await supabase.rpc("assign_crew", {
+    p_order_id: orderId,
+    // The generated type says string; the function takes null to remove the crew.
+    p_crew_id: crewId as string,
+  });
+  return error ? failure("assign_crew", error) : { status: "done" };
+}
+
+async function transition(
+  orderId: string,
+  toStatus: OrderStatus,
+  payload: { [key: string]: Json },
+): Promise<AdminOrderResult> {
+  return transitionWith(await admin(orderId), orderId, toStatus, payload);
+}
+
+/**
+ * Confirms, then assigns the chosen crew. Confirming first means a stale
+ * drawer (someone else moved the order) changes nothing. If the crew can't
+ * be assigned, the order stays confirmed and the error says why.
+ */
 export async function confirmOrder(input: ConfirmOrderInput): Promise<AdminOrderResult> {
   const parsed = confirmOrderSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: "failed" };
   const { orderId, crewId } = parsed.data;
-  if (crewId) {
-    const assigned = await assignCrew({ orderId, crewId });
-    if (assigned.status === "error") return assigned;
-  }
-  return transition(orderId, "confirmed", {});
+  const supabase = await admin(orderId);
+  const confirmed = await transitionWith(supabase, orderId, "confirmed", {});
+  if (confirmed.status === "error" || !crewId) return confirmed;
+  return assignWith(supabase, orderId, crewId);
 }
 
 export async function assignCrew(input: AssignCrewInput): Promise<AdminOrderResult> {
   const parsed = assignCrewSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: "failed" };
-  const supabase = await admin(parsed.data.orderId);
-  const { error } = await supabase.rpc("assign_crew", {
-    p_order_id: parsed.data.orderId,
-    // The generated type says string; the function takes null to remove the crew.
-    p_crew_id: parsed.data.crewId as string,
-  });
-  return error ? failure("assign_crew", error) : { status: "done" };
+  return assignWith(await admin(parsed.data.orderId), parsed.data.orderId, parsed.data.crewId);
 }
 
 export async function cancelOrderAsAdmin(input: AdminCancelInput): Promise<AdminOrderResult> {

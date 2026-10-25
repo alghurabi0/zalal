@@ -1,4 +1,5 @@
 import type { DayOption } from "@/lib/booking/availability";
+import { baghdadMinutes } from "@/lib/dates";
 
 // admin_slot_board() rows, shaped for the A2 board and the admin reschedule
 // picker. The database decides what is bookable; these only arrange it.
@@ -59,12 +60,10 @@ export function boardGrid(rows: BoardRow[], dates: string[]): BoardGrid {
       slots.set(row.slot_id, { slotId: row.slot_id, startAt: row.start_at, endAt: row.end_at });
     }
   }
-  // Order rows by the time of day, not the date.
-  const timeOfDay = (iso: string) => (new Date(iso).getTime() + 3 * 60 * 60 * 1000) % 86_400_000;
   return {
     days: dates.map((date) => ({ date, blocked: blocked.has(date) })),
     slots: [...slots.values()].sort(
-      (a, b) => timeOfDay(a.startAt) - timeOfDay(b.startAt) || a.slotId - b.slotId,
+      (a, b) => baghdadMinutes(a.startAt) - baghdadMinutes(b.startAt) || a.slotId - b.slotId,
     ),
     cell: (date, slotId) => cells.get(`${date}|${slotId}`),
   };

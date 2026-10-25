@@ -21,8 +21,12 @@ export const ORDER_STATUSES = [
   "no_show",
 ] as const satisfies readonly OrderStatus[];
 
-/** "active" = every status before the end states (the default view). */
-export const STATUS_FILTERS = ["active", "all", ...ORDER_STATUSES] as const;
+/**
+ * "active" = every status before the end states (the default view);
+ * "booked" = every order holding a place (all but cancelled), as the board
+ * counts them.
+ */
+export const STATUS_FILTERS = ["active", "booked", "all", ...ORDER_STATUSES] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 /** "none" = orders with no crew yet. */
@@ -74,6 +78,7 @@ export function parseAdminOrdersQuery(
 export function statusesFor(filter: StatusFilter): readonly OrderStatus[] {
   if (filter === "active") return CURRENT_STATUSES;
   if (filter === "all") return ORDER_STATUSES;
+  if (filter === "booked") return ORDER_STATUSES.filter((s) => s !== "cancelled");
   return [filter];
 }
 

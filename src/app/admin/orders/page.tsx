@@ -137,7 +137,7 @@ async function Filters({ query, crews }: { query: AdminOrdersQuery; crews: CrewO
           <Select {...control} name="status" variant="compact" defaultValue={query.status}>
             {STATUS_FILTERS.map((status) => (
               <option key={status} value={status}>
-                {status === "active" || status === "all"
+                {status === "active" || status === "booked" || status === "all"
                   ? t(`statuses.${status}`)
                   : tStatus(status)}
               </option>

@@ -96,7 +96,7 @@ test("an admin confirms an order with a crew, and both are audited", async ({ pa
   await expect(dialog).toContainText(crew.name);
 
   expect(await orderRow(order.id)).toMatchObject({ status: "confirmed", crew_id: crew.id });
-  expect(await auditActions(order.id)).toEqual(["order.assign_crew", "order.transition"]);
+  expect(await auditActions(order.id)).toEqual(["order.transition", "order.assign_crew"]);
 
   // Closing the drawer keeps the list's filters.
   await page.keyboard.press("Escape");

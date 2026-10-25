@@ -37,7 +37,13 @@ export async function OrderDrawer({
   crews: CrewOption[];
 }) {
   const t = await getTranslations("Admin.drawer");
-  const order = await getAdminOrder(orderId);
+  // The server's clock; the database checks again.
+  const now = new Date();
+  // Both at once; the board is dropped when the order can't be rescheduled.
+  const [order, board] = await Promise.all([
+    getAdminOrder(orderId),
+    slotBoard(baghdadToday(now), RESCHEDULE_DAYS),
+  ]);
 
   if (!order) {
     return (
@@ -47,12 +53,8 @@ export async function OrderDrawer({
     );
   }
 
-  // The server's clock; the database checks again.
-  const now = new Date();
   const canReschedule = order.status === "pending_confirmation" || order.status === "confirmed";
-  const days = canReschedule
-    ? adminRescheduleDays(await slotBoard(baghdadToday(now), RESCHEDULE_DAYS), now)
-    : [];
+  const days = canReschedule ? adminRescheduleDays(board, now) : [];
   const crewName = new Map(crews.map((crew) => [crew.id, crew.name]));
 
   return (
@@ -98,7 +100,7 @@ export async function OrderDrawer({
           orderId={order.id}
           status={order.status}
           crewId={order.crew_id}
-          crews={crews.filter((crew) => crew.active)}
+          crews={crews.filter((crew) => crew.active || crew.id === order.crew_id)}
           days={days}
           current={{ serviceDate: order.service_date, slotId: order.slot_id }}
         />
