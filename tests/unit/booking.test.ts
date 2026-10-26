@@ -274,6 +274,7 @@ describe("createBookingSchema", () => {
     ],
     note: "  الدرج ضيق  ",
     media: [{ path: `customer/${USER}/${FILE}.mp4`, durationS: 24.4 }],
+    expectedTotal: 105000,
   };
 
   it("accepts a booking and trims the note", () => {
@@ -288,6 +289,8 @@ describe("createBookingSchema", () => {
     expect(bad({ items: [{ tankId: TANK, qty: 0 }] })).toBe(false);
     expect(bad({ serviceDate: "25/10/2026" })).toBe(false);
     expect(bad({ note: "x".repeat(501) })).toBe(false);
+    expect(bad({ expectedTotal: 1.5 })).toBe(false);
+    expect(bad({ expectedTotal: undefined })).toBe(false);
     expect(bad({ media: [{ path: "customer/other/x.mp4", durationS: 1 }] })).toBe(false);
     expect(bad({ media: [{ path: `customer/${USER}/${FILE}.mp4`, durationS: 61 }] })).toBe(false);
     expect(
@@ -305,6 +308,8 @@ describe("booking errors", () => {
     expect(bookingErrorFor("ZL001")).toBe("outside_area");
     expect(bookingErrorFor("ZL009")).toBe("upload_missing");
     expect(bookingErrorFor("P0002")).toBe("stale");
+    expect(bookingErrorFor("ZL018")).toBe("price_changed");
+    expect(stepFor("price_changed")).toBeNull();
     expect(bookingErrorFor("42501")).toBe("failed");
     expect(bookingErrorFor(undefined)).toBe("failed");
     expect(stepFor("slot_full")).toBe("details");

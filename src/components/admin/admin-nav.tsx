@@ -1,6 +1,14 @@
 "use client";
 
-import { CalendarRange, ClipboardList, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarRange,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Tag,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -14,12 +22,27 @@ const items = [
   { href: routes.admin, key: "overview", icon: LayoutDashboard },
   { href: routes.adminOrders, key: "orders", icon: ClipboardList },
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
+  { href: routes.adminPrices, key: "prices", icon: Tag },
+  { href: routes.adminSchedule, key: "schedule", icon: CalendarClock },
+  { href: routes.adminSettings, key: "settings", icon: Settings },
 ] as const;
 
 /**
+ * The item for a page: the longest href that is the page or a folder above
+ * it, so /admin/settings/area marks Settings and /admin/orders/board marks
+ * the board, not Orders.
+ */
+function activeHref(pathname: string): string | undefined {
+  return items
+    .map((item) => item.href as string)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
+
+/**
  * The admin shell's navigation (spec §8.2): a sidebar on the start side on
- * desktop, a scrolling row of links on top on tablets. Later parts add
- * Prices, Schedule, Crews, Settings and Admins here.
+ * desktop, a scrolling row of links on top on tablets. Part C adds Crews
+ * and Admins here.
  */
 export function AdminNav({ name, children }: { name: string | null; children?: ReactNode }) {
   const t = useTranslations("Admin.nav");
@@ -49,7 +72,7 @@ export function AdminNav({ name, children }: { name: string | null; children?: R
       >
         <ul className="flex gap-1 lg:flex-col">
           {items.map((item) => {
-            const active = pathname === item.href;
+            const active = item.href === activeHref(pathname);
             const Icon = item.icon;
             return (
               <li key={item.key}>

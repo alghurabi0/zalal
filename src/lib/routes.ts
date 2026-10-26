@@ -42,6 +42,14 @@ export const routes = {
   adminOrder: (id: string) => `/admin/orders?order=${encodeURIComponent(id)}`,
   /** The date × slot board (A2). */
   adminBoard: "/admin/orders/board",
+  /** Prices (A8). */
+  adminPrices: "/admin/prices",
+  /** Schedule (A9): slots, blocked dates and orders that no longer fit. `?month=YYYY-MM`. */
+  adminSchedule: "/admin/schedule",
+  /** Settings (A13). */
+  adminSettings: "/admin/settings",
+  /** The service-area editor (A13). */
+  adminServiceArea: "/admin/settings/area",
 } as const;
 
 /**

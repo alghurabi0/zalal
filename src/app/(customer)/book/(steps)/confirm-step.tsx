@@ -4,7 +4,7 @@ import { Calendar, type LucideIcon, MapPin, Video } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type ComponentType, type SVGProps, useEffect, useState } from "react";
+import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "react";
 
 import { RoofTankIcon } from "@/components/icons/tank-icons";
 import { Screen } from "@/components/layout/screen";
@@ -52,6 +52,12 @@ export function ConfirmStep() {
   const [bookedRequest, setBookedRequest] = useState<string | null>(null);
   const [error, setError] = useState<BookingError | null>(null);
   const busy = submitting || (bookedRequest !== null && draft?.requestId === bookedRequest);
+  // The prices on screen when the request goes out: a refresh during a long
+  // upload can bring new ones after the tap.
+  const latestData = useRef(data);
+  useEffect(() => {
+    latestData.current = data;
+  });
 
   const ready = draft !== null && detailsComplete(draft, data.days, data.maxTanks);
   useEffect(() => {
@@ -89,6 +95,11 @@ export function ConfirmStep() {
           path: file.path,
           durationS: file.kind === "video" ? file.durationS : null,
         })),
+        expectedTotal: draftTotal(
+          current.lines,
+          latestData.current.savedTanks,
+          latestData.current.prices,
+        ),
       });
 
       if (result.status === "booked") {
@@ -107,6 +118,9 @@ export function ConfirmStep() {
         router.push(routes.book);
         return;
       }
+      // A price changed: reload the prices, so the total shown is the one
+      // the next "أكّد الحجز" sends.
+      if (result.error === "price_changed") router.refresh();
       setError(result.error);
     } catch {
       // The request never got an answer (offline). The same requestId is
@@ -188,9 +202,11 @@ export function ConfirmStep() {
       ? t("errors.outsideArea")
       : error === "upload_missing"
         ? t("errors.uploadMissing")
-        : error
-          ? t("errors.failed")
-          : null;
+        : error === "price_changed"
+          ? t("errors.priceChanged")
+          : error
+            ? t("errors.failed")
+            : null;
 
   return (
     <Screen className="bg-bg">
