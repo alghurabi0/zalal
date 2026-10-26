@@ -116,14 +116,22 @@ async function renderPdf(certificateId: string, origin: string): Promise<Uint8Ar
     });
   } finally {
     // Chromium sometimes hangs on close in serverless functions.
-    await Promise.race([browser.close(), new Promise((resolve) => setTimeout(resolve, 5_000))]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      browser.close(),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, 5_000);
+      }),
+    ]);
+    clearTimeout(timer);
   }
 }
 
 /**
  * The stored PDF's path, made first if missing. Null when the order isn't
  * completed (no certificate to print). Safe to run twice at once: both write
- * the same version, and only a record for the current issue is kept.
+ * the same version, and only a record for the current issue is kept; a run
+ * that finds the certificate issued again meanwhile deletes its own file.
  */
 export async function ensureCertificatePdf(
   certificateId: string,
@@ -155,7 +163,12 @@ export async function ensureCertificatePdf(
     .select("pdf_path")
     .maybeSingle();
   if (recordError) throw new Error(`PDF record failed: ${recordError.message}`);
-  if (!recorded) return ensureCertificatePdf(certificateId, origin);
+  if (!recorded) {
+    // Issued again while printing: this version is stale already, and the
+    // new issue's run may have cleaned the folder before it landed.
+    await bucket.remove([path]);
+    return ensureCertificatePdf(certificateId, origin);
+  }
 
   // Earlier versions are no longer readable (the policy follows pdf_path).
   const { data: files } = await bucket.list(certificate.id);

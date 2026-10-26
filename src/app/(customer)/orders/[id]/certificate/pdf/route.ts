@@ -37,26 +37,28 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/orders/[id]/
   const supabase = await createClient();
   const { data: certificate, error } = await supabase
     .from("certificates")
-    .select("id, orders!inner(number, status)")
+    .select("id, pdf_path, orders!inner(number, status)")
     .eq("order_id", orderId.data)
     .eq("orders.status", "completed")
     .maybeSingle();
   if (error) throw new Error(`Certificate read failed: ${error.message}`);
   if (!certificate) return NextResponse.redirect(report, 303);
 
-  let path: string | null;
-  try {
-    const origin = printOrigin(
-      certificateEnv(),
-      request.headers.get("host"),
-      request.headers.get("x-forwarded-proto"),
-    );
-    if (!origin) throw new Error("No origin to print the certificate from");
-    path = await ensureCertificatePdf(certificate.id, origin);
-  } catch (pdfError) {
-    Sentry.captureException(pdfError);
-    report.searchParams.set("pdf", "failed");
-    return NextResponse.redirect(report, 303);
+  let path = certificate.pdf_path;
+  if (!path) {
+    try {
+      const origin = printOrigin(
+        certificateEnv(),
+        request.headers.get("host"),
+        request.headers.get("x-forwarded-proto"),
+      );
+      if (!origin) throw new Error("No origin to print the certificate from");
+      path = await ensureCertificatePdf(certificate.id, origin);
+    } catch (pdfError) {
+      Sentry.captureException(pdfError);
+      report.searchParams.set("pdf", "failed");
+      return NextResponse.redirect(report, 303);
+    }
   }
   if (!path) return NextResponse.redirect(report, 303);
 

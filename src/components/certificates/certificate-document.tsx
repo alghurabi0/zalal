@@ -2,13 +2,13 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { LogoMark } from "@/components/brand/logo-mark";
-import { textDir } from "@/lib/bidi";
 import { certificateNumber, maskPhone } from "@/lib/certificates/format";
 import type { CertificateData, CertificateFile } from "@/lib/certificates/queries";
 import { formatDate, formatDay, slotParts } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 
 import { QrCode } from "./qr-code";
+import { TankLine } from "./tank-line";
 
 /**
  * The certificate as one A4 page (spec §10.1), printed to PDF by headless
@@ -26,7 +26,6 @@ export async function CertificateDocument({
   publicUrl: string;
 }) {
   const t = await getTranslations("CertificateDoc");
-  const tTanks = await getTranslations("Tanks");
   const tReport = await getTranslations("Report");
   const { order, customer } = certificate;
   const number = certificateNumber(order.number);
@@ -90,14 +89,7 @@ export async function CertificateDocument({
             <ul>
               {order.tanks.map((tank, index) => (
                 <li key={index}>
-                  {tReport.rich("tank", {
-                    type: tTanks(`types.${tank.tank_type}`),
-                    size: tTanks(`sizes.${tank.size}`),
-                    qty: tank.qty,
-                    iso: (chunks) => (
-                      <bdi dir={textDir(tTanks(`sizes.${tank.size}`))}>{chunks}</bdi>
-                    ),
-                  })}
+                  <TankLine tank={tank} />
                 </li>
               ))}
             </ul>

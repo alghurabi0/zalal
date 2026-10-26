@@ -54,6 +54,9 @@
 -- 6. Storage: certificate PDFs are read through the current pdf_path by
 --    whoever reads the certificate; only the server writes the bucket.
 --
+-- 7. Orders already completed before this migration get their certificate
+--    (private.backfill_certificates), dated at their completion.
+--
 -- None of these tables is in the Realtime publication.
 
 -- Types --------------------------------------------------------------------------------
@@ -600,5 +603,51 @@ begin
 end;
 $$;
 
+
+-- Orders completed before this migration ---------------------------------------------
+-- They get their certificate now, dated at their (latest) completion, so
+-- every completed order's "الشهادة" button has one to open. The PDF is made
+-- on the first download. Run once here; kept as a function so pgTAP tests it.
+
+create function private.backfill_certificates()
+returns integer
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_count integer;
+begin
+  insert into public.certificates (
+    order_id, public_code, issued_at, sterilant, residual_chlorine_mg_l, next_due_on
+  )
+  select
+    o.id,
+    private.new_certificate_code(),
+    done.at,
+    coalesce(
+      r.sterilant,
+      case when char_length(s.sterilant_text) >= 2 then s.sterilant_text end
+    ),
+    r.residual_chlorine_mg_l,
+    (
+      (done.at at time zone 'Asia/Baghdad')::date
+      + make_interval(months => s.cleaning_interval_months)
+    )::date
+  from public.orders as o
+  cross join public.settings as s
+  left join public.job_reports as r on r.order_id = o.id
+  cross join lateral (
+    select coalesce(max(e.created_at), o.updated_at) as at
+    from public.order_events as e
+    where e.order_id = o.id and e.to_status = 'completed'
+  ) as done
+  where o.status = 'completed'
+    and not exists (select 1 from public.certificates as c where c.order_id = o.id);
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+select private.backfill_certificates();
 
 revoke execute on all functions in schema private from public;

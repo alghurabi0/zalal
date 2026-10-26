@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { LogoMark } from "@/components/brand/logo-mark";
 import { CertificateRow } from "@/components/certificates/certificate-row";
+import { TankLine } from "@/components/certificates/tank-line";
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,7 +14,6 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { certificateNumber } from "@/lib/certificates/format";
 import { getPublicCertificate } from "@/lib/certificates/queries";
 import { formatDate } from "@/lib/dates";
-import { textDir } from "@/lib/bidi";
 import { routes } from "@/lib/routes";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,8 +53,6 @@ async function PageTitle() {
 async function PublicContent({ params }: PageProps<"/c/[code]">) {
   const { code } = await params;
   const t = await getTranslations("PublicCertificate");
-  const tTanks = await getTranslations("Tanks");
-  const tReport = await getTranslations("Report");
   const certificate = await getPublicCertificate(code);
 
   if (!certificate) {
@@ -89,14 +87,7 @@ async function PublicContent({ params }: PageProps<"/c/[code]">) {
             <ul className="flex flex-col items-end">
               {certificate.tanks.map((tank, index) => (
                 <li key={index}>
-                  {tReport.rich("tank", {
-                    type: tTanks(`types.${tank.tank_type}`),
-                    size: tTanks(`sizes.${tank.size}`),
-                    qty: tank.qty,
-                    iso: (chunks) => (
-                      <bdi dir={textDir(tTanks(`sizes.${tank.size}`))}>{chunks}</bdi>
-                    ),
-                  })}
+                  <TankLine tank={tank} />
                 </li>
               ))}
             </ul>

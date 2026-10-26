@@ -43,7 +43,6 @@ export type CertificateData = {
   chlorine: number | null;
   /** A Baghdad calendar day, YYYY-MM-DD. */
   nextDueOn: string;
-  pdfPath: string | null;
   order: {
     id: string;
     number: number;
@@ -73,7 +72,6 @@ type Row = {
   sterilant: string | null;
   residual_chlorine_mg_l: number | null;
   next_due_on: string;
-  pdf_path: string | null;
   orders: {
     id: string;
     number: number;
@@ -102,7 +100,7 @@ type Row = {
   };
 };
 
-const SELECT = `id, public_code, issued_at, sterilant, residual_chlorine_mg_l, next_due_on, pdf_path,
+const SELECT = `id, public_code, issued_at, sterilant, residual_chlorine_mg_l, next_due_on,
   orders!inner(
     id, number, status, service_date, slot_start_at, slot_end_at, district, landmark,
     order_items(id, tank_type, size, qty),
@@ -167,7 +165,6 @@ export async function loadCertificate(
     sterilant: data.sterilant,
     chlorine: data.residual_chlorine_mg_l,
     nextDueOn: data.next_due_on,
-    pdfPath: data.pdf_path,
     order: {
       id: order.id,
       number: order.number,

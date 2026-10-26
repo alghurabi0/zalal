@@ -31,7 +31,7 @@ export async function rateOrder(input: RateOrderInput): Promise<RateOrderResult>
   });
   if (error) {
     if (error.code === "ZL026") return { status: "error", error: "already_rated" };
-    if (error.code === "ZL025" || error.code === "P0002") {
+    if (error.code === "ZL025" || error.code === "P0002" || error.code === "42501") {
       return { status: "error", error: "not_allowed" };
     }
     // Only the SQLSTATE: the message can quote the comment.

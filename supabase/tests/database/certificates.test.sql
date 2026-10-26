@@ -18,7 +18,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(42);
+select plan(46);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -286,6 +286,32 @@ select ok(
   not has_function_privilege('authenticated', 'private.issue_certificate(uuid)', 'execute'),
   'nobody calls issue_certificate directly'
 );
+
+-- Orders completed before the migration (backfill) -------------------------------------------
+
+select tests.clear_authentication();
+update public.settings as s set sterilant_text = 'كلور قديم' where s.id;
+insert into tests.ids values
+  ('old', tests.create_order(tests.a(), 'completed', p_crew_id => tests.id('crew1'))),
+  ('old2', tests.create_order(tests.a(), 'completed', p_crew_id => tests.id('crew1')));
+insert into public.order_events (order_id, from_status, to_status, actor_role, created_at)
+values (tests.id('old'), 'in_progress', 'completed', 'crew', '2026-03-31 22:00+00');
+insert into public.job_reports (order_id, crew_id, sterilant, residual_chlorine_mg_l)
+values (tests.id('old'), tests.id('crew1'), 'كلور التقرير', 0.3);
+
+select is(private.backfill_certificates(), 2, 'the backfill issues a certificate for each completed order without one');
+select results_eq(
+  $$ select issued_at, sterilant, residual_chlorine_mg_l, next_due_on, pdf_path
+     from public.certificates where order_id = tests.id('old') $$,
+  $$ values ('2026-03-31 22:00+00'::timestamptz, 'كلور التقرير', 0.3::numeric, '2026-10-01'::date, null::text) $$,
+  'dated at the completion (1 April in Baghdad + 6 months), with the report''s data'
+);
+select results_eq(
+  $$ select sterilant from public.certificates where order_id = tests.id('old2') $$,
+  $$ values ('كلور قديم') $$,
+  'with no report, the sterilant from settings'
+);
+select is(private.backfill_certificates(), 0, 'and running it again issues none');
 
 -- The settings paragraph (spec §10.1 item 4) -------------------------------------------------
 

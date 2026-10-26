@@ -22,10 +22,12 @@ const PENDING_SHOWN = 10;
 const TICKETS_SHOWN = 5;
 
 /**
- * Overview (A1): today's orders by status, the orders waiting for
- * confirmation and the open tickets (for now only those low ratings open,
- * each linking to its order), kept live by the shell (AdminLive). Unread
- * chats and subscription requests arrive with their phases (5 and 6).
+ * Overview (A1): today's orders by status and the orders waiting for
+ * confirmation, kept live by the shell (AdminLive, which follows orders),
+ * and the open tickets (for now only those low ratings open, each linking to
+ * its order), read when the page loads: tickets aren't in Realtime until A5
+ * (Phase 5). Unread chats and subscription requests arrive with their
+ * phases (5 and 6).
  */
 export default async function OverviewPage() {
   const t = await getTranslations("Admin.overview");

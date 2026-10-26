@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { z } from "zod";
 
 import { CertificateRow } from "@/components/certificates/certificate-row";
+import { TankLine } from "@/components/certificates/tank-line";
 import { Screen } from "@/components/layout/screen";
 import { LiveOrders } from "@/components/orders/live-orders";
 import { BackButton } from "@/components/ui/back-button";
@@ -18,10 +19,10 @@ import { type CertificateData, getCertificate } from "@/lib/certificates/queries
 import { formatDate, formatDayMonth } from "@/lib/dates";
 import { getOrder } from "@/lib/orders/queries";
 import { canFollowJob, canTrack } from "@/lib/orders/status";
-import { textDir } from "@/lib/bidi";
 import { routes } from "@/lib/routes";
 
 import { BeforeAfter } from "./before-after";
+import { PdfFailed } from "./pdf-failed";
 import { Rating } from "./rating";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -131,19 +132,15 @@ async function ReportContent({ params, searchParams }: PageProps<"/orders/[id]/c
       </header>
 
       <div className="flex flex-col gap-3 px-4 pt-3.5">
-        {pdf === "failed" && (
-          <p
-            role="alert"
-            className="rounded-input bg-warn-bg px-3.5 py-2.5 text-13 font-bold text-warn-fg"
-          >
-            {t("pdfFailed")}
-          </p>
-        )}
+        {pdf === "failed" && <PdfFailed />}
         <BeforeAfter before={certificate.before} after={certificate.after} />
         <Clips certificate={certificate} />
         <Rows certificate={certificate} />
       </div>
       <Rating
+        // A rating that arrives (sent here, or on another device) replaces
+        // the form's own state.
+        key={certificate.rating ? "sent" : "open"}
         orderId={certificate.order.id}
         rating={certificate.rating}
         shareCode={certificate.publicCode}
@@ -184,7 +181,6 @@ async function Clips({ certificate }: { certificate: CertificateData }) {
 
 async function Rows({ certificate }: { certificate: CertificateData }) {
   const t = await getTranslations("Report");
-  const tTanks = await getTranslations("Tanks");
   return (
     <section
       aria-label={t("rows.label")}
@@ -195,12 +191,7 @@ async function Rows({ certificate }: { certificate: CertificateData }) {
           <ul className="flex flex-col items-end">
             {certificate.order.tanks.map((tank, index) => (
               <li key={index}>
-                {t.rich("tank", {
-                  type: tTanks(`types.${tank.tank_type}`),
-                  size: tTanks(`sizes.${tank.size}`),
-                  qty: tank.qty,
-                  iso: (chunks) => <bdi dir={textDir(tTanks(`sizes.${tank.size}`))}>{chunks}</bdi>,
-                })}
+                <TankLine tank={tank} />
               </li>
             ))}
           </ul>

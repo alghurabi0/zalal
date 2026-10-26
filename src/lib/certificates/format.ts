@@ -12,9 +12,6 @@ export const RATING_TAGS = [
   "clear_photos",
 ] as const satisfies readonly RatingTag[];
 
-/** 3 stars or fewer opens a support ticket (decision 49). */
-export const TICKET_STARS = 3;
-
 /** The certificate number is the order's: #1024 → "ZL-1024". */
 export function certificateNumber(orderNumber: number): string {
   return `ZL-${orderNumber}`;
