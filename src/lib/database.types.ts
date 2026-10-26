@@ -581,6 +581,7 @@ export type Database = {
           min_app_version: string;
           privacy_md: string;
           sms_enabled: boolean;
+          sterilant_text: string;
           terms_md: string;
           updated_at: string;
           working_days: number[];
@@ -599,6 +600,7 @@ export type Database = {
           min_app_version?: string;
           privacy_md?: string;
           sms_enabled?: boolean;
+          sterilant_text?: string;
           terms_md?: string;
           updated_at?: string;
           working_days?: number[];
@@ -616,6 +618,7 @@ export type Database = {
           min_app_version?: string;
           privacy_md?: string;
           sms_enabled?: boolean;
+          sterilant_text?: string;
           terms_md?: string;
           updated_at?: string;
           working_days?: number[];
@@ -748,6 +751,43 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_addresses_outside_area: { Args: Record<PropertyKey, never>; Returns: number };
+      admin_block_date: { Args: { p_date: string; p_reason: string }; Returns: undefined };
+      admin_create_slot: {
+        Args: {
+          p_capacity: number;
+          p_end_time: string;
+          p_start_time: string;
+          p_weekdays: number[];
+        };
+        Returns: number;
+      };
+      admin_save_service_area: {
+        Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
+        Returns: Record<string, unknown>;
+      };
+      admin_schedule_conflicts: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          number: number;
+          order_id: string;
+          reason: string;
+          service_date: string;
+          slot_id: number;
+          slot_start_at: string;
+          status: Database["public"]["Enums"]["order_status"];
+        }[];
+      };
+      admin_service_areas: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          active: boolean;
+          area: Json;
+          id: number;
+          name: string;
+          updated_at: string;
+        }[];
+      };
       admin_slot_board: {
         Args: { p_from: string; p_to: string };
         Returns: {
@@ -760,6 +800,13 @@ export type Database = {
           start_at: string;
           taken: number;
         }[];
+      };
+      admin_unblock_date: { Args: { p_date: string }; Returns: undefined };
+      admin_update_prices: { Args: { p_prices: Json }; Returns: number };
+      admin_update_settings: { Args: { p_patch: Json }; Returns: undefined };
+      admin_update_slot: {
+        Args: { p_active: boolean; p_capacity: number; p_slot_id: number; p_weekdays: number[] };
+        Returns: undefined;
       };
       assign_crew: { Args: { p_crew_id: string; p_order_id: string }; Returns: undefined };
       booking_availability: {
@@ -781,6 +828,7 @@ export type Database = {
       create_order: {
         Args: {
           p_address_id: string;
+          p_expected_total?: number;
           p_items: Json;
           p_media?: Json;
           p_note?: string;
