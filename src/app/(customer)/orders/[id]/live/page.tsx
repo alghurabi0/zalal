@@ -25,9 +25,8 @@ import { JobFiles } from "./job-files";
  * Job progress (spec §5.14, LiveJob.dc.html): the timeline وصل الفريق / بدأ
  * الشغل / خلص الشغل with times, the crew's "قبل" photos, its clips and its
  * "بعد" photos, all live. Open from arrival on; on the way it sends the
- * customer to Tracking, before that to Order details. The certificate
- * button waits for Phase 4, task 2: until then a completed order's button
- * opens Order details.
+ * customer to Tracking, before that to Order details. Its button opens
+ * the certificate (Report) once the job is completed.
  */
 export default function JobProgressPage(props: PageProps<"/orders/[id]/live">) {
   return (
@@ -80,10 +79,10 @@ async function JobProgressContent({ params }: PageProps<"/orders/[id]/live">) {
       </div>
 
       <footer className="sticky bottom-0 z-10 flex gap-2.5 border-t border-border bg-surface px-5 pt-3 pb-safe-5.5">
-        {/* Chat joins it in Phase 5; the certificate comes with Phase 4, task 2. */}
+        {/* Chat joins it in Phase 5. */}
         {job.status === "completed" ? (
-          <Button href={routes.order(job.id)} size="footer" className="flex-1">
-            {t("details")}
+          <Button href={routes.certificate(job.id)} size="footer" className="flex-1">
+            {t("certificate")}
           </Button>
         ) : (
           <Button size="footer" disabled className="flex-1">

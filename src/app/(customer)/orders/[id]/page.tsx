@@ -29,8 +29,8 @@ import { RescheduleSheet } from "./reschedule-sheet";
  * Order details (N4): status, timeline, summary, price and attachments, with
  * the buttons its status allows. Cancel (N6) and reschedule (N7) open
  * sheets. From the crew setting off it links to Tracking and then Job
- * progress; the certificate comes with Phase 4, task 2, help with Chat in
- * Phase 5.
+ * progress, and once completed to the certificate (Report) and the job's
+ * files; help comes with Chat in Phase 5.
  */
 export default function OrderPage(props: PageProps<"/orders/[id]">) {
   return (
@@ -300,6 +300,22 @@ async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number 
     );
   }
 
+  // Once completed: the certificate (§5.15), and the job's photos and clips.
+  if (order.status === "completed") {
+    return (
+      <Footer>
+        <div className="flex gap-2.5">
+          <Button href={routes.certificate(order.id)} size="footer" className="flex-1">
+            {t("certificateButton")}
+          </Button>
+          <Button href={routes.jobProgress(order.id)} size="footer" variant="secondary">
+            {t("jobMedia")}
+          </Button>
+        </div>
+      </Footer>
+    );
+  }
+
   // From the crew setting off: Tracking, then Job progress (§5.13, §5.14).
   const action = primaryAction(order.status);
   if (action === "track" || canFollowJob(order.status)) {
@@ -310,11 +326,7 @@ async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number 
           size="footer"
           className="w-full"
         >
-          {action === "track"
-            ? t("track")
-            : order.status === "completed"
-              ? t("jobMedia")
-              : t("progress")}
+          {action === "track" ? t("track") : t("progress")}
         </Button>
       </Footer>
     );
