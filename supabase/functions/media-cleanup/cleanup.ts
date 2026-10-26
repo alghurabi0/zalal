@@ -15,7 +15,7 @@ export const SECRET_HEADER = "x-media-cleanup-secret";
 export const requestSchema = z.object({ folder: z.enum(["customer", "crew"]) }).strict();
 export type Folder = z.infer<typeof requestSchema>["folder"];
 
-const namesSchema = z.array(z.string().min(1));
+const pageSchema = z.array(z.object({ name: z.string().min(1), created_at: z.string().min(1) }));
 
 export type CleanupLimits = {
   /** Names per unattached_media() call (1–1000). */
@@ -37,15 +37,17 @@ export const DEFAULT_LIMITS: CleanupLimits = {
 export type CleanupResult = {
   folder: Folder;
   deleted: number;
-  /** Files Storage didn't delete; they are listed again the next night. */
+  /** Files Storage didn't delete; they are tried again the next night. */
   failed: number;
   /** Stopped at a limit with files possibly left; the next run goes on. */
   more: boolean;
 };
 
 /**
- * Deletes the folder's unattached files, a page at a time, until none are
- * left, a page deletes nothing (only failures remain), or a limit is reached.
+ * Deletes the folder's unattached files, a page at a time, oldest first. Each
+ * page starts after the last row of the one before, so files Storage refuses
+ * are counted once and don't hold back newer ones. Stops when none are left
+ * or a limit is reached.
  */
 export async function cleanUp(
   client: SupabaseClient,
@@ -54,43 +56,37 @@ export async function cleanUp(
   now: () => number = Date.now,
 ): Promise<CleanupResult> {
   const stopAt = now() + limits.budgetMs;
-  const failed = new Set<string>();
   let deleted = 0;
+  let failed = 0;
+  let after: { created_at: string; name: string } | null = null;
 
   for (let page = 0; page < limits.maxPages; page++) {
-    if (page > 0 && now() > stopAt) return { folder, deleted, failed: failed.size, more: true };
+    if (page > 0 && now() > stopAt) return { folder, deleted, failed, more: true };
 
     const { data, error } = await client.rpc("unattached_media", {
       p_folder: folder,
       p_limit: limits.pageSize,
+      p_after_created_at: after?.created_at ?? null,
+      p_after_name: after?.name ?? null,
     });
     if (error) throw new Error(`unattached_media failed: ${error.message}`);
-    const names = namesSchema.parse(data);
-    if (names.length === 0) return { folder, deleted, failed: failed.size, more: false };
+    const rows = pageSchema.parse(data);
+    if (rows.length === 0) return { folder, deleted, failed, more: false };
 
-    let removedNow = 0;
+    const names = rows.map((row) => row.name);
     for (let i = 0; i < names.length; i += limits.chunkSize) {
       const chunk = names.slice(i, i + limits.chunkSize);
       const { data: removed, error: removeError } = await client.storage.from(BUCKET).remove(chunk);
       const gone = new Set(removeError ? [] : (removed ?? []).map((file) => file.name));
-      for (const name of chunk) {
-        if (gone.has(name)) {
-          removedNow++;
-          failed.delete(name);
-        } else {
-          failed.add(name);
-        }
-      }
+      const removedNow = chunk.filter((name) => gone.has(name)).length;
+      deleted += removedNow;
+      failed += chunk.length - removedNow;
     }
-    deleted += removedNow;
 
-    // A short page was the last one. A page that deleted nothing holds only
-    // files Storage keeps refusing: reading it again would list them again.
-    if (names.length < limits.pageSize || removedNow === 0) {
-      return { folder, deleted, failed: failed.size, more: false };
-    }
+    if (rows.length < limits.pageSize) return { folder, deleted, failed, more: false };
+    after = rows[rows.length - 1]!;
   }
-  return { folder, deleted, failed: failed.size, more: true };
+  return { folder, deleted, failed, more: true };
 }
 
 export type CleanupEnv = {
@@ -157,9 +153,10 @@ export async function handleRequest(
   limits: CleanupLimits = DEFAULT_LIMITS,
 ): Promise<Response> {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
+  // Callers without the secret learn nothing, not even whether it is set.
   if (!env.secret || !env.url || !env.serviceKey) {
     deps.log(JSON.stringify({ job: "media-cleanup", error: "not_configured" }));
-    return json(503, { error: "not_configured" });
+    return json(401, { error: "unauthorized" });
   }
   if (!(await sameSecret(req.headers.get(SECRET_HEADER) ?? "", env.secret))) {
     return json(401, { error: "unauthorized" });

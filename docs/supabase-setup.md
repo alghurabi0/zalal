@@ -165,7 +165,7 @@ Two nightly jobs delete photos and videos that were uploaded but never booked or
    select status_code, content from net._http_response order by id desc limit 1;
    ```
 
-   A 401 means the two secret values differ. A null from the first line means a Vault secret is missing or misnamed. Later runs show under **Integrations → Cron** (jobs `media-cleanup-customer` and `media-cleanup-crew`, 03:17 and 03:47 Baghdad time) and in the function's logs, which hold counts only.
+   A 401 means `MEDIA_CLEANUP_SECRET` is missing or differs from the Vault value (the function says which in its logs). A null from the first line means a Vault secret is missing or misnamed. Later runs show under **Integrations → Cron** (jobs `media-cleanup-customer` and `media-cleanup-crew`, 03:17 and 03:47 Baghdad time) and in the function's logs, which hold counts only.
 
 To change the secret, update both places (steps 2 and 3) together. The CI tokens need no new permission.
 

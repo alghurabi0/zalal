@@ -99,6 +99,16 @@ async function exists(path: string) {
   return error === null && data !== null;
 }
 
+/** Every name the folder lists now (the local database is small). */
+async function listed(folder: "customer" | "crew") {
+  const { data, error } = await service.rpc("unattached_media", {
+    p_folder: folder,
+    p_limit: 1000,
+  });
+  expect(error).toBeNull();
+  return (data ?? []).map((row) => row.name);
+}
+
 let customerId: string;
 let crewId: string;
 let orderId: string;
@@ -209,18 +219,12 @@ afterAll(async () => {
 
 describe("media cleanup", () => {
   it("lists only what may go", async () => {
-    const { data: customer } = await service.rpc("unattached_media", {
-      p_folder: "customer",
-      p_limit: 1000,
-    });
+    const customer = await listed("customer");
     expect(customer).toEqual(expect.arrayContaining(abandoned));
     expect(customer).not.toContain(booked);
     expect(customer).not.toContain(recent);
 
-    const { data: crew } = await service.rpc("unattached_media", {
-      p_folder: "crew",
-      p_limit: 1000,
-    });
+    const crew = await listed("crew");
     expect(crew).toContain(noOrder);
     expect(crew).not.toContain(openJob);
   });
@@ -235,9 +239,16 @@ describe("media cleanup", () => {
     for (const path of abandoned) expect(await exists(path)).toBe(true);
     expect(objectRows(abandoned)).toBe(abandoned.length);
 
-    const result = await cleanUp(service as unknown as SupabaseClient, "customer");
+    // One file per page, so every page after the first goes through the
+    // cursor (an upload time from PostgREST, sent back as given).
+    const result = await cleanUp(service as unknown as SupabaseClient, "customer", {
+      pageSize: 1,
+      chunkSize: 1,
+      maxPages: 1000,
+      budgetMs: 60_000,
+    });
     expect(result.deleted).toBeGreaterThanOrEqual(abandoned.length);
-    expect(result.failed).toBe(0);
+    expect(result).toMatchObject({ failed: 0, more: false });
 
     for (const path of abandoned) expect(await exists(path)).toBe(false);
     expect(objectRows(abandoned)).toBe(0);
@@ -271,9 +282,7 @@ describe("media cleanup", () => {
   });
 
   it("finds nothing more on a second run", async () => {
-    const { data: customer } = await service.rpc("unattached_media", { p_folder: "customer" });
-    const { data: crew } = await service.rpc("unattached_media", { p_folder: "crew" });
-    expect(customer).toEqual([]);
-    expect(crew).toEqual([]);
+    expect(await listed("customer")).toEqual([]);
+    expect(await listed("crew")).toEqual([]);
   });
 });

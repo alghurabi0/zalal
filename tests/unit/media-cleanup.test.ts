@@ -21,19 +21,32 @@ type Fake = {
 };
 
 /**
- * A bucket of files, all unattached. rpc returns the first p_limit names still
- * there; remove deletes the ones that exist, except those in `stuck`.
+ * A bucket of files, all unattached, oldest first. rpc returns the next
+ * p_limit after the cursor; remove deletes the ones that exist, except those
+ * in `stuck`.
  */
 function fakeClient(names: string[], options: { stuck?: string[]; rpcError?: string } = {}): Fake {
+  const createdAt = new Map(
+    names.map((name, i) => [name, new Date(Date.UTC(2026, 9, 1, 0, 0, i)).toISOString()]),
+  );
   const files = new Set(names);
   const stuck = new Set(options.stuck ?? []);
   const rpcCalls: Fake["rpcCalls"] = [];
   const removeCalls: Fake["removeCalls"] = [];
+  type Args = { p_limit: number; p_after_created_at: string | null; p_after_name: string | null };
   const client = {
-    rpc: async (fn: string, args: { p_limit: number }) => {
+    rpc: async (fn: string, args: Args) => {
       rpcCalls.push({ fn, args });
       if (options.rpcError) return { data: null, error: { message: options.rpcError } };
-      return { data: [...files].slice(0, args.p_limit), error: null };
+      const after = args.p_after_name === null ? -1 : names.indexOf(args.p_after_name);
+      expect(args.p_after_created_at).toBe(
+        args.p_after_name === null ? null : createdAt.get(args.p_after_name),
+      );
+      const page = names
+        .filter((name, i) => i > after && files.has(name))
+        .slice(0, args.p_limit)
+        .map((name) => ({ name, created_at: createdAt.get(name)! }));
+      return { data: page, error: null };
     },
     storage: {
       from: (bucket: string) => {
@@ -62,11 +75,22 @@ describe("cleanUp", () => {
     const fake = fakeClient(names(23));
     const result = await cleanUp(fake.client, "customer", small);
     expect(result).toEqual({ folder: "customer", deleted: 23, failed: 0, more: false });
-    // Pages of 10, 10, 3; chunks of at most 4.
-    expect(fake.rpcCalls).toEqual([
-      { fn: "unattached_media", args: { p_folder: "customer", p_limit: 10 } },
-      { fn: "unattached_media", args: { p_folder: "customer", p_limit: 10 } },
-      { fn: "unattached_media", args: { p_folder: "customer", p_limit: 10 } },
+    // Pages of 10, 10, 3, each after the last row of the one before;
+    // chunks of at most 4.
+    expect(fake.rpcCalls.map((call) => call.args)).toEqual([
+      { p_folder: "customer", p_limit: 10, p_after_created_at: null, p_after_name: null },
+      {
+        p_folder: "customer",
+        p_limit: 10,
+        p_after_created_at: "2026-10-01T00:00:09.000Z",
+        p_after_name: "customer/u/0009.jpg",
+      },
+      {
+        p_folder: "customer",
+        p_limit: 10,
+        p_after_created_at: "2026-10-01T00:00:19.000Z",
+        p_after_name: "customer/u/0019.jpg",
+      },
     ]);
     expect(fake.removeCalls.map((chunk) => chunk.length)).toEqual([4, 4, 2, 4, 4, 2, 3]);
   });
@@ -99,15 +123,13 @@ describe("cleanUp", () => {
     expect(result).toEqual({ folder: "customer", deleted: 20, failed: 0, more: true });
   });
 
-  it("counts files Storage won't delete and stops when a page deletes none", async () => {
+  it("counts files Storage won't delete and goes on past them", async () => {
     const all = names(25);
-    const stuck = all.slice(0, 10);
-    const fake = fakeClient(all, { stuck });
+    const fake = fakeClient(all, { stuck: all.slice(0, 10) });
     const result = await cleanUp(fake.client, "customer", small);
-    // Page 1 is all stuck files: nothing deleted, so it stops rather than
-    // reading the same page again.
-    expect(result).toEqual({ folder: "customer", deleted: 0, failed: 10, more: false });
-    expect(fake.rpcCalls).toHaveLength(1);
+    // The oldest page is all refused files; the next pages still get done.
+    expect(result).toEqual({ folder: "customer", deleted: 15, failed: 10, more: false });
+    expect(fake.rpcCalls).toHaveLength(3);
   });
 
   it("counts a stuck file once, however many pages list it", async () => {
@@ -182,7 +204,12 @@ describe("handleRequest", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ folder: "customer", deleted: 3, failed: 0, more: false });
     expect(clients).toEqual([["http://supabase.test", "sb_secret_x"]]);
-    expect(fake.rpcCalls[0]?.args).toEqual({ p_folder: "customer", p_limit: 10 });
+    expect(fake.rpcCalls[0]?.args).toEqual({
+      p_folder: "customer",
+      p_limit: 10,
+      p_after_created_at: null,
+      p_after_name: null,
+    });
     // Counts only, never a path.
     expect(logs).toEqual([
       JSON.stringify({
@@ -209,17 +236,17 @@ describe("handleRequest", () => {
     expect(clients).toEqual([]);
   });
 
-  it("refuses to run without its secret or keys", async () => {
+  it("refuses to run without its secret or keys, without saying so to the caller", async () => {
     for (const missing of ["secret", "url", "serviceKey"] as const) {
       const { response, clients, logs } = call(
         {},
         { env: { ...env, [missing]: undefined } as typeof env },
       );
       const res = await response;
-      expect(res.status).toBe(503);
-      expect(await res.json()).toEqual({ error: "not_configured" });
+      expect(res.status).toBe(401);
+      expect(await res.json()).toEqual({ error: "unauthorized" });
       expect(clients).toEqual([]);
-      expect(logs).toHaveLength(1);
+      expect(logs).toEqual([JSON.stringify({ job: "media-cleanup", error: "not_configured" })]);
     }
   });
 

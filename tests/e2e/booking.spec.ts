@@ -325,7 +325,8 @@ test("an upload too old to book is forgotten, so the customer adds it again", as
   }
   await expect(files.getByText(Upload.uploaded)).toHaveCount(2, { timeout: 20_000 });
 
-  // Saved 47 h ago (a tab left open): a reload forgets that one.
+  // Saved 47 h ago (a tab left open), and the tab reloads on Checkout: the
+  // file is forgotten, and confirming says so instead of booking without it.
   await page.evaluate((key) => {
     const saved = JSON.parse(window.sessionStorage.getItem(key) ?? "[]") as Array<{
       uploadedAt: number;
@@ -333,17 +334,24 @@ test("an upload too old to book is forgotten, so the customer adds it again", as
     saved[0]!.uploadedAt = Date.now() - 47 * 60 * 60 * 1000;
     window.sessionStorage.setItem(key, JSON.stringify(saved));
   }, `zl_booking_files:${userId}`);
+  await page.getByRole("link", { name: Upload.next }).click();
+  await expect(page).toHaveURL("/book/confirm");
   await page.reload();
-  await expect(files.getByText(Upload.uploaded)).toHaveCount(1);
+  await page.getByRole("button", { name: Checkout.confirm }).click();
+  await expect(page.getByText(Checkout.errors.uploadMissing)).toBeVisible();
+  await page.getByRole("link", { name: Checkout.backToPhotos }).click();
+  await expect(page).toHaveURL("/book/photos");
+  await expect(files.filter({ visible: true }).getByText(Upload.uploaded)).toHaveCount(1);
 
-  // Still open on Checkout 47 h later: confirming forgets it and sends the
-  // customer back to Photos instead of booking without it.
+  // Still open on Checkout 47 h later: confirming forgets the other one too.
   await page.getByRole("link", { name: Upload.next }).click();
   await expect(page).toHaveURL("/book/confirm");
   await page.clock.setSystemTime(Date.now() + 47 * 60 * 60 * 1000);
   await page.getByRole("button", { name: Checkout.confirm }).click();
-  await expect(page.getByText(Checkout.errors.uploadMissing)).toBeVisible();
-  await page.getByRole("link", { name: Checkout.backToPhotos }).click();
+  await expect(
+    page.getByText(Checkout.errors.uploadMissing).filter({ visible: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: Checkout.backToPhotos }).filter({ visible: true }).click();
   await expect(page).toHaveURL("/book/photos");
   // Next keeps the earlier Photos alive (hidden), with its list.
   await expect(

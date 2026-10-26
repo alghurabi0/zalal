@@ -1,6 +1,7 @@
--- unattached_media(folder, limit) (spec §7 Storage): the files in order-media
--- that the cleanup job (Edge Function media-cleanup) may delete, oldest
--- first, at most p_limit. A file is never listed while an order_media row
+-- unattached_media(folder, limit, after_created_at, after_name) (spec §7
+-- Storage): the files in order-media that the cleanup job (Edge Function
+-- media-cleanup) may delete, oldest first, at most p_limit, starting after
+-- the cursor. A file is never listed while an order_media row
 -- has its path.
 -- customer/<user id>/…: uploaded more than 72 hours ago. create_order()
 -- refuses uploads older than 48 hours, so a listed file can't be booked.
@@ -13,7 +14,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(29);
+select plan(32);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647801111112');            -- customer B
@@ -68,7 +69,7 @@ update storage.objects set created_at = now() - interval '30 days' where bucket_
 select tests.authenticate_as_service_role();
 
 select is(
-  array(select public.unattached_media('customer')),
+  array(select name from public.unattached_media('customer')),
   array[
     'customer/' || tests.a() || '/older.jpg',
     'customer/' || tests.user_id('+9647801111112') || '/b.jpg',
@@ -77,20 +78,33 @@ select is(
   'customer: unattached files over 72 hours old, oldest first'
 );
 select ok(
-  not ('customer/' || tests.a() || '/new.jpg' = any (array(select public.unattached_media('customer')))),
+  not ('customer/' || tests.a() || '/new.jpg' = any (array(select name from public.unattached_media('customer')))),
   'customer: a 71-hour-old file stays'
 );
 select ok(
-  not ('customer/' || tests.a() || '/booked.jpg' = any (array(select public.unattached_media('customer')))),
+  not ('customer/' || tests.a() || '/booked.jpg' = any (array(select name from public.unattached_media('customer')))),
   'customer: an attached file stays, however old'
 );
 select is(
-  array(select public.unattached_media('customer', 2)),
+  array(select name from public.unattached_media('customer', 2)),
   array[
     'customer/' || tests.a() || '/older.jpg',
     'customer/' || tests.user_id('+9647801111112') || '/b.jpg'
   ],
   'customer: at most p_limit names'
+);
+select is(
+  array(
+    select name from public.unattached_media(
+      'customer', 2,
+      (select o.created_at from storage.objects as o
+       where o.bucket_id = 'order-media'
+         and o.name = 'customer/' || tests.user_id('+9647801111112') || '/b.jpg'),
+      'customer/' || tests.user_id('+9647801111112') || '/b.jpg'
+    )
+  ),
+  array['customer/' || tests.a() || '/old.jpg'],
+  'customer: the next page starts after the last row of the one before'
 );
 
 select tests.clear_authentication();
@@ -142,7 +156,7 @@ select tests.upload('crew/' || tests.id('crew1') || '/not-an-order/x.jpg', tests
 select tests.upload('crew/stray.jpg', tests.crew1_user(), '8 days');
 
 create function tests.crew_list() returns text[] language sql
-as $$ select array(select public.unattached_media('crew')) $$;
+as $$ select array(select name from public.unattached_media('crew')) $$;
 
 select tests.authenticate_as_service_role();
 
@@ -176,32 +190,74 @@ select ok(
 );
 
 select throws_ok(
-  $$ select public.unattached_media('elsewhere') $$,
+  $$ select name from public.unattached_media('elsewhere') $$,
   '22023', 'invalid_folder', 'another folder is refused'
 );
 select throws_ok(
-  $$ select public.unattached_media('customer', 0) $$,
+  $$ select name from public.unattached_media('customer', 0) $$,
   '22023', 'invalid_limit', 'a limit under 1 is refused'
 );
 select throws_ok(
-  $$ select public.unattached_media('customer', 1001) $$,
+  $$ select name from public.unattached_media('customer', 1001) $$,
   '22023', 'invalid_limit', 'a limit over 1000 is refused'
+);
+select throws_ok(
+  $$ select name from public.unattached_media('customer', 10, now(), null) $$,
+  '22023', 'invalid_cursor', 'half a cursor is refused'
 );
 
 select tests.clear_authentication();
 
+-- The crew rule against attach_job_media's own (private.job_takes_media): no
+-- file it would still take is listed, at any status or time since completion.
+-- Fails if either window changes without the other.
+do $$
+declare
+  v_status text;
+  v_hours int;
+  v_order uuid;
+begin
+  foreach v_status in array array[
+    'pending_confirmation', 'confirmed', 'on_the_way', 'arrived', 'in_progress', 'no_show', 'cancelled'
+  ] loop
+    v_order := tests.create_order(tests.a(), v_status, p_crew_id => tests.id('crew1'));
+    perform tests.upload(
+      'crew/' || tests.id('crew1') || '/' || v_order || '/w.jpg', tests.crew1_user(), '30 days'
+    );
+  end loop;
+  foreach v_hours in array array[1, 23, 24, 25, 47, 49, 71, 73, 168] loop
+    v_order := tests.create_order(tests.a(), 'completed', p_crew_id => tests.id('crew1'));
+    insert into public.order_events (order_id, from_status, to_status, actor_role, created_at)
+    values (v_order, 'in_progress', 'completed', 'crew', now() - make_interval(hours => v_hours));
+    perform tests.upload(
+      'crew/' || tests.id('crew1') || '/' || v_order || '/w.jpg', tests.crew1_user(), '30 days'
+    );
+  end loop;
+end;
+$$;
+select is_empty(
+  $$
+    select l.name
+    from public.unattached_media('crew', 1000) as l
+    join public.orders as o on o.id::text = split_part(l.name, '/', 3)
+    where o.crew_id::text = split_part(l.name, '/', 2)
+      and private.job_takes_media(o.id, o.status)
+  $$,
+  'crew: no file attach_job_media would still take is listed'
+);
+
 -- Who may call it ----------------------------------------------------------------------
 
 select tests.authenticate_as_anon();
-select throws_ok($$ select public.unattached_media('customer') $$, '42501', null, 'anon may not call it');
+select throws_ok($$ select name from public.unattached_media('customer') $$, '42501', null, 'anon may not call it');
 select tests.authenticate_as(tests.a());
-select throws_ok($$ select public.unattached_media('customer') $$, '42501', null, 'a customer may not call it');
+select throws_ok($$ select name from public.unattached_media('customer') $$, '42501', null, 'a customer may not call it');
 select tests.authenticate_as(tests.user_id('+9647801111112'));
-select throws_ok($$ select public.unattached_media('customer') $$, '42501', null, 'another customer may not call it');
+select throws_ok($$ select name from public.unattached_media('customer') $$, '42501', null, 'another customer may not call it');
 select tests.authenticate_as(tests.crew1_user());
-select throws_ok($$ select public.unattached_media('crew') $$, '42501', null, 'a crew may not call it');
+select throws_ok($$ select name from public.unattached_media('crew') $$, '42501', null, 'a crew may not call it');
 select tests.authenticate_as(tests.user_id('+9647504444444'));
-select throws_ok($$ select public.unattached_media('crew') $$, '42501', null, 'an admin may not call it');
+select throws_ok($$ select name from public.unattached_media('crew') $$, '42501', null, 'an admin may not call it');
 select tests.clear_authentication();
 
 select * from finish();

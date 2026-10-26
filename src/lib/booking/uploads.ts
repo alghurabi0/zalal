@@ -70,6 +70,8 @@ const running = new Map<string, Running>();
 let state: { key: string; items: UploadItem[] } | null = null;
 /** The finished files last written to sessionStorage. */
 let saved: string | null = null;
+/** Files the last restore forgot as too old, until Checkout reports them. */
+let forgotten = 0;
 
 const EMPTY: UploadItem[] = [];
 const storageKey = (userId: string) => `zl_booking_files:${userId}`;
@@ -84,7 +86,9 @@ export function getUploads(userId: string): UploadItem[] {
     for (const job of running.values()) void job.upload?.abort();
     running.clear();
     saved = null;
-    state = { key, items: restore(key) };
+    const restored = restore(key);
+    forgotten = restored.forgotten;
+    state = { key, items: restored.items };
   }
   return state.items;
 }
@@ -96,21 +100,21 @@ export function subscribeUploads(listener: Listener) {
   };
 }
 
-function restore(key: string): UploadItem[] {
+function restore(key: string): { items: UploadItem[]; forgotten: number } {
   try {
     const parsed = storedSchema.safeParse(JSON.parse(window.sessionStorage.getItem(key) ?? "[]"));
-    if (!parsed.success) return EMPTY;
+    if (!parsed.success) return { items: EMPTY, forgotten: 0 };
     const now = Date.now();
-    return parsed.data
-      .map((file) => ({
-        ...file,
-        uploadedAt: file.uploadedAt ?? null,
-        status: "done" as const,
-        progress: 100,
-      }))
-      .filter((file) => !uploadExpired(file.uploadedAt, now));
+    const files = parsed.data.map((file) => ({
+      ...file,
+      uploadedAt: file.uploadedAt ?? null,
+      status: "done" as const,
+      progress: 100,
+    }));
+    const items = files.filter((file) => !uploadExpired(file.uploadedAt, now));
+    return { items, forgotten: files.length - items.length };
   } catch {
-    return EMPTY;
+    return { items: EMPTY, forgotten: 0 };
   }
 }
 
@@ -151,6 +155,8 @@ function patch(userId: string, id: string, changes: Partial<UploadItem>) {
  * Resolves with what was refused, once every file is checked.
  */
 export async function addFiles(userId: string, files: File[]): Promise<AddProblem[]> {
+  // Adding files means the customer has seen Photos since a reload forgot any.
+  forgotten = 0;
   const problems: AddProblem[] = [];
   const supported = files.flatMap((file) => {
     const contentType = contentTypeOf(file);
@@ -251,20 +257,30 @@ export function uploadsSettled(userId: string): Promise<UploadItem[]> {
 
 /**
  * Forgets finished uploads too old to book, without deleting them (the
- * nightly cleanup does). Returns how many went, so Checkout can send the
- * customer back to add them again.
+ * nightly cleanup does). With `unknownAge`, also those saved before their
+ * upload time was kept: for when create_order() has refused a file anyway.
+ * Returns how many went, counting the ones a reload already forgot, so
+ * Checkout can send the customer back to add them again.
  */
-export function dropExpiredUploads(userId: string, now = Date.now()): number {
+export function dropExpiredUploads(
+  userId: string,
+  { now = Date.now(), unknownAge = false }: { now?: number; unknownAge?: boolean } = {},
+): number {
   const items = getUploads(userId);
   const kept = items.filter(
-    (item) => item.status !== "done" || !uploadExpired(item.uploadedAt, now),
+    (item) =>
+      item.status !== "done" ||
+      !(uploadExpired(item.uploadedAt, now) || (unknownAge && item.uploadedAt === null)),
   );
   if (kept.length !== items.length) update(userId, () => kept);
-  return items.length - kept.length;
+  const dropped = items.length - kept.length + forgotten;
+  forgotten = 0;
+  return dropped;
 }
 
 /** After booking: the files now belong to the order, so forget them without deleting. */
 export function clearUploads(userId: string) {
+  forgotten = 0;
   for (const job of running.values()) void job.upload?.abort().catch(() => undefined);
   running.clear();
   update(userId, () => EMPTY);

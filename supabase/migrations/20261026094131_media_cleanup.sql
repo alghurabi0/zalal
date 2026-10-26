@@ -1,8 +1,8 @@
 -- Cleaning up order-media files that were uploaded but never attached to an
 -- order (spec §7 Storage, §3 Jobs). Two nightly jobs, one per folder:
 --
--- 1. public.unattached_media(folder, limit): the names the job may delete,
---    oldest first. Service role only. A file is listed only when no
+-- 1. public.unattached_media(folder, limit, after…): the names the job may
+--    delete, oldest first, a page at a time. Service role only. A file is listed only when no
 --    order_media row has its path, and:
 --    - customer/<user id>/…: it was uploaded more than 72 hours ago. A booking
 --      abandoned at step 2 leaves these behind.
@@ -43,8 +43,16 @@
 
 -- 1. What may be deleted -------------------------------------------------------------
 
-create function public.unattached_media(p_folder text, p_limit integer default 500)
-returns setof text
+-- A page of names with their upload time, oldest first. The next page starts
+-- after the last row (p_after_created_at, p_after_name), so files the Storage
+-- API keeps refusing don't fill every page.
+create function public.unattached_media(
+  p_folder text,
+  p_limit integer default 500,
+  p_after_created_at timestamptz default null,
+  p_after_name text default null
+)
+returns table (name text, created_at timestamptz)
 language plpgsql
 stable
 set search_path = ''
@@ -56,28 +64,35 @@ begin
   if p_limit is null or p_limit not between 1 and 1000 then
     raise exception using errcode = '22023', message = 'invalid_limit';
   end if;
+  if (p_after_created_at is null) <> (p_after_name is null) then
+    raise exception using errcode = '22023', message = 'invalid_cursor';
+  end if;
 
   if p_folder = 'customer' then
     return query
-    select ob.name
+    select ob.name, ob.created_at
     from storage.objects as ob
     where ob.bucket_id = 'order-media'
       and starts_with(ob.name, 'customer/')
       -- create_order() takes uploads up to 48 hours old.
       and ob.created_at < now() - interval '72 hours'
+      and (p_after_created_at is null or (ob.created_at, ob.name) > (p_after_created_at, p_after_name))
       and not exists (select 1 from public.order_media as m where m.path = ob.name)
     order by ob.created_at, ob.name
     limit p_limit;
   else
     return query
-    select ob.name
+    select ob.name, ob.created_at
     from storage.objects as ob
     where ob.bucket_id = 'order-media'
       and starts_with(ob.name, 'crew/')
       and ob.created_at < now() - interval '48 hours'
+      and (p_after_created_at is null or (ob.created_at, ob.name) > (p_after_created_at, p_after_name))
       and not exists (select 1 from public.order_media as m where m.path = ob.name)
-      -- The order still takes media from this crew, with a 24-hour margin on
-      -- private.job_takes_media() (which stops 24 hours after completion).
+      -- The order still takes media from this crew: the rule of
+      -- private.job_takes_media() (attach_job_media), with 48 hours after
+      -- completion instead of 24 as a margin. unattached_media.test.sql checks
+      -- that no file it would accept is listed, should either window change.
       and not exists (
         select 1
         from public.orders as o
@@ -105,8 +120,9 @@ begin
 end;
 $$;
 
-revoke execute on function public.unattached_media(text, integer) from public, anon, authenticated;
-grant execute on function public.unattached_media(text, integer) to service_role;
+revoke execute on function public.unattached_media(text, integer, timestamptz, text)
+from public, anon, authenticated;
+grant execute on function public.unattached_media(text, integer, timestamptz, text) to service_role;
 
 -- 2. create_order: uploads up to 48 hours old --------------------------------------------
 

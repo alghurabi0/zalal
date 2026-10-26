@@ -938,7 +938,18 @@ export type Database = {
         };
         Returns: undefined;
       };
-      unattached_media: { Args: { p_folder: string; p_limit?: number }; Returns: string[] };
+      unattached_media: {
+        Args: {
+          p_after_created_at?: string;
+          p_after_name?: string;
+          p_folder: string;
+          p_limit?: number;
+        };
+        Returns: {
+          created_at: string;
+          name: string;
+        }[];
+      };
     };
     Enums: {
       address_label: "home" | "family" | "work";
