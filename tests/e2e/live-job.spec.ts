@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+
 import { type Browser, expect, type Page, test } from "@playwright/test";
 
 import messages from "../../messages/ar.json" with { type: "json" };
@@ -18,7 +21,7 @@ import { distanceKm, distanceParts } from "../../src/lib/live/tracking";
 // §8.2 A3): the crew phone shares its position on the way, the customer
 // tracks it live, then follows the crew's photos and clips.
 
-const { Tracking, Crew, Orders, Order } = messages;
+const { Tracking, LiveJob, Crew, Orders, Order } = messages;
 
 let slot: TestSlot | null = null;
 test.afterEach(async () => {
@@ -186,4 +189,131 @@ test("Tracking says when the crew's position stops updating", async ({ page }) =
     "href",
     `/orders/${order.id}/track`,
   );
+});
+
+/** A crew file in Storage and attached to the order, as attach_job_media leaves it. */
+async function attach(
+  orderId: string,
+  crewId: string,
+  kind: "before" | "after" | "clip",
+  file: "tank.jpg" | "tank-5s.webm",
+) {
+  const path = `crew/${crewId}/${orderId}/${randomUUID()}.${file.split(".").pop()}`;
+  const body = readFileSync(new URL(`./fixtures/${file}`, import.meta.url));
+  const contentType = file.endsWith(".jpg") ? "image/jpeg" : "video/webm";
+  await admin.storage.from("order-media").upload(path, body, { contentType });
+  await admin
+    .from("order_media")
+    .insert({
+      order_id: orderId,
+      kind,
+      media_type: kind === "clip" ? "video" : "photo",
+      path,
+      bytes: body.length,
+      duration_s: kind === "clip" ? 5 : null,
+    })
+    .throwOnError();
+  return path;
+}
+
+async function moveTo(
+  orderId: string,
+  from: "arrived" | "in_progress",
+  to: "in_progress" | "completed",
+) {
+  await admin
+    .from("order_events")
+    .insert({ order_id: orderId, from_status: from, to_status: to, actor_role: "crew" })
+    .throwOnError();
+  await admin.from("orders").update({ status: to }).eq("id", orderId).throwOnError();
+}
+
+test("Job progress shows the steps and the crew's photos and clips as they arrive", async ({
+  page,
+}) => {
+  slot = await createSlot();
+  const phone = await signUp(page);
+  const crew = await createCrew();
+  const order = await createOrder(phone, {
+    slot,
+    date: baghdadDate(0),
+    status: "arrived",
+    crewId: crew.id,
+  });
+  const paths: string[] = [];
+
+  // Orders offers تابع الشغل from arrival.
+  await page.goto("/orders");
+  await visible(page).getByRole("link", { name: Orders.progress }).click();
+  await page.waitForURL(`**/orders/${order.id}/live`);
+  const main = visible(page);
+  await expect(main.getByRole("heading", { name: LiveJob.title })).toBeVisible();
+  const steps = main.getByRole("list", { name: LiveJob.steps.label }).getByRole("listitem");
+  await expect(steps).toHaveCount(3);
+  await expect(steps.nth(0)).toHaveAttribute("data-state", "done");
+  await expect(steps.nth(1)).toHaveAttribute("data-state", "next");
+  await expect(main.getByText(LiveJob.live, { exact: true })).toHaveCount(0);
+  await expect(main.getByTestId("no-files")).toHaveText(LiveJob.noFilesOpen);
+  await expect(main.getByRole("button", { name: LiveJob.certificateLater })).toBeDisabled();
+
+  // A before photo arrives without a reload.
+  paths.push(await attach(order.id, crew.id, "before", "tank.jpg"));
+  await expect(main.getByRole("heading", { name: LiveJob.before })).toBeVisible();
+  await expect(main.getByRole("button", { name: /صورة 1/ })).toBeVisible();
+
+  // Work starts: the badge, the step in progress, a clip and an after photo.
+  await moveTo(order.id, "arrived", "in_progress");
+  await expect(main.getByText(LiveJob.live, { exact: true })).toBeVisible();
+  await expect(steps.nth(1)).toHaveAttribute("data-state", "now");
+  paths.push(await attach(order.id, crew.id, "clip", "tank-5s.webm"));
+  paths.push(await attach(order.id, crew.id, "after", "tank.jpg"));
+  await expect(main.getByRole("heading", { name: LiveJob.clips })).toBeVisible();
+  await expect(main.getByRole("heading", { name: LiveJob.after })).toBeVisible();
+  await expect(main.locator("video")).toHaveCount(1);
+  await expect(main.getByText("0:05")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await screenshot(page, "live-job");
+
+  // The photo opens full screen and closes again.
+  await main.getByRole("button", { name: /صورة 1/ }).first().click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("img")).toBeVisible();
+  const close = dialog.getByRole("button", { name: messages.UI.close });
+  const box = await close.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+  await close.click();
+  await expect(dialog).toHaveCount(0);
+
+  // Done: no badge, and the button opens Order details until certificates exist.
+  await moveTo(order.id, "in_progress", "completed");
+  await expect(main.getByText(LiveJob.live, { exact: true })).toHaveCount(0);
+  await expect(steps.nth(2)).toHaveAttribute("data-state", "done");
+  await expect(main.getByRole("link", { name: LiveJob.details })).toHaveAttribute(
+    "href",
+    `/orders/${order.id}`,
+  );
+
+  await admin.storage.from("order-media").remove(paths);
+});
+
+test("Job progress and Tracking send other statuses to the right screen", async ({ page }) => {
+  slot = await createSlot();
+  const phone = await signUp(page);
+  const confirmed = await createOrder(phone, { slot, date: baghdadDate(1), status: "confirmed" });
+  const onTheWay = await createOrder(phone, { slot, date: baghdadDate(0), status: "on_the_way" });
+  const completed = await createOrder(phone, { slot, date: baghdadDate(0), status: "completed" });
+
+  await page.goto(`/orders/${confirmed.id}/live`);
+  await page.waitForURL(`**/orders/${confirmed.id}`);
+  await page.goto(`/orders/${onTheWay.id}/live`);
+  await page.waitForURL(`**/orders/${onTheWay.id}/track`);
+  await page.goto(`/orders/${completed.id}/track`);
+  await page.waitForURL(`**/orders/${completed.id}/live`);
+  await expect(visible(page).getByTestId("no-files")).toHaveText(LiveJob.noFilesDone);
+
+  // Someone else's order, or no order at all.
+  await page.goto(`/orders/${randomUUID()}/track`);
+  await expect(visible(page).getByRole("heading", { name: Order.notFound })).toBeVisible();
+  await page.goto("/orders/not-an-id/live");
+  await expect(visible(page).getByRole("heading", { name: Order.notFound })).toBeVisible();
 });

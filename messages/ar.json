@@ -486,6 +486,38 @@
     "followLater": "تابع الشغل بعد ما يوصلون",
     "follow": "تابع الشغل"
   },
+  "LiveJob": {
+    "title": "الشغل مباشر",
+    "subtitle": {
+      "arrived": "طلب <num>#{number}</num> · الفريق وصل",
+      "in_progress": "طلب <num>#{number}</num> · الفريق يشتغل هسه",
+      "completed": "طلب <num>#{number}</num> · خلص الشغل"
+    },
+    "live": "مباشر",
+    "steps": {
+      "label": "مراحل الشغل",
+      "arrived": "وصل الفريق",
+      "in_progress": "بدأ الشغل",
+      "completed": "خلص الشغل"
+    },
+    "startedAt": "بدأ {time}",
+    "stepState": {
+      "done": "خلصت",
+      "now": "هسه",
+      "next": "بعدها"
+    },
+    "before": "قبل",
+    "after": "بعد",
+    "clips": "مقاطع من الشغل",
+    "photo": "صورة {n}",
+    "clip": "مقطع {n}",
+    "fileMissing": "ما كدرنا نفتح الملف",
+    "openPhoto": "كبّر {label}",
+    "noFilesOpen": "الفريق يرفع الصور والمقاطع هنا أول بأول، إذا صوّر.",
+    "noFilesDone": "الفريق ما رفع صور لهذا الطلب.",
+    "certificateLater": "شوف الشهادة (بعد ما يخلص)",
+    "details": "تفاصيل الطلب"
+  },
   "Profile": {
     "title": "حسابي",
     "addresses": "عناويني",

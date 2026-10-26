@@ -14,6 +14,7 @@ import {
   isStale,
   trackingSteps,
 } from "@/lib/live/tracking";
+import { isLive, jobSteps } from "@/lib/live/job";
 
 const karbalaShrine = { lat: 32.6163, lng: 44.0324 };
 const alAbbasShrine = { lat: 32.6159, lng: 44.0353 };
@@ -112,5 +113,43 @@ describe("crew GPS: shouldSend", () => {
     expect(locationErrorFor({ code: "P0002" })).toBe("not_found");
     expect(locationErrorFor({ code: "42501" })).toBe("failed");
     expect(locationErrorFor(null)).toBe("failed");
+  });
+});
+
+describe("jobSteps", () => {
+  const times = {
+    arrived: "2026-10-26T06:52:00Z",
+    in_progress: "2026-10-26T07:05:00Z",
+    completed: "2026-10-26T08:10:00Z",
+  };
+  const view = (status: Parameters<typeof jobSteps>[0]) =>
+    jobSteps(status, times).map(({ state, at }) => [state, at]);
+
+  it("marks what happened, with times, and the work in progress as now", () => {
+    expect(view("arrived")).toEqual([
+      ["done", times.arrived],
+      ["next", null],
+      ["next", null],
+    ]);
+    expect(view("in_progress")).toEqual([
+      ["done", times.arrived],
+      ["now", times.in_progress],
+      ["next", null],
+    ]);
+    expect(view("completed")).toEqual([
+      ["done", times.arrived],
+      ["done", times.in_progress],
+      ["done", times.completed],
+    ]);
+  });
+
+  it("keeps a step done without a time when an override skipped it", () => {
+    expect(jobSteps("completed", {}).map((s) => s.at)).toEqual([null, null, null]);
+  });
+
+  it("is live only while the crew works", () => {
+    expect(isLive("in_progress")).toBe(true);
+    expect(isLive("arrived")).toBe(false);
+    expect(isLive("completed")).toBe(false);
   });
 });
