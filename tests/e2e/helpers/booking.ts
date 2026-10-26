@@ -244,3 +244,36 @@ export async function createOrder(
   }
   return order;
 }
+
+const CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+/**
+ * A certificate for an order made with createOrder (status completed),
+ * written directly as transition_order would issue it. No PDF yet.
+ */
+export async function createCertificate(
+  orderId: string,
+  {
+    sterilant = "كلور 50 ملغ/لتر",
+    chlorine = null,
+  }: { sterilant?: string; chlorine?: number | null } = {},
+) {
+  const publicCode = Array.from(
+    { length: 8 },
+    () => CODE_LETTERS[Math.floor(Math.random() * CODE_LETTERS.length)],
+  ).join("");
+  const nextDue = new Date(Date.now() + 182 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data } = await admin
+    .from("certificates")
+    .insert({
+      order_id: orderId,
+      public_code: publicCode,
+      sterilant,
+      residual_chlorine_mg_l: chlorine,
+      next_due_on: nextDue,
+    })
+    .select("id, public_code")
+    .single()
+    .throwOnError();
+  return data;
+}
