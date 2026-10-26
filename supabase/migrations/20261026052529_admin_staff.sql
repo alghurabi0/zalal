@@ -215,11 +215,18 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'crew_not_found';
   end if;
-  select p.phone into v_old_phone from public.profiles as p where p.id = v_crew.user_id for update;
+  select p.phone into v_old_phone from public.profiles as p where p.id = v_crew.user_id;
   if v_old_phone = p_phone then
     return;
   end if;
 
+  -- Both accounts, in id order, so two moves between the same two phones
+  -- wait for each other instead of deadlocking.
+  perform 1
+  from public.profiles as p
+  where p.id = v_crew.user_id or p.phone = p_phone
+  order by p.id
+  for update;
   v_account := private.lock_account(p_phone);
   if not private.is_untouched_account(v_account.id) then
     raise exception using errcode = 'ZL019', message = 'phone_has_account';

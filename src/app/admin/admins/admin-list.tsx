@@ -12,14 +12,11 @@ import { Input } from "@/components/ui/input";
 import type { AdminAccount } from "@/lib/admin/staff-queries";
 import { cn } from "@/lib/cn";
 import { formatPhone, normalizeIraqiMobile } from "@/lib/phone";
-import { cleanText } from "@/lib/schemas/profile";
+import { fullNameSchema } from "@/lib/schemas/profile";
 
 import { addAdmin, removeAdmin } from "./actions";
 
-const nameOk = (name: string) => {
-  const clean = cleanText(name);
-  return clean.length >= 2 && clean.length <= 40;
-};
+const nameOk = (name: string) => fullNameSchema.safeParse(name).success;
 
 /** The A14 list: every admin, with remove on everyone but the viewer. */
 export function AdminList({ admins, viewerId }: { admins: AdminAccount[]; viewerId: string }) {

@@ -52,7 +52,7 @@ test("the admin nav reaches Crews, Admins and the audit log", async ({ page }) =
 });
 
 test("an admin adds a crew with a new phone, and the crew logs in", async ({ page, browser }) => {
-  await logInAsAdmin(page);
+  const me = await logInAsAdmin(page);
   await page.goto("/admin/crews");
   const phone = newPhone();
   const name = `فريق ${phone.slice(-5)}`;
@@ -82,6 +82,13 @@ test("an admin adds a crew with a new phone, and the crew logs in", async ({ pag
   await page.goto("/admin/audit?entity=crews");
   const entry = page.getByRole("row").filter({ hasText: name }).first();
   await expect(entry).toContainText(Audit.actions.crew.create);
+
+  // Filtered to this admin too, from the admins who have entries.
+  await page.getByLabel(Audit.filterAdmin).selectOption(me.id);
+  await page.getByRole("button", { name: Audit.apply }).click();
+  await expect(page).toHaveURL(new RegExp(`admin=${me.id}`));
+  await expect(page.getByRole("row").filter({ hasText: name }).first()).toBeVisible();
+
   await screenshot(page, "admin-audit");
 });
 

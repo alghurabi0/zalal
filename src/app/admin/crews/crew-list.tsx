@@ -15,15 +15,11 @@ import { adminOrdersHref } from "@/lib/admin/orders-query";
 import type { AdminCrew } from "@/lib/admin/staff-queries";
 import { cn } from "@/lib/cn";
 import { formatPhone, normalizeIraqiMobile } from "@/lib/phone";
-import { cleanText } from "@/lib/schemas/profile";
-import { CREW_NAME_MAX } from "@/lib/schemas/admin-staff";
+import { CREW_NAME_MAX, crewNameSchema } from "@/lib/schemas/admin-staff";
 
 import { createCrew, setCrewPhone, updateCrew } from "./actions";
 
-const nameOk = (name: string) => {
-  const clean = cleanText(name);
-  return clean.length >= 2 && clean.length <= CREW_NAME_MAX;
-};
+const nameOk = (name: string) => crewNameSchema.safeParse(name).success;
 
 /** The A10 table: each crew's name, phone, open orders and state, edited in place. */
 export function CrewList({ crews }: { crews: AdminCrew[] }) {

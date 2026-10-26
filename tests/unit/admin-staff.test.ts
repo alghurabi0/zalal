@@ -54,6 +54,10 @@ describe("staff errors", () => {
     expect(adminEditErrorFor({ code: "ZL020" })).toBe("crew_name_taken");
     expect(adminEditErrorFor({ code: "ZL021" })).toBe("account_is_crew");
     expect(adminEditErrorFor({ code: "ZL022" })).toBe("cannot_remove_self");
+    expect(adminEditErrorFor({ code: "P0002", message: "account_not_found" })).toBe(
+      "account_deleted",
+    );
+    expect(adminEditErrorFor({ code: "P0002", message: "crew_not_found" })).toBe("not_found");
   });
 
   it("has a string for every error", () => {

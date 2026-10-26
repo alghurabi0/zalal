@@ -10,6 +10,7 @@ export const ADMIN_EDIT_ERRORS = [
   "crew_name_taken",
   "account_is_crew",
   "cannot_remove_self",
+  "account_deleted",
   "invalid",
   "not_found",
   "failed",
@@ -41,6 +42,8 @@ export function adminEditErrorFor(
 ): AdminEditError {
   if (!error?.code) return "failed";
   if (error.code === "22023") return error.message === "date_in_past" ? "date_in_past" : "invalid";
+  // A phone whose account was deleted (A10, A14): Auth still holds it.
+  if (error.code === "P0002" && error.message === "account_not_found") return "account_deleted";
   return byCode[error.code] ?? "failed";
 }
 

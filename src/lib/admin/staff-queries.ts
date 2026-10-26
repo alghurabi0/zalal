@@ -128,7 +128,28 @@ export async function auditLog(filter: {
   };
 }
 
-/** Order numbers and crew names the log's rows point at, for links and labels. */
+/** Every admin who has a row in the log, removed ones too, for the filter. */
+export async function auditAdmins(): Promise<AdminAccount[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone, log:admin_audit_log!admin_audit_log_admin_id_fkey!inner(id)")
+    .limit(1, { referencedTable: "log" })
+    .order("full_name");
+  if (error) throw new Error(`Audit admins read failed: ${error.message}`);
+  return data.map((p) => ({ id: p.id, fullName: p.full_name, phone: p.phone }));
+}
+
+/** Crew ids a log row names: a crew row, or an order's old and new crew. */
+function crewIdsIn(entry: AuditEntry): string[] {
+  if (entry.entity === "crews") return [entry.entityId];
+  if (entry.action !== "order.assign_crew") return [];
+  const diff = entry.diff;
+  if (typeof diff !== "object" || diff === null || Array.isArray(diff)) return [];
+  return [diff.from, diff.to].filter((id): id is string => typeof id === "string");
+}
+
+/** Order numbers and crew names the page's rows point at, for links and labels. */
 export async function auditNames(
   entries: AuditEntry[],
 ): Promise<{ orders: Map<string, number>; crews: Map<string, string> }> {
@@ -136,12 +157,11 @@ export async function auditNames(
   const orderIds = [
     ...new Set(entries.filter((e) => e.entity === "orders").map((e) => e.entityId)),
   ];
+  const crewIds = [...new Set(entries.flatMap(crewIdsIn))];
+  const none = Promise.resolve({ data: [], error: null });
   const [orders, crews] = await Promise.all([
-    orderIds.length
-      ? supabase.from("orders").select("id, number").in("id", orderIds)
-      : Promise.resolve({ data: [], error: null }),
-    // Every crew: crew ids also sit inside assign_crew diffs.
-    supabase.from("crews").select("id, name"),
+    orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
+    crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
   if (crews.error) throw new Error(`Audit crews read failed: ${crews.error.message}`);

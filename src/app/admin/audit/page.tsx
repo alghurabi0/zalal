@@ -16,8 +16,8 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from "@/lib/admin/audit";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
 import {
-  adminAccounts,
   AUDIT_ENTITIES,
+  auditAdmins,
   type AuditEntity,
   type AuditEntry,
   auditLog,
@@ -81,7 +81,7 @@ async function Audit({ searchParams }: PageProps<"/admin/audit">) {
   );
   const [{ entries, nextBefore }, admins] = await Promise.all([
     auditLog({ entity: query.entity, adminId: query.admin, before: query.before }),
-    adminAccounts(),
+    auditAdmins(),
   ]);
   const names = await auditNames(entries);
   const filtered = Boolean(query.entity || query.admin);
@@ -270,6 +270,7 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
   }
 }
 
+/** Fields with a label (Admin.audit.fields), settings columns included. */
 const KNOWN_FIELDS = [
   "name",
   "active",
@@ -283,7 +284,25 @@ const KNOWN_FIELDS = [
   "area",
   "start_time",
   "end_time",
+  "sms_enabled",
+  "company_phone",
+  "working_hours_start",
+  "working_hours_end",
+  "working_days",
+  "cleaning_interval_months",
+  "booking_window_days",
+  "cancel_cutoff_hours",
+  "max_tanks_per_order",
+  "terms_md",
+  "privacy_md",
+  "sterilant_text",
+  "min_app_version",
+  "maintenance_mode",
 ] as const;
+
+/** Long values (Terms, Privacy) are cut in the table. */
+const MAX_SHOWN = 120;
+const shorten = (text: string) => (text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN)}…` : text);
 
 async function FieldLabel({ field }: { field: string }) {
   const t = await getTranslations("Admin.audit");
@@ -366,9 +385,9 @@ async function Value({
   if (typeof value === "object") {
     return (
       <bdi dir="ltr" className="font-mono text-12 break-all">
-        {JSON.stringify(value)}
+        {shorten(JSON.stringify(value))}
       </bdi>
     );
   }
-  return <bdi>{String(value)}</bdi>;
+  return <bdi>{shorten(String(value))}</bdi>;
 }

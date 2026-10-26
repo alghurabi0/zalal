@@ -46,7 +46,7 @@ export async function addAdmin(
   });
   if (error) return editFailure("admin_add_admin", error, report);
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from("orders")
     .select("id, customer:profiles!orders_customer_id_fkey!inner(phone)", {
       count: "exact",
@@ -54,6 +54,8 @@ export async function addAdmin(
     })
     .eq("customer.phone", parsed.data.phone)
     .in("status", CURRENT_STATUSES);
+  // The admin is added either way; only the note about their orders is lost.
+  if (countError) report(`admin open orders read failed (${countError.code})`);
   return { status: "done", added, openOrders: count ?? 0 };
 }
 
