@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { MAX_VIDEO_SECONDS } from "@/lib/booking/media";
+import { type CrewJobError, FINISH_FIELD_ERRORS } from "@/lib/crew/errors";
 import { JOB_MEDIA_KINDS, orderIdOfPath } from "@/lib/crew/media";
 
 import { STAFF_NOTE_MAX, staffReasonSchema } from "./admin-order";
@@ -44,6 +45,12 @@ export const finishJobSchema = z.object({
   residualChlorine: residualChlorineSchema,
   note: z.string().trim().max(STAFF_NOTE_MAX, { error: "note_too_long" }),
 });
+
+/** The form error for a refused C4 input: the first issue's key, else "failed". */
+export function finishErrorOf(error: z.ZodError): CrewJobError {
+  const message = error.issues[0]?.message;
+  return FINISH_FIELD_ERRORS.find((key) => key === message) ?? "failed";
+}
 
 /**
  * The chlorine box as typed: empty is no reading, Arabic-Indic digits and

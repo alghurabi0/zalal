@@ -46,10 +46,7 @@ async function JobContent({ params }: PageProps<"/crew/jobs/[id]">) {
   const viewer = await requireViewer(routes.crewJob(id), "crew");
   const t = await getTranslations("Crew");
   const jobId = z.uuid().safeParse(id);
-  const [job, sterilantText] = await Promise.all([
-    jobId.success ? getJob(jobId.data) : null,
-    getSterilantText(),
-  ]);
+  const job = jobId.success ? await getJob(jobId.data) : null;
 
   if (!job) {
     return (
@@ -72,6 +69,9 @@ async function JobContent({ params }: PageProps<"/crew/jobs/[id]">) {
   }
 
   const tUI = await getTranslations("UI");
+  // Only C4 needs it; without it the form starts empty.
+  const sterilantText =
+    nextStep(job.status)?.to === "completed" ? await getSterilantText().catch(() => "") : "";
   return (
     <>
       <LiveJobs />

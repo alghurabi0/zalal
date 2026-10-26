@@ -13,7 +13,12 @@ import { isPending } from "@/lib/crew/media-queue";
 import { canMarkNoShow, nextStep } from "@/lib/crew/status";
 import type { OrderStatus } from "@/lib/orders/status";
 import { STAFF_NOTE_MAX } from "@/lib/schemas/admin-order";
-import { finishJobSchema, parseChlorine, STERILANT_MAX } from "@/lib/schemas/crew-job";
+import {
+  finishErrorOf,
+  finishJobSchema,
+  parseChlorine,
+  STERILANT_MAX,
+} from "@/lib/schemas/crew-job";
 
 import { advanceJob, type CrewJobResult, finishJob, markNoShow } from "../../actions";
 import { useCrewMedia } from "../../use-crew-media";
@@ -185,8 +190,7 @@ function FinishSheet({
     };
     const parsed = finishJobSchema.safeParse(input);
     if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message;
-      setError(FINISH_FIELD_ERRORS.find((key) => key === message) ?? "failed");
+      setError(finishErrorOf(parsed.error));
       return;
     }
     submit(() => finishJob(parsed.data));

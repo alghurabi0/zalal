@@ -80,6 +80,8 @@ export class MediaQueue {
   private items: QueueItem[] = EMPTY;
   private records = new Map<string, StoredFile>();
   private retries = new Map<string, { attempts: number; at: number }>();
+  /** Files whose 409 turned out not to be a finished upload (one fresh try each). */
+  private conflicts = new Set<string>();
   /** Uploads under way; `settle` ends the wait when one is aborted. */
   private running = new Map<string, { upload: Uploader | null; settle: () => void }>();
   private store: Promise<MediaStore> | null = null;
@@ -175,6 +177,7 @@ export class MediaQueue {
     this.running.clear();
     this.records.clear();
     this.retries.clear();
+    this.conflicts.clear();
     this.cancelTimer?.();
     this.cancelTimer = null;
     this.userId = null;
@@ -225,6 +228,7 @@ export class MediaQueue {
         uploadUrl: null,
         prepared: false,
         uploaded: false,
+        error: null,
         createdAt: this.deps.now(),
         file,
       };
@@ -271,6 +275,11 @@ export class MediaQueue {
   retry(userId: string, id: string) {
     if (this.userId !== userId || !this.records.has(id)) return;
     this.retries.delete(id);
+    const record = this.records.get(id);
+    if (record?.error) {
+      record.error = null;
+      void this.save(record);
+    }
     this.patch(id, { status: "waiting", error: null });
     void this.pump();
   }
@@ -278,6 +287,8 @@ export class MediaQueue {
   /** The × on a queued file: stops it, forgets it, and deletes an uploaded copy. */
   async remove(userId: string, id: string) {
     if (this.userId !== userId) return;
+    // An attach under way can't be called back (the page hides × meanwhile).
+    if (this.items.find((item) => item.id === id)?.status === "attaching") return;
     const record = this.records.get(id);
     const job = this.running.get(id);
     this.running.delete(id);
@@ -322,7 +333,8 @@ export class MediaQueue {
     this.cancelTimer?.();
     this.cancelTimer = null;
     const waiting = this.items.filter((item) => item.status === "waiting");
-    if (waiting.length === 0) return;
+    // Offline, the browser's online event wakes the queue instead.
+    if (waiting.length === 0 || !this.deps.online()) return;
     const at = Math.min(...waiting.map((item) => this.retries.get(item.id)?.at ?? 0));
     this.cancelTimer = this.deps.setTimer(
       () => void this.pump(),
@@ -335,14 +347,18 @@ export class MediaQueue {
     if (!record) return;
     const stale = () => generation !== this.generation || !this.records.has(id);
 
+    // 409 most often means Storage already has the file (the answer to an
+    // earlier try was lost); attach_job_media then tells whether it does.
+    let conflict = false;
     if (!record.uploaded) {
       this.patch(id, { status: "uploading", progress: 0, error: null });
       const outcome = await this.uploadOnce(record);
       if (stale()) return;
-      // 409: Storage already has the file (the answer to an earlier try was lost).
-      if (outcome === "done" || outcome === 409) {
+      if (outcome === "done") {
         record.uploaded = true;
         await this.save(record);
+      } else if (outcome === 409) {
+        conflict = true;
       } else if (outcome === null || outcome >= 500 || [408, 423, 429].includes(outcome)) {
         this.later(id);
         return;
@@ -377,8 +393,17 @@ export class MediaQueue {
       if (item) for (const listener of this.attachedListeners) listener(item);
     } else if (result.error === "failed") {
       this.later(id);
+    } else if (conflict && result.error === "upload_not_found" && !this.conflicts.has(id)) {
+      // Storage didn't have it after all: start a new upload, once.
+      this.conflicts.add(id);
+      record.uploadUrl = null;
+      await this.save(record);
+      this.later(id);
     } else {
-      this.fail(id, result.error);
+      this.fail(
+        id,
+        conflict && result.error === "upload_not_found" ? "upload_refused" : result.error,
+      );
     }
   }
 
@@ -431,6 +456,11 @@ export class MediaQueue {
 
   private fail(id: string, error: QueueError) {
     this.retries.delete(id);
+    const record = this.records.get(id);
+    if (record) {
+      record.error = error;
+      void this.save(record);
+    }
     this.patch(id, { status: "failed", error });
   }
 
@@ -475,9 +505,9 @@ function toItem(file: StoredFile): QueueItem {
     path: file.path,
     bytes: file.bytes,
     durationS: file.durationS,
-    status: file.prepared ? "waiting" : "preparing",
+    status: file.error ? "failed" : file.prepared ? "waiting" : "preparing",
     progress: file.uploaded ? 100 : 0,
-    error: null,
+    error: file.error ?? null,
     file: file.file,
   };
 }

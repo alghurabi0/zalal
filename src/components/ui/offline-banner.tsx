@@ -2,16 +2,8 @@
 
 import { WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSyncExternalStore } from "react";
 
-function subscribe(onChange: () => void) {
-  window.addEventListener("online", onChange);
-  window.addEventListener("offline", onChange);
-  return () => {
-    window.removeEventListener("online", onChange);
-    window.removeEventListener("offline", onChange);
-  };
-}
+import { useOnline } from "@/lib/use-online";
 
 /**
  * The "ماكو انترنيت" bar at the top of the screen (spec §5), shown while
@@ -21,12 +13,7 @@ function subscribe(onChange: () => void) {
  */
 export function OfflineBanner() {
   const t = useTranslations("UI");
-  const online = useSyncExternalStore(
-    subscribe,
-    () => navigator.onLine,
-    // The server and the first client render assume online.
-    () => true,
-  );
+  const online = useOnline();
 
   return (
     <div role="status" className="sticky top-0 z-40">

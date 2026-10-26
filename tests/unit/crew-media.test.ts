@@ -54,6 +54,13 @@ describe("job media rules", () => {
       "invalid_chlorine",
     );
     expect(crewJobErrorFor({ code: "22023", message: "other" })).toBe("failed");
+    expect(
+      crewJobErrorFor({
+        code: "23514",
+        message: 'new row for relation "order_event_notes" violates check constraint',
+      }),
+    ).toBe("note_too_long");
+    expect(crewJobErrorFor({ code: "23514", message: 'relation "job_reports"' })).toBe("failed");
   });
 });
 
@@ -264,6 +271,73 @@ describe("MediaQueue", () => {
       status: "failed",
       error: "media_not_allowed",
     });
+  });
+
+  it("keeps a lasting failure across a reload instead of sending it again", async () => {
+    const first = setup();
+    first.state.attach = "closed";
+    await first.queue.start(USER_A, first.attach);
+    await first.queue.add(USER_A, target, [photo()]);
+    await flush();
+    first.uploads[0]?.callbacks.onSuccess();
+    await flush();
+
+    const second = setup({ store: first.store });
+    await second.queue.start(USER_A, second.attach);
+    await flush();
+    expect(second.queue.getItems(USER_A)[0]).toMatchObject({
+      status: "failed",
+      error: "media_not_allowed",
+    });
+    expect(second.uploads).toHaveLength(0);
+    expect(second.attach).not.toHaveBeenCalled();
+  });
+
+  it("uploads afresh once when a 409 wasn't a finished upload", async () => {
+    const t = setup();
+    let missing = true;
+    t.attach.mockImplementation(async () =>
+      missing ? { status: "error", error: "upload_not_found" } : { status: "done", id: FILE },
+    );
+    await t.queue.start(USER_A, t.attach);
+    await t.queue.add(USER_A, target, [photo()]);
+    await flush();
+    t.uploads[0]?.callbacks.onUrl?.("https://storage.test/upload/abc");
+    t.uploads[0]?.callbacks.onError(409);
+    await flush();
+    expect(t.queue.getItems(USER_A)[0]?.status).toBe("waiting");
+
+    missing = false;
+    t.state.now += 5000;
+    t.timers.at(-1)?.run();
+    await flush();
+    expect(t.uploads[1]?.target.uploadUrl).toBeNull();
+    t.uploads[1]?.callbacks.onSuccess();
+    await flush();
+    expect(t.queue.getItems(USER_A)[0]?.status).toBe("attached");
+  });
+
+  it("doesn't take back a file while it is being attached", async () => {
+    const t = setup();
+    t.attach.mockImplementation(() => new Promise(() => undefined));
+    await t.queue.start(USER_A, t.attach);
+    await t.queue.add(USER_A, target, [photo()]);
+    await flush();
+    t.uploads[0]?.callbacks.onSuccess();
+    await flush();
+    const [item] = t.queue.getItems(USER_A);
+    expect(item?.status).toBe("attaching");
+    await t.queue.remove(USER_A, item?.id ?? "");
+    expect(t.queue.getItems(USER_A)).toHaveLength(1);
+    expect(t.deps.removeObject).not.toHaveBeenCalled();
+  });
+
+  it("doesn't wake every second while offline", async () => {
+    const t = setup({ online: false });
+    await t.queue.start(USER_A, t.attach);
+    await t.queue.add(USER_A, target, [photo()]);
+    await flush();
+    expect(t.timers).toHaveLength(0);
   });
 
   it("removes a file and deletes its uploaded copy", async () => {

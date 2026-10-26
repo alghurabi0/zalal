@@ -6,7 +6,6 @@ import { requireViewer } from "@/lib/auth/viewer";
 import {
   type CrewJobError,
   crewJobErrorFor,
-  FINISH_FIELD_ERRORS,
   type JobMediaError,
   jobMediaErrorFor,
 } from "@/lib/crew/errors";
@@ -21,6 +20,7 @@ import {
   type CrewNoShowInput,
   crewNoShowSchema,
   type FinishJobInput,
+  finishErrorOf,
   finishJobSchema,
   type RemoveJobMediaInput,
   removeJobMediaSchema,
@@ -63,11 +63,7 @@ export async function advanceJob(input: AdvanceJobInput): Promise<CrewJobResult>
 /** خلصنا (C4): the cash tick, sterilant, residual chlorine and an internal note. */
 export async function finishJob(input: FinishJobInput): Promise<CrewJobResult> {
   const parsed = finishJobSchema.safeParse(input);
-  if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message;
-    const field = FINISH_FIELD_ERRORS.find((key) => key === message);
-    return { status: "error", error: field ?? "failed" };
-  }
+  if (!parsed.success) return { status: "error", error: finishErrorOf(parsed.error) };
   const { orderId, sterilant, residualChlorine, note } = parsed.data;
   return transition(orderId, "completed", {
     cash_collected: true,

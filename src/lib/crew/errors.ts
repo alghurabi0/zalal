@@ -49,16 +49,15 @@ export function crewJobErrorFor(
   if (error.code === "22023" && error.message && invalidFields.has(error.message)) {
     return error.message as CrewJobError;
   }
-  // The note's length check (order_event_notes).
-  if (error.code === "23514") return "note_too_long";
+  // The note's length check; any other check is a bug, so "failed".
+  if (error.code === "23514" && error.message?.includes("order_event_notes")) {
+    return "note_too_long";
+  }
   return "failed";
 }
 
 export type JobMediaError =
   "media_not_allowed" | "too_many_files" | "upload_not_found" | "not_found" | "failed";
-
-/** Whether trying again later can help (no answer, or a server error). */
-export const isLastingMediaError = (error: JobMediaError) => error !== "failed";
 
 export function jobMediaErrorFor(
   error: { code?: string; message?: string } | null | undefined,

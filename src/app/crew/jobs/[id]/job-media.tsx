@@ -3,15 +3,7 @@
 import { Camera, Image as ImageIcon, Play, Video, WifiOff, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  type ChangeEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  useTransition,
-} from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +21,7 @@ import { type AddProblem, isPending, type QueueItem } from "@/lib/crew/media-que
 import type { CrewMedia } from "@/lib/crew/queries";
 import { mediaQueue } from "@/lib/crew/use-media-queue";
 import type { OrderStatus } from "@/lib/orders/status";
+import { useOnline } from "@/lib/use-online";
 
 import { removeJobMedia } from "../../actions";
 import { useCrewMedia } from "../../use-crew-media";
@@ -216,7 +209,8 @@ function KindSection({
               file={file}
               orderId={orderId}
               name={name(index + 1)}
-              canRemove={canRemove}
+              // remove_job_media takes back only this crew's own files.
+              canRemove={canRemove && file.path.startsWith(`crew/${crewId}/`)}
             />
           ))}
         </ul>
@@ -398,7 +392,8 @@ function QueuedRow({
           {t("retry")}
         </Button>
       )}
-      {item.status !== "attached" && (
+      {/* Attaching can't be called back; once attached, the tile has its own ×. */}
+      {item.status !== "attached" && item.status !== "attaching" && (
         <IconButton
           icon={X}
           variant="soft"
@@ -424,21 +419,4 @@ function usePreview(file: Blob | null): string | null {
     };
   }, [file]);
   return url;
-}
-
-const subscribeOnline = (listener: () => void) => {
-  window.addEventListener("online", listener);
-  window.addEventListener("offline", listener);
-  return () => {
-    window.removeEventListener("online", listener);
-    window.removeEventListener("offline", listener);
-  };
-};
-
-function useOnline() {
-  return useSyncExternalStore(
-    subscribeOnline,
-    () => navigator.onLine,
-    () => true,
-  );
 }

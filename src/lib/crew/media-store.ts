@@ -1,4 +1,5 @@
 import type { JobMediaKind } from "./media";
+import type { QueueError } from "./media-queue";
 
 // Where the crew's media queue keeps its files until they are attached
 // (spec §8.1 C3b): IndexedDB, so a reload or a closed tab loses nothing.
@@ -27,6 +28,8 @@ export type StoredFile = {
   prepared: boolean;
   /** Storage has the whole file; only the attach is left. */
   uploaded: boolean;
+  /** Why it stopped for good, so a reload doesn't send it again. */
+  error: QueueError | null;
   createdAt: number;
   file: Blob;
 };
