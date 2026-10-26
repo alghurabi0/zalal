@@ -164,7 +164,9 @@ export function groupByDay(messages: ChatMessage[], now: Date): DayGroup[] {
  */
 export function timestampMicros(value: string): number {
   const match =
-    /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}(?::?\d{2})?)?$/.exec(value);
+    /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}(?::?\d{2})?)?$/.exec(
+      value,
+    );
   if (!match) return Date.parse(value) * 1000;
   let zone = match[4] ?? "Z";
   if (/^[+-]\d{2}$/.test(zone)) zone += ":00";

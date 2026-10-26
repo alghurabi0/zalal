@@ -17,17 +17,15 @@ export async function sendAsViewer(
   message: z.output<typeof sendChatMessageSchema>,
 ): Promise<SendResult> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .rpc("send_chat_message", {
-      p_client_id: message.clientId,
-      p_thread_id: message.threadId,
-      p_body: message.body || undefined,
-      p_media_path: message.mediaPath,
-      p_duration_s: message.durationS,
-      p_order_id: message.orderId,
-      p_topic: message.topic,
-    })
-    .single();
+  const { data, error } = await supabase.rpc("send_chat_message", {
+    p_client_id: message.clientId,
+    p_thread_id: message.threadId,
+    p_body: message.body || undefined,
+    p_media_path: message.mediaPath,
+    p_duration_s: message.durationS,
+    p_order_id: message.orderId,
+    p_topic: message.topic,
+  });
   if (error) {
     const code = chatSendErrorFor(error.code);
     // Only the SQLSTATE: the message can quote the input.

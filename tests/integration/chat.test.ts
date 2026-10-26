@@ -22,7 +22,6 @@ const status = JSON.parse(
   }),
 ) as { API_URL: string; DB_URL: string; PUBLISHABLE_KEY: string; SECRET_KEY: string };
 
-type Client = SupabaseClient<Database>;
 const noSession = { auth: { persistSession: false, autoRefreshToken: false } };
 const service = createClient<Database>(status.API_URL, status.SECRET_KEY, noSession);
 const runId = String(Date.now()).slice(-6);
@@ -50,7 +49,7 @@ async function account(n: number, role: "customer" | "admin" = "customer") {
   return { id, client };
 }
 
-async function upload(client: Client, path: string) {
+async function upload(client: Account["client"] | typeof service, path: string) {
   paths.push(path);
   const { error } = await client.storage
     .from("chat-media")
@@ -65,8 +64,9 @@ function sql(query: string) {
   }).trim();
 }
 
-let customer: { id: string; client: Client };
-let support: { id: string; client: Client };
+type Account = Awaited<ReturnType<typeof account>>;
+let customer: Account;
+let support: Account;
 let threadId: string;
 const sent = () => `${customer.id}/${randomUUID()}.jpg`;
 
@@ -93,16 +93,20 @@ describe("chat over the API", () => {
     photo = sent();
     await upload(customer.client, photo);
     const clientId = randomUUID();
-    const first = await customer.client
-      .rpc("send_chat_message", { p_client_id: clientId, p_body: "التسريب", p_media_path: photo })
-      .single();
+    const first = await customer.client.rpc("send_chat_message", {
+      p_client_id: clientId,
+      p_body: "التسريب",
+      p_media_path: photo,
+    });
     expect(first.error).toBeNull();
     expect(first.data).toMatchObject({ media_type: "photo", body: "التسريب", author: "customer" });
     threadId = first.data!.thread_id;
 
-    const retry = await customer.client
-      .rpc("send_chat_message", { p_client_id: clientId, p_body: "التسريب", p_media_path: photo })
-      .single();
+    const retry = await customer.client.rpc("send_chat_message", {
+      p_client_id: clientId,
+      p_body: "التسريب",
+      p_media_path: photo,
+    });
     expect(retry.data?.id).toBe(first.data!.id);
   });
 
@@ -117,13 +121,11 @@ describe("chat over the API", () => {
     const link = await support.client.storage.from("chat-media").createSignedUrl(photo, 60);
     expect(link.error).toBeNull();
 
-    const answer = await support.client
-      .rpc("send_chat_message", {
-        p_client_id: randomUUID(),
-        p_thread_id: threadId,
-        p_body: "وصلت الصورة",
-      })
-      .single();
+    const answer = await support.client.rpc("send_chat_message", {
+      p_client_id: randomUUID(),
+      p_thread_id: threadId,
+      p_body: "وصلت الصورة",
+    });
     expect(answer.error).toBeNull();
 
     const marked = await support.client.rpc("mark_chat_read", { p_thread_id: threadId });

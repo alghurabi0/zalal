@@ -21,5 +21,4 @@ export function chatSendErrorFor(code: string | undefined): ChatSendError {
 
 /** What sending a message returns to the screen. */
 export type SendResult =
-  | { status: "sent"; message: ChatRow }
-  | { status: "error"; error: ChatSendError };
+  { status: "sent"; message: ChatRow } | { status: "error"; error: ChatSendError };
