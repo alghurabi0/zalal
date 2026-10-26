@@ -4,10 +4,13 @@ import {
   CalendarClock,
   CalendarRange,
   ClipboardList,
+  History,
   LayoutDashboard,
   LogOut,
   Settings,
+  ShieldCheck,
   Tag,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -24,7 +27,10 @@ const items = [
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
   { href: routes.adminPrices, key: "prices", icon: Tag },
   { href: routes.adminSchedule, key: "schedule", icon: CalendarClock },
+  { href: routes.adminCrews, key: "crews", icon: Users },
   { href: routes.adminSettings, key: "settings", icon: Settings },
+  { href: routes.adminAdmins, key: "admins", icon: ShieldCheck },
+  { href: routes.adminAudit, key: "audit", icon: History },
 ] as const;
 
 /**
@@ -41,8 +47,7 @@ function activeHref(pathname: string): string | undefined {
 
 /**
  * The admin shell's navigation (spec §8.2): a sidebar on the start side on
- * desktop, a scrolling row of links on top on tablets. Part C adds Crews
- * and Admins here.
+ * desktop, a scrolling row of links on top on tablets.
  */
 export function AdminNav({ name, children }: { name: string | null; children?: ReactNode }) {
   const t = useTranslations("Admin.nav");

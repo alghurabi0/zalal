@@ -3,8 +3,8 @@ import { type Page } from "@playwright/test";
 import { e164, enterCode, newPhone, requestCode } from "./auth";
 import { admin } from "./supabase";
 
-// Admin dashboard test data: staff accounts and customers made directly,
-// since accounts for admins and crews come from screens in a later part.
+// Admin dashboard test data: staff accounts and customers made directly, so
+// tests that aren't about A10 or A14 don't have to go through those screens.
 
 async function createAccount(phone: string, role: "customer" | "crew" | "admin", name: string) {
   const { data, error } = await admin.auth.admin.createUser({

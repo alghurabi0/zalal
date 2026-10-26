@@ -50,6 +50,12 @@ export const routes = {
   adminSettings: "/admin/settings",
   /** The service-area editor (A13). */
   adminServiceArea: "/admin/settings/area",
+  /** Crews (A10). */
+  adminCrews: "/admin/crews",
+  /** Admins (A14). */
+  adminAdmins: "/admin/admins",
+  /** The admin audit log, newest first; `?entity=`, `?admin=`, `?before=<id>`. */
+  adminAudit: "/admin/audit",
 } as const;
 
 /**
