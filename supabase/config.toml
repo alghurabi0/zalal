@@ -413,6 +413,13 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Called by pg_cron (private.invoke_media_cleanup), not by users. The new
+# secret keys aren't JWTs, so the gateway's JWT check is off and the function
+# checks the job's own secret (x-media-cleanup-secret) itself.
+[functions.media-cleanup]
+verify_jwt = false
+import_map = "./functions/media-cleanup/deno.json"
+
 [analytics]
 # Local log collection isn't needed for development or tests.
 enabled = false
