@@ -3,8 +3,9 @@
 -- back to pending_confirmation) from pending_confirmation or confirmed, only
 -- while the slot starts at least cancel_cutoff_hours from now (ZL006).
 -- Crew (assigned, active): confirmed -> on_the_way -> arrived -> in_progress
--- (needs a before photo) -> completed (needs an after photo and cash
--- collected), or no_show from confirmed/on_the_way/arrived with a note.
+-- -> completed (needs cash collected), or no_show from
+-- confirmed/on_the_way/arrived with a note. Before and after photos are
+-- optional (settled Oct 26, 2026; migration crew_jobs).
 -- Admin: confirm, cancel with a reason, reschedule and no_show at any time;
 -- any other move is an override that needs a reason. Every change writes
 -- order_events; admin changes also write admin_audit_log. Cancelling frees
@@ -17,7 +18,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(70);
+select plan(69);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -195,34 +196,21 @@ select tests.authenticate_as(tests.user_id('+9647703333333'));
 
 select lives_ok($$ select tests.go('job', 'on_the_way') $$, 'the crew sets off');
 select lives_ok($$ select tests.go('job', 'arrived') $$, 'the crew arrives');
-select throws_ok(
+select lives_ok(
   $$ select tests.go('job', 'in_progress') $$,
-  'ZL011', 'before_photo_required', 'work starts only after a before photo'
+  'the crew starts work without a before photo'
 );
-
-select tests.clear_authentication();
-insert into public.order_media (order_id, kind, media_type, path, bytes)
-values (tests.id('job'), 'before', 'photo', 'crew/job/before.jpg', 1000);
-select tests.authenticate_as(tests.user_id('+9647703333333'));
-
-select lives_ok($$ select tests.go('job', 'in_progress') $$, 'the crew starts work');
-select throws_ok(
-  $$ select tests.go('job', 'completed', '{"cash_collected": true}') $$,
-  'ZL011', 'after_photo_required', 'the job completes only after an after photo'
-);
-
-select tests.clear_authentication();
-insert into public.order_media (order_id, kind, media_type, path, bytes)
-values (tests.id('job'), 'after', 'photo', 'crew/job/after.jpg', 1000);
-select tests.authenticate_as(tests.user_id('+9647703333333'));
-
 select throws_ok(
   $$ select tests.go('job', 'completed') $$,
   'ZL011', 'cash_not_collected', 'the crew ticks that the cash was collected'
 );
 select lives_ok(
   $$ select tests.go('job', 'completed', '{"cash_collected": true}') $$,
-  'the crew completes the job'
+  'the crew completes the job without an after photo'
+);
+select is_empty(
+  $$ select 1 from public.order_media where order_id = tests.id('job') $$,
+  'the job has no photos at all'
 );
 select results_eq(
   $$ select status::text, cash_collected from public.orders where id = tests.id('job') $$,

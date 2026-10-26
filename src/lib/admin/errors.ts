@@ -8,8 +8,6 @@ export const ADMIN_ORDER_ERRORS = [
   "invalid_transition",
   "reason_required",
   "crew_not_assigned",
-  "before_photo_required",
-  "after_photo_required",
   "cash_not_collected",
   "crew_inactive",
   "crew_change_not_allowed",
@@ -31,8 +29,6 @@ const byCode: Record<string, AdminOrderError> = {
 const requirements = new Set<string>([
   "reason_required",
   "crew_not_assigned",
-  "before_photo_required",
-  "after_photo_required",
   "cash_not_collected",
 ]);
 

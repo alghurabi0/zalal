@@ -10,8 +10,19 @@ const toneClasses: Record<BadgeTone, string> = {
   neutral: "bg-well text-muted",
 };
 
-/** An order's status pill (Orders.dc.html). */
-export function StatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
+/**
+ * An order's status pill (Orders.dc.html). `label` replaces the customer's
+ * wording, e.g. the crew app's "وصلنا".
+ */
+export function StatusBadge({
+  status,
+  label,
+  className,
+}: {
+  status: OrderStatus;
+  label?: string;
+  className?: string;
+}) {
   const t = useTranslations("Orders.status");
   return (
     <span
@@ -21,7 +32,7 @@ export function StatusBadge({ status, className }: { status: OrderStatus; classN
         className,
       )}
     >
-      {t(status)}
+      {label ?? t(status)}
     </span>
   );
 }

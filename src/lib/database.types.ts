@@ -846,6 +846,13 @@ export type Database = {
         };
         Returns: Record<string, unknown>;
       };
+      crew_job_contact: {
+        Args: { p_order_id: string };
+        Returns: {
+          full_name: string;
+          phone: string;
+        }[];
+      };
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
       in_service_area: { Args: { p_lat: number; p_lng: number }; Returns: boolean };
       otp_locked_until: { Args: { p_phone: string }; Returns: string };

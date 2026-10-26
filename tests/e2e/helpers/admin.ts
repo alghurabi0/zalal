@@ -48,7 +48,7 @@ export async function createCustomer(name = "زبون التجربة") {
   return { phone, id, district: `حي ${phone.slice(-4)}` };
 }
 
-/** An active crew with its own crew-role account. */
+/** An active crew with its own crew-role account, not logged in anywhere. */
 export async function createCrew() {
   const phone = newPhone();
   const name = `فريق ${phone.slice(-5)}`;
@@ -59,5 +59,14 @@ export async function createCrew() {
     .select("id, name")
     .single()
     .throwOnError();
-  return data;
+  return { ...data, phone, userId };
+}
+
+/** A new crew, logged in on this page. Ends on My jobs (C2). */
+export async function logInAsCrew(page: Page) {
+  const crew = await createCrew();
+  await requestCode(page, crew.phone);
+  await enterCode(page, crew.phone);
+  await page.waitForURL("**/crew");
+  return crew;
 }

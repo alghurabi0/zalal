@@ -32,8 +32,10 @@ export const routes = {
   logout: "/logout",
   terms: "/terms",
   privacy: "/privacy",
-  /** Crew surface (spec §2, §8.1); a placeholder until Phase 3 task 2. */
+  /** Crew surface (spec §2, §8.1): My jobs (C2). */
   crew: "/crew",
+  /** Job detail (C3). */
+  crewJob: (id: string) => `/crew/jobs/${id}`,
   /** Admin dashboard (spec §8.2): Overview (A1). */
   admin: "/admin",
   /** Orders (A2), filtered by its query string (see adminOrdersQuery). */

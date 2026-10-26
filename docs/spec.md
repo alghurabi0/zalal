@@ -15,7 +15,7 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 - Booking: tank type × size × count, date and slot, optional photos/videos, note, cash payment
 - Admin confirms every booking; manual crew assignment
 - Simple live tracking: crew pin on the map while on the way
-- Job progress by status, optional clips, required before and after photos
+- Job progress by status, with optional before and after photos and clips
 - Company-issued sterilization certificate (web + PDF) and a skippable company rating
 - Support chat (one thread per user), issue reports, push + in-app notifications
 - Tips articles managed from the dashboard (seeded)
@@ -59,7 +59,7 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 39 | Dispatch | Admin assigns crews manually |
 | 40 | Tracking | Crew phone sends GPS while on the way; straight-line distance, no routing ETA |
 | 42 | Crew identity | No crew card, details or crew rating |
-| 43–44 | Job media | Before and after photos are required; per-step clips are optional |
+| 43–44 | Job media | Before photos, after photos and clips are all optional (settled Oct 26, 2026; earlier draft required the photos) |
 | 45–46 | Certificate | A company document (placeholder design), no reading validation |
 | 49 | Rating | Skippable, rates the company; 3 stars or fewer opens a support ticket |
 | 53 | Notifications | Push + in-app only |
@@ -436,8 +436,8 @@ The main path runs from booking to the certificate. Reschedule loops back to pen
 | `pending_confirmation` or `confirmed` → `cancelled` | Customer (≥ 2 h before slot start, reason required), Admin (any time, reason required) | — | Release slot; push to the other side |
 | `confirmed` → `on_the_way` | Crew | A crew is assigned | Push "الفريق طلع لبيتك"; crew GPS sharing starts |
 | `on_the_way` → `arrived` | Crew | — | Push "الفريق وصل"; GPS sharing stops |
-| `arrived` → `in_progress` | Crew | At least 1 "before" photo | In-app update |
-| `in_progress` → `completed` | Crew | At least 1 "after" photo; cash collected ticked (unless subscription) | Issue certificate + PDF; update `tanks.last_cleaned_at`; schedule reminder; decrement subscription visit; push "شهادتك جاهزة" |
+| `arrived` → `in_progress` | Crew | — (photos are optional) | In-app update |
+| `in_progress` → `completed` | Crew | Cash collected ticked (unless subscription) | Issue certificate + PDF; update `tanks.last_cleaned_at`; schedule reminder; decrement subscription visit; push "شهادتك جاهزة" |
 | `confirmed`, `on_the_way` or `arrived` → `no_show` | Crew or Admin | Note required | Chat system message to the customer |
 | Any → any | Admin override | Reason required | Logged as an override in `order_events` |
 
@@ -447,7 +447,7 @@ Rules:
 - The booking window is today (Baghdad) plus the next 13 days (`booking_window_days` = 14, today included; settled Oct 25, 2026).
 - Slot capacity is held in `slot_bookings` with a unique key (`service_date`, `slot_id`, `seat`), so two customers cannot take the last place at once. Bookings for one slot and day also queue on a transaction lock, so a lowered capacity is respected too (`tests/integration/booking-capacity.test.ts`).
 - Reschedule keeps the assigned crew; the admin can change it when confirming again. A no-show keeps its place. An admin override out of `cancelled` takes a place again and fails if the slot is full.
-- Error codes the app maps to messages: `ZL004` slot not bookable, `ZL005` slot full ("الموعد انحجز، اختار موعد ثاني"), `ZL006` too late to change (N6/N7 "راسلنا بالمحادثة"), `ZL010` move not allowed, `ZL011` a requirement is missing (before photo, after photo, cash, reason, crew). The full list is in `supabase/CLAUDE.md`.
+- Error codes the app maps to messages: `ZL004` slot not bookable, `ZL005` slot full ("الموعد انحجز، اختار موعد ثاني"), `ZL006` too late to change (N6/N7 "راسلنا بالمحادثة"), `ZL010` move not allowed, `ZL011` a requirement is missing (cash, reason, crew). The full list is in `supabase/CLAUDE.md`.
 - Phase 2 builds `transition_order` with every move in the table and its checks. The side effects that need later tables are added by their phases: certificate and PDF (Phase 4), notifications and push (Phase 5), subscription coverage and visits (Phase 6). Completion already sets `tanks.last_cleaned_at`.
 - Rating is separate from status. A completed order can be rated once, any time later.
 
@@ -497,7 +497,7 @@ Settings (columns of the one `settings` row, migration `settings`): `sms_enabled
 Access rules (RLS):
 
 - A customer reads and writes only their own rows. Their order rows can be written only through RPC functions.
-- A crew reads orders, their lines, events, staff notes and media only for orders assigned to it, while the crew is active. It reads the address copy on the order, never the `addresses` table. It writes media, live location and status, all through RPC functions.
+- A crew reads orders, their lines, events, staff notes and media only for orders assigned to it, while the crew is active. It reads the address copy on the order, never the `addresses` table. It reads the customer's name and phone only through `crew_job_contact(order_id)` (Phase 3, task 2, part A, migration `crew_jobs`): the assigned crew, while the job is confirmed, on the way, arrived or in progress, never for a deleted account; other roles get `42501`, anything else `P0002`. It writes media, live location and status, all through RPC functions.
 - An admin reads and writes everything. Every admin write goes to `admin_audit_log`. Audited admin RPCs so far: `transition_order` (Phase 2) and `assign_crew(order_id, crew_id)` (Phase 3, part A: sets a crew while the order is pending, confirmed or on the way, removes it only while pending or confirmed; the crew must be active with a crew-role account, `ZL013`; other statuses `ZL014`; logged as `order.assign_crew` with the old and new crew, since crew changes are not status events). Phase 3, part B: `admin_update_prices(prices)` (the six cells at once; each changed cell logged as `price.update`), `admin_create_slot(start, end, capacity, weekdays)` (`ZL015` slot_exists for the same times, also against a switched-off slot) and `admin_update_slot(id, capacity, weekdays, active)` (`slot.create` / `slot.update`), `admin_block_date(date, reason)` (not before today in Baghdad) and `admin_unblock_date(date)` (`blocked_date.add` / `.update` / `.remove`), `admin_update_settings(patch)` (only the named settings; `settings.update` with the old and new value of each changed one), and `admin_save_service_area(id, name, area, active)` (GeoJSON in; `ZL016` invalid_area for a shape that isn't a valid polygon inside Iraq, at most 5,000 points; `ZL017` last_active_area; returns how many saved addresses are now outside every active area; `service_area.create` / `.update`). None of them touch orders or addresses: a lowered capacity, a switched-off slot, a dropped weekday or a blocked day leaves bookings in place, and `admin_schedule_conflicts()` lists them for the admin to reschedule. Admin reads: `admin_service_areas()` (shapes as GeoJSON) and `admin_addresses_outside_area()`. Phase 3, part C (migration `admin_staff`): the app server first makes sure an Auth account exists for the phone (Auth admin API, phone confirmed, no password; the first login sets it, §9.1), then calls, as the admin: `admin_create_crew(phone, name)` (the account must be untouched, a customer that never signed in and has no addresses, tanks or orders, so a customer's account and history never become a shared crew phone, `ZL019` phone_has_account; `ZL020` crew_name_taken; `crew.create`), `admin_update_crew(id, name, active)` (rename, switch on or off; returns the crew's open orders and never touches them: a switched-off crew loses access at once and the admin reassigns its orders in A2; `crew.update`), `admin_set_crew_phone(id, phone)` (a lost or replaced crew phone: the crew moves to another untouched account and keeps its orders, the old account becomes an unnamed customer; `crew.phone`), `admin_add_admin(phone, name)` (any customer account, which keeps its own orders and addresses, or a new one; not a crew account, `ZL021` account_is_crew; the name only when the account has none; `admin.add`) and `admin_remove_admin(user_id)` (back to customer; never yourself, `ZL022` cannot_remove_self; removals lock every admin row and check the caller again, so two admins removing each other at once can't leave none; `admin.remove`). Nobody writes `crews` or `profiles.role` directly.
 - `admin_slot_board(from, to)` (admins, at most 62 days): places taken per day and slot for the A2 board and the admin reschedule picker. It lists every slot that runs that day plus any switched-off slot that still holds places, and marks blocked days. `bookable` uses staff rules (any slot that hasn't started), unlike `booking_availability()`, which applies the customer window and cutoff.
 - Orders: `create_order(request_id, address_id, service_date, slot_id, items, note, media, expected_total)` (customers; `expected_total` is the total Checkout showed, and a different total at today's prices is refused with `ZL018` price_changed, so an admin's price change never bills a customer for a price they didn't see), `transition_order(order_id, to_status, payload)` (all roles, per §6) and `booking_availability()` (logged-in users: days × slots in the window with places left and whether each can be booked) are the only ways in. `delete_address` refuses while an active order uses the address (`ZL012`).
@@ -521,10 +521,10 @@ Neither surface has designs. Both are built from the same tokens and kit as the 
 
 | # | Screen | Content and rules |
 | --- | --- | --- |
-| C1 | Login | Same phone + OTP. A crew-role account lands on C2; any other role is refused. Until Phase 3, `/crew` and `/admin` are placeholders with logout |
-| C2 | My jobs | Today and tomorrow, grouped by slot. Each card shows the order number, slot, district + landmark, tank lines, a customer-note preview, the customer media count and a status chip |
-| C3 | Job detail | Map pin with "افتح بخرائط كوكل" (deep link), "اتصل بالزبون", tank lines, note, customer photos/videos, timeline |
-| C3a | Status button | One large button that moves the job to its next status: طلعنا → وصلنا → بدينا الشغل (needs a before photo) → خلصنا (opens C4). A secondary action, "الزبون مو موجود", marks a no-show and needs a note |
+| C1 | Login | Same phone + OTP. A crew-role account lands on C2 (with logout in its header); any other role is sent to its own surface |
+| C2 | My jobs | Today and tomorrow, grouped by slot. An open job from an earlier day comes first, and today's completed and no-show jobs last; orders still waiting for confirmation are not listed even when a crew is assigned (settled Oct 26, 2026). The list updates through Realtime, and also when the app comes back to the screen and once a minute, since a job taken away from the crew sends it no event. Each card shows the order number, slot, district + landmark, tank lines, a customer-note preview, the customer media count and a status chip |
+| C3 | Job detail | Map pin with "افتح بخرائط كوكل" (deep link), "اتصل بالزبون" (only while the job is confirmed, on the way, arrived or in progress, through `crew_job_contact`; settled Oct 26, 2026), tank lines, note, customer photos/videos, timeline |
+| C3a | Status button | One large button that moves the job to its next status: طلعنا → وصلنا → بدينا الشغل → خلصنا (opens C4). No step needs a photo (settled Oct 26, 2026). A secondary action, "الزبون مو موجود", marks a no-show until work starts and needs a note, which stays internal |
 | C3b | Media | Camera capture (`<input capture>`) for before and after photos, plus optional clips (60 s each). Uploads use a retry queue that survives a page reload |
 | C4 | Finish form | Sterilant (prefilled from settings); residual chlorine mg/L (optional); "استلمنا المبلغ \[35,000 د.ع\]" checkbox (hidden for subscription orders); note. Submit completes the job |
 
@@ -769,6 +769,9 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
   - [x] Part B: A8 prices, A9 schedule (slots, blocked dates), A13 settings with the service-area editor (Google Maps with a key; without one, a drawn preview plus GeoJSON import and export)
   - [x] Part C: A10 crews, A14 admins (a phone that already has an account can't become a crew; an existing account can be made an admin), audit log screen
 - [ ] Crew app C1–C4 with media capture, retry queue and GPS sharing
+  - [x] Part A: C1 login, C2 My jobs, C3 Job detail, C3a status button and no-show; a cash-only finish sheet; `crew_job_contact`; before and after photos made optional
+  - [ ] Part B: C3b photo and clip capture with a retry queue that survives a reload; the full C4 finish form (sterilant, residual chlorine, an internal crew note)
+  - [ ] Part C: GPS sharing while on the way (`crew_live_location`, Wake Lock), and the three-device test of the whole path
 
 * Done when: the whole path booking → confirm → assign → on the way → arrived → in progress → completed runs across three devices
 
@@ -810,10 +813,10 @@ The maintained version is `CLAUDE.md` at the repo root, which has grown past thi
 
 These are assumptions made while writing the spec. Each has a working default, so none blocks Phase 0–2; settle them before the phase noted.
 
-- [ ] **Job media (before Phase 3):** answers 43 and 44 were read together as "before and after photos required, per-step clips optional". Confirm.
-- [ ] **Residual chlorine (before Phase 3):** kept as an optional crew field that shows on the certificate only when filled. Keep it or remove it?
-- [ ] **Crew calls the customer (before Phase 3):** the crew app has "اتصل بالزبون" from the company-owned crew phone, to help find the house. OK?
-- [ ] **No-show policy (before Phase 3):** no fee or block in v1, only a status and a chat message. OK?
+- [x] **Job media (before Phase 3):** settled Oct 26, 2026: before photos, after photos and clips are all optional. `transition_order` no longer checks for photos (migration `crew_jobs`).
+- [x] **Residual chlorine (before Phase 3):** settled Oct 26, 2026: kept as an optional crew field (C4) that shows on the certificate only when filled.
+- [x] **Crew calls the customer (before Phase 3):** settled Oct 26, 2026: yes, from the company-owned crew phone, and only while the job is open (confirmed through in progress). After that the number is hidden.
+- [x] **No-show policy (before Phase 3):** settled Oct 26, 2026: no fee or block in v1, only the status and an internal note. The chat message to the customer comes with Chat in Phase 5.
 - [ ] **Subscription details (before Phase 6):** price, number of tanks covered, and whether one visit covers a multi-tank order.
 - [x] **Operations (before Phase 2):** settled Oct 25, 2026: slot capacity 2, slots Saturday to Thursday (Friday closed), support hours 9 AM–9 PM, as seeded. All are editable later (A9, A13).
 - [x] **Booking rules (Phase 2, task 1):** settled Oct 25, 2026. The window is today plus 13 days. A new booking needs the slot to start at least 2 h from now, like cancel and reschedule. A new tank line saves one tank to the address, and its quantity stays on the order line. `transition_order` covers the whole §6 table now, so `crews` and `admin_audit_log` moved up from Phase 3.

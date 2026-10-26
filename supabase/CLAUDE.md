@@ -35,7 +35,7 @@ Loaded when Claude works in this folder. The root CLAUDE.md rules still apply. F
   - `ZL001` `outside_service_area`
   - `ZL002` `password_change_not_allowed` and `ZL003` `email_not_allowed` (the `auth.users` guard; Auth's API reports them as a failed update, the app never shows them)
   - `ZL004` `slot_unavailable` (inactive, wrong weekday, blocked, outside the window, or inside the cutoff), `ZL005` `slot_full`, `ZL006` `change_too_late` (customer cancel or reschedule inside the cutoff), `ZL007` `too_many_tanks`, `ZL008` `too_many_files`, `ZL009` `upload_not_found` (missing, unfinished, someone else's, or already attached)
-  - `ZL010` `invalid_transition`; `ZL011` a missing requirement: `before_photo_required`, `after_photo_required`, `cash_not_collected`, `crew_not_assigned`, `reason_required`
+  - `ZL010` `invalid_transition`; `ZL011` a missing requirement: `cash_not_collected`, `crew_not_assigned`, `reason_required` (`before_photo_required` and `after_photo_required` were retired by migration `crew_jobs`: photos are optional)
   - `ZL012` `address_in_use` (`delete_address` while an active order uses it)
   - `ZL013` `crew_inactive` (assigning a switched-off crew, or one whose account is no longer a crew), `ZL014` `crew_change_not_allowed` (changing the crew after the crew arrived, or removing it while on the way)
   - `ZL015` `slot_exists` (a new slot with the times of another, switched off or not), `ZL016` `invalid_area` (a service area that isn't a valid polygon inside Iraq, or has more than 5,000 points), `ZL017` `last_active_area` (switching off the only active area), `ZL018` `price_changed` (`create_order`'s `expected_total` no longer matches the prices)

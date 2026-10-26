@@ -7,7 +7,8 @@ import { ORDER_STATUSES } from "@/lib/admin/orders-query";
 // (transition_order, assign_crew).
 
 /** Staff reasons go to order_event_notes (1–500 characters, trimmed). */
-export const staffReasonSchema = z.string().trim().min(1).max(500);
+export const STAFF_NOTE_MAX = 500;
+export const staffReasonSchema = z.string().trim().min(1).max(STAFF_NOTE_MAX);
 
 export const confirmOrderSchema = z.object({
   orderId: z.uuid(),
