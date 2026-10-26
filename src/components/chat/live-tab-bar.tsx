@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { type Tab, TabBar } from "@/components/ui/tab-bar";
+import { createClient } from "@/lib/supabase/browser";
 import { usePostgresChanges } from "@/lib/supabase/use-postgres-changes";
 
 /**
@@ -32,6 +33,17 @@ export function LiveTabBar({
     filter: `user_id=eq.${userId}`,
     events: ["INSERT", "UPDATE"],
     onChange: (row) => setUnread(Number(row.customer_unread) > 0),
+    // A change before the subscription was live: read the row again.
+    onSubscribed: () => {
+      void createClient()
+        .from("chat_threads")
+        .select("customer_unread")
+        .eq("user_id", userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setUnread(data.customer_unread > 0);
+        });
+    },
   });
 
   return <TabBar active={active} chatUnread={unread} />;

@@ -22,6 +22,7 @@ export function usePostgresChanges({
   filter,
   events,
   onChange,
+  onSubscribed,
   enabled = true,
 }: {
   table: string;
@@ -29,12 +30,19 @@ export function usePostgresChanges({
   filter?: string;
   events: readonly Event[];
   onChange: (row: Record<string, unknown>, event: Event) => void;
+  /**
+   * The subscription is live (first join and every rejoin after a dropped
+   * connection). Changes made before it are not sent: read them here.
+   */
+  onSubscribed?: () => void;
   enabled?: boolean;
 }) {
-  // The latest callback, without resubscribing on every render.
+  // The latest callbacks, without resubscribing on every render.
   const handler = useRef(onChange);
+  const subscribed = useRef(onSubscribed);
   useEffect(() => {
     handler.current = onChange;
+    subscribed.current = onSubscribed;
   });
   const eventsKey = events.join(",");
 
@@ -61,7 +69,9 @@ export function usePostgresChanges({
             ),
         );
       }
-      channel.subscribe();
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") subscribed.current?.();
+      });
     })();
 
     return () => {

@@ -50,19 +50,22 @@ export function InboxRows({
 
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  const reload = () => {
+    void createClient()
+      .rpc("admin_chat_inbox", { p_search: query.q, p_limit: query.n + 1 })
+      .then(({ data }) => {
+        if (data) setRows(data);
+      });
+  };
   usePostgresChanges({
     table: "chat_threads",
     events: ["INSERT", "UPDATE"],
     onChange: () => {
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        void createClient()
-          .rpc("admin_chat_inbox", { p_search: query.q, p_limit: query.n + 1 })
-          .then(({ data }) => {
-            if (data) setRows(data);
-          });
-      }, 1000);
+      timer.current = setTimeout(reload, 1000);
     },
+    // A change before the subscription was live.
+    onSubscribed: () => reload(),
   });
 
   const shown = rows.slice(0, query.n);

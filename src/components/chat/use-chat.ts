@@ -114,6 +114,13 @@ export function useChat({
       }
       onMessage?.(message);
     },
+    // Messages posted before the subscription was live (an automatic reply
+    // right after opening Chat, or anything during a dropped connection).
+    onSubscribed: () => {
+      void fetchMessages(createClient(), threadId)
+        .then((page) => setMessages((current) => mergeMessages(current, page.messages)))
+        .catch(() => undefined);
+    },
   });
 
   // Read marks: while the screen is visible and the other side's messages

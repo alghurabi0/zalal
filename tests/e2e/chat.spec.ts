@@ -378,7 +378,13 @@ test("an admin edits the automatic reply in A13", async ({ page }) => {
     await logInAsAdmin(page);
     await page.goto("/admin/settings");
     const form = page.getByRole("form", { name: Admin.settings.chat.title });
-    await form.getByLabel(Admin.settings.chat.text).fill("وصلت رسالتك، نرد عليك الصبح.");
+    const field = form.getByLabel(Admin.settings.chat.text);
+    // Typing before the page hydrates can be undone by it: retry until the
+    // box holds exactly the new text.
+    await expect(async () => {
+      await field.fill("وصلت رسالتك، نرد عليك الصبح.");
+      await expect(field).toHaveValue("وصلت رسالتك، نرد عليك الصبح.", { timeout: 1000 });
+    }).toPass();
     await form.getByRole("button", { name: Admin.settings.save }).click();
     await expect(form.getByText(Admin.settings.saved, { exact: true })).toBeVisible();
     const { data: saved } = await admin

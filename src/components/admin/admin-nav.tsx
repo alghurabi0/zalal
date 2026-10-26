@@ -22,6 +22,7 @@ import { type ReactNode, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
+import { createClient } from "@/lib/supabase/browser";
 import { usePostgresChanges } from "@/lib/supabase/use-postgres-changes";
 
 const items = [
@@ -147,6 +148,17 @@ function useUnreadThreads(initial: string[]): number {
         else next.delete(id);
         return next;
       });
+    },
+    // A change before the subscription was live: read the unread threads again.
+    onSubscribed: () => {
+      void createClient()
+        .from("chat_threads")
+        .select("id")
+        .gt("admin_unread", 0)
+        .limit(1000)
+        .then(({ data }) => {
+          if (data) setThreads(new Set(data.map((thread) => thread.id)));
+        });
     },
   });
   return threads.size;
