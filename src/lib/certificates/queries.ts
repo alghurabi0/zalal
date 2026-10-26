@@ -107,7 +107,7 @@ const SELECT = `id, public_code, issued_at, sterilant, residual_chlorine_mg_l, n
     id, number, status, service_date, slot_start_at, slot_end_at, district, landmark,
     order_items(id, tank_type, size, qty),
     order_media(id, kind, media_type, path, duration_s, created_at),
-    profiles(full_name, phone, reminders_enabled),
+    profiles!orders_customer_id_fkey(full_name, phone, reminders_enabled),
     ratings(stars, tags, comment, tickets(number))
   )`;
 

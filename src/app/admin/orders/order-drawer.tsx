@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/orders/status-badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { adminRescheduleDays } from "@/lib/admin/board";
+import { certificateNumber, ticketNumber } from "@/lib/certificates/format";
 import {
   type AdminOrderDetails,
   type AdminOrderEvent,
@@ -17,6 +18,7 @@ import {
 import { baghdadToday, formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
+import { routes } from "@/lib/routes";
 
 import { OrderActions } from "./order-actions";
 
@@ -77,6 +79,7 @@ export async function OrderDrawer({
         </Section>
       )}
       <Media order={order} />
+      {order.status === "completed" && <CertificateAndRating order={order} />}
       <Section title={t("crew")}>
         <p className="text-15 font-bold">{order.crew?.name ?? t("noCrew")}</p>
         {order.crewChanges.length > 0 && (
@@ -107,6 +110,91 @@ export async function OrderDrawer({
       </Card>
       <Timeline order={order} />
     </Drawer>
+  );
+}
+
+/** The certificate (links to its PDF, print page and N15) and the customer's rating. */
+async function CertificateAndRating({ order }: { order: AdminOrderDetails }) {
+  const t = await getTranslations("Admin.drawer");
+  const tRating = await getTranslations("Report.rating");
+  const { certificate, rating } = order;
+  const link = "font-bold text-teal underline-offset-4 hover:underline";
+  return (
+    <Section title={t("certificate")}>
+      {certificate ? (
+        <div className="flex flex-col gap-1.5 text-15">
+          <p>
+            <span className="text-muted">{t("certificateNumber")}: </span>
+            <span dir="ltr" className="font-bold">
+              {certificateNumber(order.number)}
+            </span>
+            <span className="text-muted"> · {t("certificateCode")}: </span>
+            <span dir="ltr" className="font-bold">
+              {certificate.public_code}
+            </span>
+          </p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <a href={routes.certificatePdf(order.id)} className={link}>
+              {t("certificatePdf")}
+            </a>
+            <a
+              href={routes.certificatePrint(certificate.id)}
+              target="_blank"
+              rel="noreferrer"
+              className={link}
+            >
+              {t("certificatePrint")}
+            </a>
+            <a
+              href={routes.publicCertificate(certificate.public_code)}
+              target="_blank"
+              rel="noreferrer"
+              className={link}
+            >
+              {t("certificatePublic")}
+            </a>
+          </p>
+        </div>
+      ) : (
+        <p className="text-14 text-muted">{t("noCertificate")}</p>
+      )}
+      <div className="flex flex-col gap-1.5 border-t border-divider pt-2.5">
+        <h3 className="text-14 font-extrabold">{t("rating")}</h3>
+        {rating ? (
+          <>
+            <p className="flex items-center gap-2 text-15 font-bold">
+              <span aria-hidden className="text-star" dir="ltr">
+                {"★".repeat(rating.stars)}
+                <span className="text-track">{"★".repeat(5 - rating.stars)}</span>
+              </span>
+              {t("stars", { n: rating.stars })}
+              <span className="text-13 font-normal text-muted">
+                · {formatDayTime(rating.created_at)}
+              </span>
+            </p>
+            {rating.tags.length > 0 && (
+              <p className="text-14 text-body-2">
+                {rating.tags.map((tag) => tRating(`tags.${tag}`)).join(" · ")}
+              </p>
+            )}
+            {rating.comment && (
+              <p className="text-15 whitespace-pre-line text-body-2">{rating.comment}</p>
+            )}
+            {rating.ticket && (
+              <p className="text-14 font-bold text-danger">
+                {t.rich("ticket", {
+                  number: ticketNumber(rating.ticket.number),
+                  status: rating.ticket.status,
+                  num: (chunks) => <span dir="ltr">{chunks}</span>,
+                })}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-14 text-muted">{t("notRated")}</p>
+        )}
+      </div>
+    </Section>
   );
 }
 

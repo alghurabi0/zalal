@@ -961,9 +961,14 @@
       "pendingCaption": "الطلبات اللي تنتظر التأكيد، الأقرب موعداً أولاً",
       "later": "تجي قريباً",
       "chats": "المحادثات غير المقروءة",
-      "tickets": "البلاغات المفتوحة",
       "subscriptions": "طلبات الاشتراك",
-      "comingSoon": "تنضاف ويه المحادثة والاشتراكات"
+      "comingSoon": "تنضاف ويه المحادثة والاشتراكات",
+      "ticketsOpen": "البلاغات المفتوحة ({count})",
+      "ticketsEmpty": "ماكو بلاغات مفتوحة",
+      "ticketsEmptyBody": "التقييم بـ 3 نجوم أو أقل يفتح بلاغ ويطلع هنا. إدارة البلاغات تجي ويه قسم البلاغات.",
+      "ticketRow": "<num>{ticket}</num> · طلب <num>#{order}</num>",
+      "ticketStars": "{n} من 5",
+      "ticketsCaption": "أحدث البلاغات المفتوحة"
     },
     "table": {
       "number": "الطلب",
@@ -1060,7 +1065,18 @@
         "booked": "انحجز الطلب",
         "rescheduled": "تغيّر الموعد إلى {date}",
         "moved": "{from} ← {to}"
-      }
+      },
+      "certificate": "الشهادة والتقييم",
+      "certificateNumber": "الشهادة",
+      "certificateCode": "رمز التحقق",
+      "certificatePdf": "تحميل PDF",
+      "certificatePrint": "صفحة الطباعة",
+      "certificatePublic": "صفحة التحقق",
+      "noCertificate": "ماكو شهادة لهذا الطلب.",
+      "rating": "التقييم",
+      "stars": "{n} من 5",
+      "notRated": "الزبون بعده ما قيّم.",
+      "ticket": "بلاغ <num>{number}</num> · {status, select, open {مفتوح} in_progress {قيد المعالجة} other {مغلق}}"
     },
     "actions": {
       "title": "الإجراءات",
@@ -1240,6 +1256,11 @@
         "title": "الفريق",
         "sterilant": "مادة التعقيم",
         "sterilantHint": "تنكتب تلقائياً باستمارة إنهاء الشغل، والفريق يكدر يغيّرها."
+      },
+      "certificate": {
+        "title": "الشهادة",
+        "text": "وصف الخدمة بالشهادة",
+        "textHint": "فقرة قصيرة تنطبع بكل شهادة جديدة: شنو يشمل التنظيف والتعقيم."
       },
       "legal": {
         "title": "الشروط والخصوصية",

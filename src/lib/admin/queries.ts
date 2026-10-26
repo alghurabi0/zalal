@@ -182,6 +182,18 @@ export type AdminOrderDetails = AdminOrderRow & {
   notes: Map<number, string>;
   media: AdminOrderMedia[];
   crewChanges: CrewChange[];
+  /** Issued on completion (migration certificates). */
+  certificate: { id: string; public_code: string; pdf_path: string | null } | null;
+  rating: AdminRating | null;
+};
+
+export type AdminRating = {
+  stars: number;
+  tags: Enums["rating_tag"][];
+  comment: string | null;
+  created_at: string;
+  /** The ticket a rating of 3 stars or fewer opened. */
+  ticket: { number: number; status: Enums["ticket_status"] } | null;
 };
 
 type DetailsRaw = Omit<RawRow, "order_items"> & {
@@ -202,6 +214,8 @@ type DetailsRaw = Omit<RawRow, "order_items"> & {
     path: string;
     created_at: string;
   }[];
+  certificates: AdminOrderDetails["certificate"];
+  ratings: (Omit<AdminRating, "ticket"> & { tickets: AdminRating["ticket"] }) | null;
 };
 
 /** The A2 drawer. Null when the order doesn't exist. */
@@ -218,7 +232,9 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetails | nul
        order_items(id, tank_type, size, qty, unit_price_iqd),
        order_events(id, from_status, to_status, actor_role, cancel_reason, is_override, details,
          created_at, actor:profiles(full_name)),
-       order_media(id, kind, media_type, path, created_at)`,
+       order_media(id, kind, media_type, path, created_at),
+       certificates(id, public_code, pdf_path),
+       ratings(stars, tags, comment, created_at, tickets(number, status))`,
     )
     .eq("id", id)
     .maybeSingle()
@@ -232,7 +248,7 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetails | nul
     signedUrls(data.order_media.map((file) => file.path)),
   ]);
 
-  const { order_items, order_events, order_media, ...rest } = data;
+  const { order_items, order_events, order_media, certificates, ratings, ...rest } = data;
   const items = [...order_items].sort((a, b) => a.id - b.id);
   return {
     ...rest,
@@ -257,6 +273,61 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetails | nul
         url: urls.get(file.path) ?? null,
       })),
     crewChanges,
+    certificate: certificates,
+    rating: ratings && {
+      stars: ratings.stars,
+      tags: ratings.tags,
+      comment: ratings.comment,
+      created_at: ratings.created_at,
+      ticket: ratings.tickets,
+    },
+  };
+}
+
+export type OpenTicket = {
+  id: string;
+  number: number;
+  source: Enums["ticket_source"];
+  created_at: string;
+  order: { id: string; number: number } | null;
+  stars: number | null;
+};
+
+/**
+ * A1's open tickets: the count and the newest few. Until A5 (Phase 5) they
+ * all come from low ratings and open the order's drawer.
+ */
+export async function openTickets(
+  limit: number,
+): Promise<{ total: number; tickets: OpenTicket[] }> {
+  const supabase = await createClient();
+  const { data, error, count } = await supabase
+    .from("tickets")
+    .select("id, number, source, created_at, orders(id, number), ratings(stars)", {
+      count: "exact",
+    })
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(limit)
+    .overrideTypes<
+      {
+        id: string;
+        number: number;
+        source: Enums["ticket_source"];
+        created_at: string;
+        orders: { id: string; number: number } | null;
+        ratings: { stars: number } | null;
+      }[],
+      { merge: false }
+    >();
+  if (error) throw new Error(`Tickets read failed: ${error.message}`);
+  return {
+    total: count ?? data.length,
+    tickets: data.map(({ orders, ratings, ...ticket }) => ({
+      ...ticket,
+      order: orders,
+      stars: ratings?.stars ?? null,
+    })),
   };
 }
 

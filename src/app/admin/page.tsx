@@ -1,5 +1,6 @@
 import { ClipboardCheck, Headset, MessagesSquare, Repeat } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
@@ -11,17 +12,20 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { adminOrdersHref, ORDER_STATUSES } from "@/lib/admin/orders-query";
-import { pendingConfirmations, todayCounts } from "@/lib/admin/queries";
+import { openTickets, pendingConfirmations, todayCounts } from "@/lib/admin/queries";
 import { requireViewer } from "@/lib/auth/viewer";
-import { baghdadToday, formatDate } from "@/lib/dates";
+import { ticketNumber } from "@/lib/certificates/format";
+import { baghdadToday, formatDate, formatDayTime } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
 const PENDING_SHOWN = 10;
+const TICKETS_SHOWN = 5;
 
 /**
- * Overview (A1): today's orders by status and the orders waiting for
- * confirmation, kept live by the shell (AdminLive). Unread chats, open
- * tickets and subscription requests arrive with their phases (5 and 6).
+ * Overview (A1): today's orders by status, the orders waiting for
+ * confirmation and the open tickets (for now only those low ratings open,
+ * each linking to its order), kept live by the shell (AdminLive). Unread
+ * chats and subscription requests arrive with their phases (5 and 6).
  */
 export default async function OverviewPage() {
   const t = await getTranslations("Admin.overview");
@@ -40,9 +44,10 @@ async function Overview() {
   // The server's clock, in Baghdad.
   const now = new Date();
   const today = baghdadToday(now);
-  const [counts, pending] = await Promise.all([
+  const [counts, pending, tickets] = await Promise.all([
     todayCounts(now),
     pendingConfirmations(PENDING_SHOWN),
+    openTickets(TICKETS_SHOWN),
   ]);
   const todayTotal = ORDER_STATUSES.reduce((sum, status) => sum + counts[status], 0);
 
@@ -118,13 +123,65 @@ async function Overview() {
         )}
       </section>
 
+      <section aria-labelledby="tickets" className="flex flex-col gap-3">
+        <h2 id="tickets" className="text-18 font-extrabold">
+          {t("ticketsOpen", { count: tickets.total })}
+        </h2>
+        {tickets.tickets.length === 0 ? (
+          <Card className="flex items-center gap-3 p-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-well text-muted">
+              <Headset aria-hidden className="size-5" />
+            </span>
+            <span className="flex flex-col">
+              <span className="text-15 font-bold">{t("ticketsEmpty")}</span>
+              <span className="text-13 text-muted">{t("ticketsEmptyBody")}</span>
+            </span>
+          </Card>
+        ) : (
+          <Card className="p-0">
+            <ul aria-label={t("ticketsCaption")} className="flex flex-col">
+              {tickets.tickets.map((ticket) => (
+                <li
+                  key={ticket.id}
+                  className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3 last:border-0"
+                >
+                  {ticket.order ? (
+                    <Link
+                      href={routes.adminOrder(ticket.order.id)}
+                      className="text-15 font-bold text-teal underline-offset-4 hover:underline"
+                    >
+                      {t.rich("ticketRow", {
+                        ticket: ticketNumber(ticket.number),
+                        order: ticket.order.number,
+                        num: (chunks) => <span dir="ltr">{chunks}</span>,
+                      })}
+                    </Link>
+                  ) : (
+                    <span dir="ltr" className="text-15 font-bold">
+                      {ticketNumber(ticket.number)}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-3 text-13 text-muted">
+                    {ticket.stars !== null && (
+                      <span className="font-bold text-danger">
+                        {t("ticketStars", { n: ticket.stars })}
+                      </span>
+                    )}
+                    {formatDayTime(ticket.created_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </section>
+
       <section aria-labelledby="later" className="flex flex-col gap-3">
         <h2 id="later" className="text-18 font-extrabold">
           {t("later")}
         </h2>
-        <ul className="grid gap-3 sm:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           <Later icon={MessagesSquare} title={t("chats")} />
-          <Later icon={Headset} title={t("tickets")} />
           <Later icon={Repeat} title={t("subscriptions")} />
         </ul>
       </section>

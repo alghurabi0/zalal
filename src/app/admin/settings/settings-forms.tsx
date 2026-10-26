@@ -13,6 +13,7 @@ import type { AdminSettings } from "@/lib/admin/catalog-queries";
 import type { AdminEditError } from "@/lib/admin/edit-errors";
 import { normalizeIraqiPhone } from "@/lib/phone";
 import {
+  CERTIFICATE_TEXT_MAX,
   LEGAL_MAX,
   SETTING_RANGES,
   type SettingsSectionInput,
@@ -29,6 +30,7 @@ export function SettingsForms({ settings }: { settings: AdminSettings }) {
       <SupportSection settings={settings} />
       <BookingSection settings={settings} />
       <CrewSection settings={settings} />
+      <CertificateSection settings={settings} />
       <LegalSection settings={settings} />
     </div>
   );
@@ -327,6 +329,30 @@ function CrewSection({ settings }: { settings: AdminSettings }) {
             name="sterilant_text"
             value={sterilant}
             onChange={(event) => setSterilant(event.target.value)}
+          />
+        )}
+      </Field>
+    </Section>
+  );
+}
+
+function CertificateSection({ settings }: { settings: AdminSettings }) {
+  const t = useTranslations("Admin.settings.certificate");
+  const [text, setText] = useState(settings.certificate_text);
+  return (
+    <Section
+      title={t("title")}
+      input={{ section: "certificate", values: { certificate_text: text } }}
+    >
+      <Field label={t("text")} variant="compact" hint={t("textHint")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            rows={4}
+            maxLength={CERTIFICATE_TEXT_MAX}
+            name="certificate_text"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
           />
         )}
       </Field>
