@@ -938,6 +938,7 @@ export type Database = {
         };
         Returns: undefined;
       };
+      unattached_media: { Args: { p_folder: string; p_limit?: number }; Returns: string[] };
     };
     Enums: {
       address_label: "home" | "family" | "work";
