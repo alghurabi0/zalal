@@ -6,7 +6,7 @@ import { Suspense } from "react";
 
 import { Screen } from "@/components/layout/screen";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
-import { TabBar } from "@/components/ui/tab-bar";
+import { CustomerTabBar } from "@/components/chat/customer-tab-bar";
 import { chosenAddress, listAddresses } from "@/lib/addresses";
 import { getViewer, surfaceFor } from "@/lib/auth/viewer";
 import { baghdadHour } from "@/lib/dates";
@@ -32,7 +32,7 @@ export default function HomePage() {
           <HomeCards />
         </Suspense>
       </div>
-      <TabBar active="home" />
+      <CustomerTabBar active="home" />
     </Screen>
   );
 }

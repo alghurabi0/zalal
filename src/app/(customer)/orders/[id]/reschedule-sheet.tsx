@@ -80,7 +80,7 @@ export function RescheduleSheet({
       <SheetTrigger asChild>{children}</SheetTrigger>
       {blocked ? (
         <SheetContent title={t("blocked.title")}>
-          <BlockedChange />
+          <BlockedChange orderId={orderId} />
         </SheetContent>
       ) : (
         <SheetContent

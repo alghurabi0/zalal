@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, MessageSquare } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
@@ -79,7 +79,6 @@ async function JobProgressContent({ params }: PageProps<"/orders/[id]/live">) {
       </div>
 
       <footer className="sticky bottom-0 z-10 flex gap-2.5 border-t border-border bg-surface px-5 pt-3 pb-safe-5.5">
-        {/* Chat joins it in Phase 5. */}
         {job.status === "completed" ? (
           <Button href={routes.certificate(job.id)} size="footer" className="flex-1">
             {t("certificate")}
@@ -89,6 +88,15 @@ async function JobProgressContent({ params }: PageProps<"/orders/[id]/live">) {
             {t("certificateLater")}
           </Button>
         )}
+        <Button
+          href={routes.chatAbout(job.id)}
+          size="footer"
+          variant="secondary"
+          aria-label={t("chat")}
+          className="w-13.5 shrink-0 px-0"
+        >
+          <MessageSquare aria-hidden className="size-5.5" strokeWidth={2} />
+        </Button>
       </footer>
     </>
   );

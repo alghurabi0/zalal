@@ -42,6 +42,8 @@ export const routes = {
   /** Booking success (N5). */
   booked: (id: string) => `/book/done/${id}`,
   chat: "/chat",
+  /** Chat with the next message tagged with an order (مساعدة, Tracking, Job progress). */
+  chatAbout: (orderId: string) => `/chat?order=${encodeURIComponent(orderId)}`,
   profile: "/profile",
   /** POST only: ends the session, then Welcome. */
   logout: "/logout",

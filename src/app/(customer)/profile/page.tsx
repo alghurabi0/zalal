@@ -8,7 +8,7 @@ import { RoofTankIcon } from "@/components/icons/tank-icons";
 import { Screen } from "@/components/layout/screen";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
-import { TabBar } from "@/components/ui/tab-bar";
+import { CustomerTabBar } from "@/components/chat/customer-tab-bar";
 import { listAddresses } from "@/lib/addresses";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
@@ -30,7 +30,7 @@ export default function ProfilePage() {
         <ProfileContent />
       </Suspense>
       <div className="flex-1" />
-      <TabBar active="profile" />
+      <CustomerTabBar active="profile" />
     </Screen>
   );
 }

@@ -16,7 +16,7 @@ const typeIcons = { roof: RoofTankIcon, ground: GroundTankIcon } as const;
 /**
  * One order on Orders (Orders.dc.html, spec §5.12): number and date,
  * status, tanks, address, price and the button for its status. The whole
- * card opens Order details (N4). مساعدة comes with Chat (Phase 5).
+ * card opens Order details (N4). مساعدة opens Chat tagged with the order.
  */
 export function OrderCard({ order }: { order: OrderSummary }) {
   const t = useTranslations("Orders");
@@ -71,6 +71,14 @@ export function OrderCard({ order }: { order: OrderSummary }) {
       <div className="relative z-10 flex gap-2">
         <Button href={actionHref(action, order.id)} size="sm" className="flex-1 text-14">
           {t(action)}
+        </Button>
+        <Button
+          href={routes.chatAbout(order.id)}
+          size="sm"
+          variant="secondary"
+          className="rounded-chip px-3.5 text-14"
+        >
+          {t("help")}
         </Button>
       </div>
     </Card>

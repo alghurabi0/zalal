@@ -8,7 +8,7 @@ import { LiveOrders } from "@/components/orders/live-orders";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
-import { TabBar } from "@/components/ui/tab-bar";
+import { CustomerTabBar } from "@/components/chat/customer-tab-bar";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { listOrders } from "@/lib/orders/queries";
@@ -34,7 +34,7 @@ export default async function OrdersPage(props: PageProps<"/orders">) {
           <OrdersContent {...props} />
         </Suspense>
       </div>
-      <TabBar active="orders" />
+      <CustomerTabBar active="orders" />
     </Screen>
   );
 }

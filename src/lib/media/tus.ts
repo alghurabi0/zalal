@@ -4,9 +4,10 @@ import { ORDER_MEDIA_BUCKET } from "@/lib/booking/media";
 import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/browser";
 
-// A resumable (TUS) upload straight from the phone to Storage (order-media),
-// as the logged-in user: the storage policies decide who may write where.
-// Booking step 2 and the crew's media queue share it.
+// A resumable (TUS) upload straight from the phone to Storage (order-media
+// unless another bucket is named), as the logged-in user: the storage
+// policies decide who may write where. Booking step 2, the crew's media
+// queue and Chat's attachments (chat-media) share it.
 
 export type TusCallbacks = {
   /** 0–99; 100 waits for onSuccess, when Storage has the whole file. */
@@ -24,7 +25,8 @@ export async function createTusUpload(
     path,
     contentType,
     uploadUrl,
-  }: { path: string; contentType: string; uploadUrl?: string | null },
+    bucket = ORDER_MEDIA_BUCKET,
+  }: { path: string; contentType: string; uploadUrl?: string | null; bucket?: string },
   callbacks: TusCallbacks,
 ): Promise<Upload> {
   const { Upload, DetailedError } = await import("tus-js-client");
@@ -47,7 +49,7 @@ export async function createTusUpload(
     storeFingerprintForResuming: false,
     headers: { apikey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, "x-upsert": "false" },
     metadata: {
-      bucketName: ORDER_MEDIA_BUCKET,
+      bucketName: bucket,
       objectName: path,
       contentType,
       cacheControl: "3600",

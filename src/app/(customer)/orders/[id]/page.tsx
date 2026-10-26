@@ -1,4 +1,4 @@
-import { CalendarClock, SearchX } from "lucide-react";
+import { CalendarClock, MessageSquare, SearchX } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { type ReactNode, Suspense } from "react";
 import { z } from "zod";
@@ -30,7 +30,7 @@ import { RescheduleSheet } from "./reschedule-sheet";
  * the buttons its status allows. Cancel (N6) and reschedule (N7) open
  * sheets. From the crew setting off it links to Tracking and then Job
  * progress, and once completed to the certificate (Report) and the job's
- * files; help comes with Chat in Phase 5.
+ * files. Help opens Chat tagged with the order.
  */
 export default function OrderPage(props: PageProps<"/orders/[id]">) {
   return (
@@ -92,6 +92,7 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
         )}
         {order.media.length > 0 && <Files order={order} />}
         <Timeline entries={buildTimeline(order.events)} />
+        <Help orderId={order.id} />
       </div>
       <Actions order={order} cutoff={cutoff} />
     </>
@@ -104,6 +105,30 @@ function Header({ children }: { children?: ReactNode }) {
       <BackButton href={routes.orders} />
       {children}
     </div>
+  );
+}
+
+/** Help (N4): Chat with the next message tagged with this order. */
+async function Help({ orderId }: { orderId: string }) {
+  const t = await getTranslations("Order");
+  return (
+    <Card className="flex items-center gap-3 p-4">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-selected text-teal">
+        <MessageSquare aria-hidden className="size-5" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-15 font-extrabold">{t("help")}</span>
+        <span className="text-13 text-muted">{t("helpBody")}</span>
+      </span>
+      <Button
+        href={routes.chatAbout(orderId)}
+        size="sm"
+        variant="secondary"
+        className="px-4 text-14"
+      >
+        {t("helpButton")}
+      </Button>
+    </Card>
   );
 }
 
