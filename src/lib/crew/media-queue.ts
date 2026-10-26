@@ -1,5 +1,5 @@
 import { contentTypeOf, mediaKindOf } from "@/lib/booking/media";
-import type { PrepareProblem, Prepared } from "@/lib/media/prepare";
+import type { Prepared, PrepareProblem } from "@/lib/media/prepare";
 import type { TusCallbacks } from "@/lib/media/tus";
 
 import type { JobMediaError } from "./errors";
@@ -145,6 +145,10 @@ export class MediaQueue {
     for (const file of saved) this.records.set(file.id, file);
     this.set([...this.items, ...saved.map(toItem)]);
     void this.pump();
+    // Files the page closed on while they were being prepared.
+    void (async () => {
+      for (const file of saved.filter((f) => !f.prepared)) await this.prepare(file, generation);
+    })();
   }
 
   /** Logout: stops everything and deletes every queued file on this phone. */
@@ -209,56 +213,59 @@ export class MediaQueue {
 
     for (const { file, contentType } of fitting.slice(0, room)) {
       const id = crypto.randomUUID();
-      const path = jobObjectPath(target.crewId, target.orderId, id, contentType);
-      const item: QueueItem = {
-        id,
-        orderId: target.orderId,
-        kind: target.kind,
-        path,
-        bytes: file.size,
-        durationS: null,
-        status: "preparing",
-        progress: 0,
-        error: null,
-        file,
-      };
-      this.set([...this.items, item]);
-
-      const prepared = await this.deps.prepare(file, wanted);
-      if (generation !== this.generation) return problems;
-      if ("problem" in prepared) {
-        problems.push(prepared.problem);
-        this.set(this.items.filter((i) => i.id !== id));
-        continue;
-      }
-      // Removed while it was being prepared.
-      if (!this.items.some((i) => i.id === id)) continue;
-
       const record: StoredFile = {
         id,
         userId,
         orderId: target.orderId,
         kind: target.kind,
-        path,
+        path: jobObjectPath(target.crewId, target.orderId, id, contentType),
         contentType,
-        bytes: prepared.file.size,
-        durationS: prepared.durationS,
+        bytes: file.size,
+        durationS: null,
         uploadUrl: null,
+        prepared: false,
         uploaded: false,
         createdAt: this.deps.now(),
-        file: prepared.file,
+        file,
       };
       this.records.set(id, record);
+      this.set([...this.items, toItem(record)]);
       await this.save(record);
-      this.patch(id, {
-        bytes: record.bytes,
-        durationS: record.durationS,
-        file: record.file,
-        status: "waiting",
-      });
-      void this.pump();
+      const problem = await this.prepare(record, generation);
+      if (generation !== this.generation) return problems;
+      if (problem) problems.push(problem);
     }
     return problems;
+  }
+
+  /** Shrinks or checks a saved file, then queues it. Resolves with why it was refused. */
+  private async prepare(record: StoredFile, generation: number): Promise<PrepareProblem | null> {
+    const source =
+      record.file instanceof File
+        ? record.file
+        : new File([record.file], record.id, { type: record.contentType });
+    const prepared = await this.deps.prepare(source, record.kind === "clip" ? "video" : "photo");
+    // Removed, or another account, while it was being prepared.
+    if (generation !== this.generation || !this.records.has(record.id)) return null;
+    if ("problem" in prepared) {
+      this.records.delete(record.id);
+      this.set(this.items.filter((item) => item.id !== record.id));
+      await this.forget(record.id);
+      return prepared.problem;
+    }
+    record.file = prepared.file;
+    record.bytes = prepared.file.size;
+    record.durationS = prepared.durationS;
+    record.prepared = true;
+    await this.save(record);
+    this.patch(record.id, {
+      bytes: record.bytes,
+      durationS: record.durationS,
+      file: record.file,
+      status: "waiting",
+    });
+    void this.pump();
+    return null;
   }
 
   retry(userId: string, id: string) {
@@ -468,7 +475,7 @@ function toItem(file: StoredFile): QueueItem {
     path: file.path,
     bytes: file.bytes,
     durationS: file.durationS,
-    status: "waiting",
+    status: file.prepared ? "waiting" : "preparing",
     progress: file.uploaded ? 100 : 0,
     error: null,
     file: file.file,

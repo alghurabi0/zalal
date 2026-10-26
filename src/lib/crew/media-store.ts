@@ -20,6 +20,11 @@ export type StoredFile = {
   durationS: number | null;
   /** The TUS upload's URL once Storage made it, to resume after a reload. */
   uploadUrl: string | null;
+  /**
+   * Shrunk or checked on the phone. Saved before that too, so a reload in
+   * the second it takes doesn't lose the photo.
+   */
+  prepared: boolean;
   /** Storage has the whole file; only the attach is left. */
   uploaded: boolean;
   createdAt: number;

@@ -211,7 +211,10 @@ function FinishSheet({
               variant="compact"
               maxLength={STERILANT_MAX}
               value={sterilant}
-              onChange={(event) => setSterilant(event.target.value)}
+              onChange={(event) => {
+                setSterilant(event.target.value);
+                setError(null);
+              }}
             />
           )}
         </Field>
@@ -230,7 +233,10 @@ function FinishSheet({
               autoComplete="off"
               maxLength={5}
               value={chlorine}
-              onChange={(event) => setChlorine(event.target.value)}
+              onChange={(event) => {
+                setChlorine(event.target.value);
+                setError(null);
+              }}
             />
           )}
         </Field>
@@ -246,7 +252,10 @@ function FinishSheet({
               rows={2}
               maxLength={STAFF_NOTE_MAX}
               value={note}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                setNote(event.target.value);
+                setError(null);
+              }}
             />
           )}
         </Field>
@@ -256,7 +265,10 @@ function FinishSheet({
             className="size-5.5 accent-navy"
             checked={cash}
             aria-invalid={error === "cash_not_collected" ? true : undefined}
-            onChange={(event) => setCash(event.target.checked)}
+            onChange={(event) => {
+              setCash(event.target.checked);
+              setError(null);
+            }}
           />
           <span>{t("cash", { amount })}</span>
         </label>

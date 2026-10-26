@@ -8,7 +8,8 @@ import { baghdadDate, createOrder, createSlot } from "./helpers/booking";
 import { admin } from "./helpers/supabase";
 
 // The crew app, part A (spec §8.1 C1–C3a): My jobs, Job detail and the
-// status button. Photos are optional (settled Oct 26, 2026).
+// status button. Photos are optional (settled Oct 26, 2026). Photos, clips
+// and the full finish form are in crew-media.spec.ts.
 
 const { Crew } = messages;
 
@@ -119,9 +120,11 @@ test("a crew runs a job from confirmed to completed without photos", async ({ pa
   await page.getByRole("button", { name: Crew.steps.finish }).click();
   const sheet = page.getByRole("dialog", { name: Crew.finish.title });
   const confirm = sheet.getByRole("button", { name: Crew.finish.confirm });
-  await expect(confirm).toBeDisabled();
+  await confirm.click();
+  await expect(sheet.getByRole("alert")).toHaveText(Crew.errors.cash_not_collected);
   await sheet.getByRole("checkbox").check();
   await expect(sheet).toContainText("35,000");
+  await sheet.getByLabel(Crew.finish.sterilant).fill("كلور");
   await confirm.click();
   await expect(sheet).toBeHidden();
   await expect(badge).toContainText(Crew.status.completed);

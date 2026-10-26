@@ -199,6 +199,24 @@ describe("MediaQueue", () => {
     expect(second.attached).toHaveLength(1);
   });
 
+  it("keeps a photo the page closed on while it was being prepared", async () => {
+    const first = setup();
+    first.deps.prepare = () => new Promise(() => undefined);
+    await first.queue.start(USER_A, first.attach);
+    void first.queue.add(USER_A, target, [photo()]);
+    await flush();
+    expect(first.queue.getItems(USER_A)[0]?.status).toBe("preparing");
+    expect(await first.store.all()).toMatchObject([{ prepared: false }]);
+
+    const second = setup({ store: first.store });
+    await second.queue.start(USER_A, second.attach);
+    await flush();
+    expect(second.uploads).toHaveLength(1);
+    second.uploads[0]?.callbacks.onSuccess();
+    await flush();
+    expect(second.attached).toHaveLength(1);
+  });
+
   it("attaches again after a reload when only the attach was left", async () => {
     const first = setup();
     first.state.attach = "offline";
