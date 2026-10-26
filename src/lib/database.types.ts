@@ -115,6 +115,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      certificates: {
+        Row: {
+          id: string;
+          issued_at: string;
+          next_due_on: string;
+          order_id: string;
+          pdf_path: string | null;
+          public_code: string;
+          residual_chlorine_mg_l: number | null;
+          sterilant: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: string;
+          issued_at?: string;
+          next_due_on: string;
+          order_id: string;
+          pdf_path?: string | null;
+          public_code: string;
+          residual_chlorine_mg_l?: number | null;
+          sterilant?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          issued_at?: string;
+          next_due_on?: string;
+          order_id?: string;
+          pdf_path?: string | null;
+          public_code?: string;
+          residual_chlorine_mg_l?: number | null;
+          sterilant?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "certificates_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       crew_live_location: {
         Row: {
           accuracy_m: number;
@@ -633,6 +678,49 @@ export type Database = {
         };
         Relationships: [];
       };
+      ratings: {
+        Row: {
+          comment: string | null;
+          created_at: string;
+          order_id: string;
+          stars: number;
+          tags: Database["public"]["Enums"]["rating_tag"][];
+          ticket_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          comment?: string | null;
+          created_at?: string;
+          order_id: string;
+          stars: number;
+          tags?: Database["public"]["Enums"]["rating_tag"][];
+          ticket_id?: string | null;
+        };
+        Update: {
+          comment?: string | null;
+          created_at?: string;
+          order_id?: string;
+          stars?: number;
+          tags?: Database["public"]["Enums"]["rating_tag"][];
+          ticket_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ratings_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ratings_ticket_id_fkey";
+            columns: ["ticket_id"];
+            isOneToOne: true;
+            referencedRelation: "tickets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       service_areas: {
         Row: {
           active: boolean;
@@ -665,6 +753,7 @@ export type Database = {
         Row: {
           booking_window_days: number;
           cancel_cutoff_hours: number;
+          certificate_text: string;
           cleaning_interval_months: number;
           company_phone: string | null;
           id: boolean;
@@ -684,6 +773,7 @@ export type Database = {
         Insert: {
           booking_window_days?: number;
           cancel_cutoff_hours?: number;
+          certificate_text?: string;
           cleaning_interval_months?: number;
           company_phone?: string | null;
           id?: boolean;
@@ -702,6 +792,7 @@ export type Database = {
         Update: {
           booking_window_days?: number;
           cancel_cutoff_hours?: number;
+          certificate_text?: string;
           cleaning_interval_months?: number;
           company_phone?: string | null;
           id?: boolean;
@@ -838,6 +929,61 @@ export type Database = {
           },
         ];
       };
+      tickets: {
+        Row: {
+          category: Database["public"]["Enums"]["ticket_category"] | null;
+          created_at: string;
+          description: string | null;
+          id: string;
+          number: number;
+          order_id: string | null;
+          source: Database["public"]["Enums"]["ticket_source"];
+          status: Database["public"]["Enums"]["ticket_status"];
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          category?: Database["public"]["Enums"]["ticket_category"] | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          number?: never;
+          order_id?: string | null;
+          source: Database["public"]["Enums"]["ticket_source"];
+          status?: Database["public"]["Enums"]["ticket_status"];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          category?: Database["public"]["Enums"]["ticket_category"] | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          number?: never;
+          order_id?: string | null;
+          source?: Database["public"]["Enums"]["ticket_source"];
+          status?: Database["public"]["Enums"]["ticket_status"];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tickets_order_id_user_id_fkey";
+            columns: ["order_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id", "customer_id"];
+          },
+          {
+            foreignKeyName: "tickets_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -957,6 +1103,24 @@ export type Database = {
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
       in_service_area: { Args: { p_lat: number; p_lng: number }; Returns: boolean };
       otp_locked_until: { Args: { p_phone: string }; Returns: string };
+      public_certificate: {
+        Args: { p_code: string };
+        Returns: {
+          district: string;
+          issued_at: string;
+          items: Json;
+          number: number;
+        }[];
+      };
+      rate_order: {
+        Args: {
+          p_comment?: string;
+          p_order_id: string;
+          p_stars: number;
+          p_tags?: Database["public"]["Enums"]["rating_tag"][];
+        };
+        Returns: number;
+      };
       record_otp_send_failed: {
         Args: { p_error: string; p_request_id: number };
         Returns: undefined;
@@ -1021,8 +1185,12 @@ export type Database = {
         | "no_show";
       otp_channel: "whatsapp" | "sms";
       payment_method: "cash";
+      rating_tag: "on_time" | "clean_work" | "respectful" | "clear_photos";
       tank_size: "s" | "m" | "l";
       tank_type: "roof" | "ground";
+      ticket_category: "leak" | "smell" | "late" | "staff" | "payment" | "other";
+      ticket_source: "app" | "rating";
+      ticket_status: "open" | "in_progress" | "closed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1151,8 +1319,12 @@ export const Constants = {
       ],
       otp_channel: ["whatsapp", "sms"],
       payment_method: ["cash"],
+      rating_tag: ["on_time", "clean_work", "respectful", "clear_photos"],
       tank_size: ["s", "m", "l"],
       tank_type: ["roof", "ground"],
+      ticket_category: ["leak", "smell", "late", "staff", "payment", "other"],
+      ticket_source: ["app", "rating"],
+      ticket_status: ["open", "in_progress", "closed"],
     },
   },
 } as const;
