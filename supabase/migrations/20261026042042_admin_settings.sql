@@ -73,10 +73,12 @@ begin
     return;
   end if;
 
-  -- Column names come from the catalog check above, quoted with %I.
+  -- Column names come from the catalog check above, quoted with %I. The
+  -- where clause is for pg-safeupdate, which PostgREST loads: it refuses an
+  -- update without one, even on this one-row table.
   select string_agg(format('%I', k), ', ') into v_cols from jsonb_object_keys(v_diff) as k;
   execute format(
-    'update public.settings as s set (%1$s) = (select %1$s from jsonb_populate_record(null::public.settings, $1))',
+    'update public.settings as s set (%1$s) = (select %1$s from jsonb_populate_record(null::public.settings, $1)) where s.id',
     v_cols
   )
   using p_patch;
