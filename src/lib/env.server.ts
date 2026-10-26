@@ -98,3 +98,34 @@ export function otpEnv(): OtpEnv {
   });
   return cachedOtp;
 }
+
+// Certificate PDFs (spec §3, §10.1; src/lib/certificates/pdf.ts). On Vercel
+// the PDF is made with @sparticuz/chromium, which opens the deployment's own
+// print page. Deployment Protection blocks that request unless "Protection
+// Bypass for Automation" is on, which sets VERCEL_AUTOMATION_BYPASS_SECRET
+// (docs/deploy-setup.md). Elsewhere (local, CI) CERTIFICATE_CHROMIUM_PATH
+// names a Chromium to use; without it the PDF can't be made there.
+const certificateEnvSchema = z.object({
+  CERTIFICATE_CHROMIUM_PATH: optional(z.string().min(1)),
+  VERCEL_ENV: optional(z.enum(["production", "preview", "development"])),
+  // The deployment's own host, e.g. zalal-abc123.vercel.app (no scheme).
+  VERCEL_URL: optional(z.string().min(1)),
+  // The production domain, e.g. zalal.iq: the address the QR code opens.
+  VERCEL_PROJECT_PRODUCTION_URL: optional(z.string().min(1)),
+  VERCEL_AUTOMATION_BYPASS_SECRET: optional(z.string().min(1)),
+});
+
+export type CertificateEnv = z.infer<typeof certificateEnvSchema>;
+
+let cachedCertificate: CertificateEnv | undefined;
+
+export function certificateEnv(): CertificateEnv {
+  cachedCertificate ??= certificateEnvSchema.parse({
+    CERTIFICATE_CHROMIUM_PATH: process.env.CERTIFICATE_CHROMIUM_PATH,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_URL: process.env.VERCEL_URL,
+    VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    VERCEL_AUTOMATION_BYPASS_SECRET: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+  });
+  return cachedCertificate;
+}

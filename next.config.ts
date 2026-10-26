@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
   },
   // PostHog's API paths end in a slash (/e/); a redirect would drop events.
   skipTrailingSlashRedirect: true,
+  // Certificate PDFs (src/lib/certificates/pdf.ts): @sparticuz/chromium finds
+  // its compressed browser through import.meta.url, which the file tracer
+  // can't follow, so ship its bin/ with the two functions that print: the
+  // crew job page (its completion action) and the PDF download.
+  outputFileTracingIncludes: {
+    "/crew/jobs/\\[id\\]": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+    "/orders/\\[id\\]/certificate/pdf": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+  },
   turbopack: {
     rules: {
       "*.css": {

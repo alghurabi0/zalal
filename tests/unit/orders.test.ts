@@ -42,13 +42,13 @@ describe("badgeTone and primaryAction", () => {
     expect(badgeTone("cancelled")).toBe("neutral");
   });
 
-  it("tracks on the way, follows the job from arrival, rebooks a cancelled order", () => {
+  it("tracks on the way, follows the job from arrival, opens the certificate, rebooks a cancelled order", () => {
     expect(primaryAction("cancelled")).toBe("rebook");
     expect(primaryAction("on_the_way")).toBe("track");
     expect(primaryAction("arrived")).toBe("progress");
     expect(primaryAction("in_progress")).toBe("progress");
-    // The certificate comes with Phase 4, task 2.
-    for (const status of ["pending_confirmation", "confirmed", "completed", "no_show"] as const) {
+    expect(primaryAction("completed")).toBe("certificate");
+    for (const status of ["pending_confirmation", "confirmed", "no_show"] as const) {
       expect(primaryAction(status)).toBe("details");
     }
   });
@@ -59,6 +59,7 @@ describe("badgeTone and primaryAction", () => {
     expect(actionHref("progress", id)).toBe(`/orders/${id}/live`);
     expect(actionHref("details", id)).toBe(`/orders/${id}`);
     expect(actionHref("rebook", id)).toBe("/book");
+    expect(actionHref("certificate", id)).toBe(`/orders/${id}/certificate`);
   });
 
   it("opens Tracking on the way and arrived, Job progress from arrival on", () => {

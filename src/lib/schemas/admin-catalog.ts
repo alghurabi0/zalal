@@ -138,6 +138,12 @@ export const crewSettingsSchema = z.object({
   sterilant_text: z.string().trim().max(STERILANT_MAX),
 });
 
+/** settings.certificate_text (spec §10.1 item 4). */
+export const CERTIFICATE_TEXT_MAX = 800;
+export const certificateSettingsSchema = z.object({
+  certificate_text: z.string().trim().max(CERTIFICATE_TEXT_MAX),
+});
+
 /** settings.terms_md / privacy_md */
 export const LEGAL_MAX = 50_000;
 export const legalSettingsSchema = z.object({
@@ -150,6 +156,7 @@ export const settingsSectionSchema = z.discriminatedUnion("section", [
   z.object({ section: z.literal("support"), values: supportSettingsSchema }),
   z.object({ section: z.literal("booking"), values: bookingSettingsSchema }),
   z.object({ section: z.literal("crew"), values: crewSettingsSchema }),
+  z.object({ section: z.literal("certificate"), values: certificateSettingsSchema }),
   z.object({ section: z.literal("legal"), values: legalSettingsSchema }),
 ]);
 

@@ -20,6 +20,7 @@ import { Stepper } from "@/components/ui/stepper";
 import { TabBar } from "@/components/ui/tab-bar";
 import { routes } from "@/lib/routes";
 
+import { LightboxDemo } from "./lightbox-demo";
 import { SheetDemo } from "./sheet-demo";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -241,6 +242,10 @@ export default function KitPage() {
               <Button>{t("saveAddress")}</Button>
             </SheetPanel>
           </div>
+        </Section>
+
+        <Section title={t("sections.lightbox")}>
+          <LightboxDemo />
         </Section>
 
         <Section title={t("sections.steps")}>

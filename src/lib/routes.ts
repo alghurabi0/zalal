@@ -22,6 +22,17 @@ export const routes = {
   tracking: (id: string) => `/orders/${id}/track`,
   /** Job progress (§5.14), from arrival on. */
   jobProgress: (id: string) => `/orders/${id}/live`,
+  /** Certificate and rating (§5.15, Report), once the order is completed. */
+  certificate: (id: string) => `/orders/${id}/certificate`,
+  /** Downloads the certificate PDF (made first if missing). */
+  certificatePdf: (id: string) => `/orders/${id}/certificate/pdf`,
+  /**
+   * The A4 page the PDF is printed from (§10.1), by certificate id. Opens
+   * with the print token (headless Chromium) or for the customer and admins.
+   */
+  certificatePrint: (certificateId: string) => `/certificates/${certificateId}/print`,
+  /** Public certificate page (N15), no login. */
+  publicCertificate: (code: string) => `/c/${code}`,
   /** Booking step 1 (§5.9): tanks, date and slot. */
   book: "/book",
   /** Booking step 2 (§5.10): photos, videos and a note. */

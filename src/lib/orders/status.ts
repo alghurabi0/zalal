@@ -59,11 +59,10 @@ export function badgeTone(status: OrderStatus): BadgeTone {
 /**
  * The main button on an order card (spec §5.12): تتبّع opens Tracking while
  * the crew is on the way, تابع الشغل opens Job progress once it has arrived,
- * and a cancelled order offers أعد الحجز. The certificate comes with
- * Phase 4, task 2; until then a completed order, like the others, gets
- * تفاصيل الطلب, which opens Order details.
+ * الشهادة opens the certificate (Report) once the job is completed, and a
+ * cancelled order offers أعد الحجز. The rest get تفاصيل الطلب.
  */
-export type OrderAction = "details" | "rebook" | "track" | "progress";
+export type OrderAction = "details" | "rebook" | "track" | "progress" | "certificate";
 
 export function primaryAction(status: OrderStatus): OrderAction {
   switch (status) {
@@ -74,6 +73,8 @@ export function primaryAction(status: OrderStatus): OrderAction {
     case "arrived":
     case "in_progress":
       return "progress";
+    case "completed":
+      return "certificate";
     default:
       return "details";
   }
@@ -88,6 +89,8 @@ export function actionHref(action: OrderAction, orderId: string): string {
       return routes.tracking(orderId);
     case "progress":
       return routes.jobProgress(orderId);
+    case "certificate":
+      return routes.certificate(orderId);
     default:
       return routes.order(orderId);
   }

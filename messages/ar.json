@@ -374,7 +374,8 @@
       "completed": "مكتمل",
       "cancelled": "ملغي",
       "no_show": "ما لكينا أحد"
-    }
+    },
+    "certificate": "الشهادة"
   },
   "Order": {
     "title": "طلب <num>#{number}</num>",
@@ -451,7 +452,8 @@
       "slot_unavailable": "هذا الموعد ما بقى متاح، اختار موعد ثاني",
       "invalid_transition": "تغيرت حالة الطلب، ما نكدر نغيره هسه.",
       "failed": "ما كدرنا نحفظ التغيير، جرب مرة ثانية."
-    }
+    },
+    "certificateButton": "الشهادة"
   },
   "Tracking": {
     "title": "تتبع الفريق",
@@ -516,7 +518,110 @@
     "noFilesOpen": "الفريق يرفع الصور والمقاطع هنا أول بأول، إذا صوّر.",
     "noFilesDone": "الفريق ما رفع صور لهذا الطلب.",
     "certificateLater": "شوف الشهادة (بعد ما يخلص)",
-    "details": "تفاصيل الطلب"
+    "certificate": "شوف الشهادة"
+  },
+  "Report": {
+    "metaTitle": "شهادة التعقيم",
+    "title": "شهادة التعقيم",
+    "download": "تحميل الشهادة PDF",
+    "headline": "خزانك نظيف ومعقّم",
+    "subtitle": "طلب <num>#{number}</num> · {date} · رقم الشهادة <num>{certificate}</num>",
+    "before": "قبل",
+    "after": "بعد",
+    "beforePhotos": "صور قبل التنظيف",
+    "afterPhotos": "صور بعد التنظيف",
+    "noPhotos": "ما اكو صور",
+    "photo": "صورة {n}",
+    "clips": "مقاطع الشغل",
+    "clip": "مقطع {n}",
+    "fileMissing": "ما كدرنا نفتح الملف",
+    "rows": {
+      "label": "تفاصيل الشهادة",
+      "tanks": "الخزانات",
+      "sterilant": "مادة التعقيم",
+      "chlorine": "الكلور المتبقي بالماي",
+      "by": "نُفّذ بواسطة",
+      "next": "التنظيف الجاي"
+    },
+    "tank": "{type} · <iso>{size}</iso>{qty, plural, =1 {} other { × #}}",
+    "chlorineValue": "{value} ملغ/لتر",
+    "company": "شركة زلال",
+    "nextValue": "{month} · نذكّرك",
+    "rating": {
+      "title": "شلون كانت الخدمة؟",
+      "stars": "التقييم",
+      "star": "{n} من 5",
+      "tagsLegend": "شنو عجبك؟",
+      "tags": {
+        "on_time": "وصلوا بالوقت",
+        "clean_work": "شغل نظيف",
+        "respectful": "تعامل محترم",
+        "clear_photos": "الصور واضحة"
+      },
+      "comment": "ملاحظتك (اختياري)",
+      "commentPlaceholder": "اكتب شي تحب نعرفه",
+      "send": "أرسل التقييم",
+      "pickStars": "اختار عدد النجوم أول",
+      "thanks": "شكراً على تقييمك",
+      "ticket": "فتحنا لك بلاغ <num>{ticket}</num>، وراح نتواصل وياك قريب.",
+      "errors": {
+        "already_rated": "هذا الطلب مقيّم من قبل.",
+        "not_allowed": "ما تكدر تقيّم هذا الطلب.",
+        "failed": "ما كدرنا نرسل التقييم، جرب مرة ثانية."
+      }
+    },
+    "share": "مشاركة",
+    "shareText": "شهادة تعقيم خزان من زلال · {certificate}",
+    "copied": "نسخنا رابط الشهادة",
+    "shareFailed": "ما كدرنا نشارك الرابط",
+    "pdfFailed": "ما كدرنا نجهّز ملف الشهادة هسه، جرب بعد شوية.",
+    "notReady": "الشهادة مو جاهزة",
+    "notReadyBody": "ما لكينا شهادة لهذا الطلب. إذا خلص الشغل هسه، جرب بعد شوية.",
+    "toOrder": "تفاصيل الطلب"
+  },
+  "CertificateDoc": {
+    "metaTitle": "شهادة تنظيف وتعقيم",
+    "title": "شهادة تنظيف وتعقيم خزان ماء",
+    "number": "رقم الشهادة",
+    "issued": "تاريخ الإصدار",
+    "customer": "الزبون",
+    "name": "الاسم",
+    "address": "العنوان",
+    "addressValue": "{district} · {landmark}",
+    "phone": "الهاتف",
+    "service": "الخدمة",
+    "order": "رقم الطلب",
+    "serviceDate": "موعد الخدمة",
+    "serviceDateValue": "{date} · <num>{from}–{to}</num> {period, select, morning {الصبح} noon {الظهر} afternoon {العصر} other {المسا}}",
+    "tanks": "الخزانات",
+    "sterilant": "مادة التعقيم",
+    "chlorine": "الكلور المتبقي",
+    "description": "وصف الخدمة",
+    "photos": "صور من الشغل",
+    "before": "قبل",
+    "after": "بعد",
+    "next": "موعد التنظيف الجاي (موصى به)",
+    "verify": "التحقق من الشهادة",
+    "verifyBody": "امسح الرمز أو افتح الرابط:",
+    "code": "رمز التحقق",
+    "qr": "رمز QR لصفحة التحقق من الشهادة",
+    "stamp": "ختم الشركة",
+    "issuer": "شركة زلال",
+    "companyPhone": "هاتف الشركة",
+    "disclaimer": "هذه الشهادة وثيقة صادرة من شركة زلال لتوثيق الخدمة المنفذة، وليست شهادة من جهة رسمية"
+  },
+  "PublicCertificate": {
+    "metaTitle": "التحقق من شهادة",
+    "title": "التحقق من الشهادة",
+    "valid": "شهادة صادرة من شركة زلال",
+    "number": "رقم الشهادة",
+    "issued": "تاريخ الإصدار",
+    "district": "المنطقة",
+    "tanks": "الخزانات",
+    "notFound": "ما لكينا هذه الشهادة",
+    "notFoundBody": "تأكد من الرابط أو من رمز التحقق المكتوب على الشهادة.",
+    "home": "تعرّف على زلال",
+    "disclaimer": "هذه الشهادة وثيقة صادرة من شركة زلال لتوثيق الخدمة المنفذة، وليست شهادة من جهة رسمية"
   },
   "Profile": {
     "title": "حسابي",
@@ -718,7 +823,10 @@
       "profile": "حسابي",
       "chatUnread": "رسائل جديدة"
     },
-    "iqd": "{amount} د.ع"
+    "iqd": "{amount} د.ع",
+    "photoOf": "{n} من {total}",
+    "previousPhoto": "الصورة السابقة",
+    "nextPhoto": "الصورة التالية"
   },
   "Kit": {
     "title": "مكونات الواجهة",
@@ -733,7 +841,8 @@
       "skeleton": "التحميل",
       "empty": "الحالة الفارغة",
       "error": "الخطأ",
-      "tabBar": "الشريط السفلي"
+      "tabBar": "الشريط السفلي",
+      "lightbox": "عرض الصور"
     },
     "next": "التالي",
     "skip": "تخطي",
@@ -793,7 +902,9 @@
     "emptyBody": "من يصير شي جديد بطلبك، نخبرك هنا.",
     "emptyCta": "رجوع للرئيسية",
     "successTitle": "وصلنا بلاغك",
-    "successCta": "افتح المحادثة"
+    "successCta": "افتح المحادثة",
+    "photo": "صورة {n}",
+    "openPhoto": "كبّر {label}"
   },
   "Admin": {
     "nav": {
@@ -850,9 +961,14 @@
       "pendingCaption": "الطلبات اللي تنتظر التأكيد، الأقرب موعداً أولاً",
       "later": "تجي قريباً",
       "chats": "المحادثات غير المقروءة",
-      "tickets": "البلاغات المفتوحة",
       "subscriptions": "طلبات الاشتراك",
-      "comingSoon": "تنضاف ويه المحادثة والاشتراكات"
+      "comingSoon": "تنضاف ويه المحادثة والاشتراكات",
+      "ticketsOpen": "البلاغات المفتوحة ({count})",
+      "ticketsEmpty": "ماكو بلاغات مفتوحة",
+      "ticketsEmptyBody": "التقييم بـ 3 نجوم أو أقل يفتح بلاغ ويطلع هنا. إدارة البلاغات تجي ويه قسم البلاغات.",
+      "ticketRow": "<num>{ticket}</num> · طلب <num>#{order}</num>",
+      "ticketStars": "{n} من 5",
+      "ticketsCaption": "أحدث البلاغات المفتوحة"
     },
     "table": {
       "number": "الطلب",
@@ -949,7 +1065,18 @@
         "booked": "انحجز الطلب",
         "rescheduled": "تغيّر الموعد إلى {date}",
         "moved": "{from} ← {to}"
-      }
+      },
+      "certificate": "الشهادة والتقييم",
+      "certificateNumber": "الشهادة",
+      "certificateCode": "رمز التحقق",
+      "certificatePdf": "تحميل PDF",
+      "certificatePrint": "صفحة الطباعة",
+      "certificatePublic": "صفحة التحقق",
+      "noCertificate": "ماكو شهادة لهذا الطلب.",
+      "rating": "التقييم",
+      "stars": "{n} من 5",
+      "notRated": "الزبون بعده ما قيّم.",
+      "ticket": "بلاغ <num>{number}</num> · {status, select, open {مفتوح} in_progress {قيد المعالجة} other {مغلق}}"
     },
     "actions": {
       "title": "الإجراءات",
@@ -1129,6 +1256,11 @@
         "title": "الفريق",
         "sterilant": "مادة التعقيم",
         "sterilantHint": "تنكتب تلقائياً باستمارة إنهاء الشغل، والفريق يكدر يغيّرها."
+      },
+      "certificate": {
+        "title": "الشهادة",
+        "text": "وصف الخدمة بالشهادة",
+        "textHint": "فقرة قصيرة تنطبع بكل شهادة جديدة: شنو يشمل التنظيف والتعقيم."
       },
       "legal": {
         "title": "الشروط والخصوصية",

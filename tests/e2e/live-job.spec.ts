@@ -291,13 +291,13 @@ test("Job progress shows the steps and the crew's photos and clips as they arriv
   await close.click();
   await expect(dialog).toHaveCount(0);
 
-  // Done: no badge, and the button opens Order details until certificates exist.
+  // Done: no badge, and the button opens the certificate.
   await moveTo(order.id, "in_progress", "completed");
   await expect(main.getByText(LiveJob.live, { exact: true })).toHaveCount(0);
   await expect(steps.nth(2)).toHaveAttribute("data-state", "done");
-  await expect(main.getByRole("link", { name: LiveJob.details })).toHaveAttribute(
+  await expect(main.getByRole("link", { name: LiveJob.certificate })).toHaveAttribute(
     "href",
-    `/orders/${order.id}`,
+    `/orders/${order.id}/certificate`,
   );
 
   await admin.storage.from("order-media").remove(paths);

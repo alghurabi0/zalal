@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { chromium, defineConfig, devices } from "@playwright/test";
 
 import { OTP_OUTBOX } from "./tests/e2e/helpers/outbox";
 
@@ -42,6 +42,11 @@ export default defineConfig({
     timeout: 180_000,
     // Without an OTPIQ key the app logs login codes; this also writes them
     // where the tests can read them (src/lib/otp/senders.ts).
-    env: { OTP_DEV_OUTBOX: OTP_OUTBOX },
+    // Certificate PDFs (src/lib/certificates/pdf.ts) need a Chromium off
+    // Vercel; the server borrows the one the tests run in.
+    env: {
+      OTP_DEV_OUTBOX: OTP_OUTBOX,
+      CERTIFICATE_CHROMIUM_PATH: executablePath ?? chromium.executablePath(),
+    },
   },
 });
