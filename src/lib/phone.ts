@@ -41,6 +41,20 @@ export function normalizeIraqiMobile(input: string): string | null {
   return /^7[3-9]\d{8}$/.test(digits) ? `+964${digits}` : null;
 }
 
+/**
+ * Like normalizeIraqiMobile, but also takes landlines (the company phone,
+ * settings.company_phone): +964 then 8 to 10 digits, not starting with 0.
+ */
+export function normalizeIraqiPhone(input: string): string | null {
+  const mobile = normalizeIraqiMobile(input);
+  if (mobile) return mobile;
+  let digits = toWesternDigits(input).replace(/[\s\-().]/g, "");
+  if (digits.startsWith("+964")) digits = digits.slice(4);
+  else if (digits.startsWith("00964")) digits = digits.slice(5);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  return /^[1-9]\d{7,9}$/.test(digits) ? `+964${digits}` : null;
+}
+
 /** Zod schema for a typed phone number; parses to E.164. Shared by the Login form and the server. */
 export const phoneInputSchema = z
   .string()

@@ -104,6 +104,16 @@ export function slotParts(
   return { from: start.text, to: clock(endAt).text, period };
 }
 
+/**
+ * slotParts for a slot's times of day ("08:00:00", Baghdad time, as the
+ * slots table stores them), e.g. on the A9 list.
+ */
+export function timeSlotParts(startTime: string, endTime: string) {
+  // Baghdad is UTC+3 all year, so any day gives the same clock.
+  const at = (time: string) => `2026-01-01T${time.slice(0, 5)}:00+03:00`;
+  return slotParts(at(startTime), at(endTime));
+}
+
 const dayMonthTime = new Intl.DateTimeFormat(LOCALE, {
   timeZone,
   day: "numeric",
