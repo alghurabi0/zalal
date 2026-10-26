@@ -30,12 +30,11 @@ export function distanceParts(km: number): { unit: "km" | "m"; value: string } {
 }
 
 /**
- * Seconds since the position was saved, by the server's clock: `offsetMs`
- * is the server's time minus the device's when the page loaded, so a phone
- * set to the wrong time still shows the right age.
+ * Seconds since the position was saved. `serverNowMs` is the server's clock
+ * (useServerNow), so a phone set to the wrong time still shows the right age.
  */
-export function ageSeconds(updatedAt: string, nowMs: number, offsetMs: number): number {
-  return Math.max(0, Math.floor((nowMs + offsetMs - new Date(updatedAt).getTime()) / 1000));
+export function ageSeconds(updatedAt: string, serverNowMs: number): number {
+  return Math.max(0, Math.floor((serverNowMs - new Date(updatedAt).getTime()) / 1000));
 }
 
 export function isStale(ageS: number): boolean {

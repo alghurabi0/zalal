@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { formatDayTime } from "@/lib/dates";
 import { orderChangeErrorFor } from "@/lib/orders/errors";
 import {
+  actionHref,
   badgeTone,
   changeState,
   type OrderStatus,
@@ -50,6 +51,14 @@ describe("badgeTone and primaryAction", () => {
     for (const status of ["pending_confirmation", "confirmed", "completed", "no_show"] as const) {
       expect(primaryAction(status)).toBe("details");
     }
+  });
+
+  it("sends each button to its screen", () => {
+    const id = "6f1d2c1e-0000-4000-8000-000000000001";
+    expect(actionHref("track", id)).toBe(`/orders/${id}/track`);
+    expect(actionHref("progress", id)).toBe(`/orders/${id}/live`);
+    expect(actionHref("details", id)).toBe(`/orders/${id}`);
+    expect(actionHref("rebook", id)).toBe("/book");
   });
 
   it("opens Tracking on the way and arrived, Job progress from arrival on", () => {

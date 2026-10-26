@@ -17,7 +17,7 @@ import { cn } from "@/lib/cn";
 import { formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { getOrder, type OrderDetails } from "@/lib/orders/queries";
-import { canFollowJob, changeState, primaryAction } from "@/lib/orders/status";
+import { actionHref, canFollowJob, changeState, primaryAction } from "@/lib/orders/status";
 import { buildTimeline, type TimelineEntry } from "@/lib/orders/timeline";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
@@ -305,15 +305,17 @@ async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number 
   if (action === "track" || canFollowJob(order.status)) {
     return (
       <Footer>
-        {action === "track" ? (
-          <Button href={routes.tracking(order.id)} size="footer" className="w-full">
-            {t("track")}
-          </Button>
-        ) : (
-          <Button href={routes.jobProgress(order.id)} size="footer" className="w-full">
-            {order.status === "completed" ? t("jobMedia") : t("progress")}
-          </Button>
-        )}
+        <Button
+          href={action === "track" ? actionHref(action, order.id) : routes.jobProgress(order.id)}
+          size="footer"
+          className="w-full"
+        >
+          {action === "track"
+            ? t("track")
+            : order.status === "completed"
+              ? t("jobMedia")
+              : t("progress")}
+        </Button>
       </Footer>
     );
   }

@@ -86,6 +86,10 @@ test("the crew shares its position on the way and the customer tracks it live", 
     .single()
     .throwOnError();
   expect(shared).toEqual({ lat: 32.6365, lng: 44.0555, crew_id: crewSide.crew.id });
+  // It keeps sharing on every crew screen, not only the job's own page.
+  await job.goto("/crew");
+  await expect(job.getByText(Crew.location.keepOpen)).toBeVisible();
+  await job.goto(`/crew/jobs/${order.id}`);
 
   // Orders offers تتبّع الفريق, which opens Tracking.
   await page.goto("/orders");

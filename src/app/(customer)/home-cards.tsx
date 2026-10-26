@@ -13,7 +13,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { activeOrder, type OrderSummary } from "@/lib/orders/queries";
-import { primaryAction } from "@/lib/orders/status";
+import { actionHref, primaryAction } from "@/lib/orders/status";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import { tankStatus, type TankStatus } from "@/lib/tanks/status";
@@ -68,12 +68,7 @@ async function ActiveOrderCard({ order }: { order: OrderSummary }) {
   });
   const num = (chunks: ReactNode) => <span dir="ltr">{chunks}</span>;
   const action = primaryAction(status);
-  const href =
-    action === "track"
-      ? routes.tracking(order.id)
-      : action === "progress"
-        ? routes.jobProgress(order.id)
-        : routes.order(order.id);
+  const href = actionHref(action, order.id);
 
   return (
     <Card

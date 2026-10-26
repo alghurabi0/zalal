@@ -23,14 +23,13 @@ import { routes } from "@/lib/routes";
 
 import { JobActions } from "./job-actions";
 import { JobMedia } from "./job-media";
-import { LocationShare } from "./location-share";
 
 /**
  * Job detail (C3, spec §8.1): the pin with directions, a call to the
  * customer while the job is open, tank lines, the customer's note and
  * files, the crew's own photos and clips (C3b), the timeline with staff
  * notes, and the status button (C3a) with the finish form (C4). While the
- * job is on the way the phone shares its position (§8.1 GPS rule).
+ * job is on the way the crew layout shares the phone's position.
  */
 export default function JobPage(props: PageProps<"/crew/jobs/[id]">) {
   return (
@@ -86,7 +85,6 @@ async function JobContent({ params }: PageProps<"/crew/jobs/[id]">) {
         <StatusBadge status={job.status} label={t(`status.${job.status}`)} className="text-13" />
       </Header>
       <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
-        {job.status === "on_the_way" && <LocationShare key={job.id} orderId={job.id} />}
         <Place job={job} />
         <Summary job={job} />
         {job.customer_note && (

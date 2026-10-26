@@ -3,7 +3,6 @@
 // TypeScript 6 no longer loads every @types package by itself.
 /// <reference types="google.maps" />
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   AdvancedMarker,
   AdvancedMarkerAnchorPoint,
@@ -13,9 +12,10 @@ import {
 import { MapPinned } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { CrewPin, HomePin } from "@/components/live/pins";
+import { useServerNow } from "@/components/live/use-server-now";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { areaPath, boundsOf, type MultiPolygonCoords, projector } from "@/lib/admin/geojson";
@@ -25,7 +25,7 @@ import { publicEnv } from "@/lib/env";
 import type { CrewPosition } from "@/lib/live/queries";
 import { ageSeconds, distanceKm, distanceParts, isStale } from "@/lib/live/tracking";
 import { routes } from "@/lib/routes";
-import { createClient } from "@/lib/supabase/browser";
+import { usePostgresChanges } from "@/lib/supabase/use-postgres-changes";
 
 const WIDTH = 800;
 const HEIGHT = 460;
@@ -36,7 +36,7 @@ type PositionRow = CrewPosition & { order_id: string; crew_id: string };
 export function LiveMap({ data }: { data: LiveMapData }) {
   const t = useTranslations("Admin.liveMap");
   const live = useLivePositions();
-  const now = useServerNow(data.readAt);
+  const now = useServerNow(data.readAt, 5000);
 
   const jobs = data.jobs.map((job) => {
     const update = live.get(job.orderId);
@@ -46,7 +46,7 @@ export function LiveMap({ data }: { data: LiveMapData }) {
       (!job.position || Date.parse(update.updated_at) > Date.parse(job.position.updated_at))
         ? update
         : job.position;
-    const age = position && now !== null ? ageSeconds(position.updated_at, now, 0) : null;
+    const age = position && now !== null ? ageSeconds(position.updated_at, now) : null;
     return { ...job, position, age, stale: age !== null && isStale(age) };
   });
 
@@ -298,12 +298,11 @@ function useLivePositions(): ReadonlyMap<string, PositionRow> {
   const [positions, setPositions] = useState<ReadonlyMap<string, PositionRow>>(
     () => new globalThis.Map(),
   );
-
-  useEffect(() => {
-    const supabase = createClient();
-    let channel: RealtimeChannel | null = null;
-    let closed = false;
-    const take = (row: Partial<PositionRow>) => {
+  usePostgresChanges({
+    table: "crew_live_location",
+    events: ["INSERT", "UPDATE"],
+    onChange: (value) => {
+      const row = value as Partial<PositionRow>;
       if (!row.order_id || !row.crew_id || !row.updated_at) return;
       const next = row as PositionRow;
       setPositions((current) => {
@@ -313,40 +312,7 @@ function useLivePositions(): ReadonlyMap<string, PositionRow> {
         copy.set(next.order_id, next);
         return copy;
       });
-    };
-
-    void (async () => {
-      // Join with the admin's token, or RLS sends nothing (spec §3).
-      const { data } = await supabase.auth.getSession();
-      if (closed || !data.session) return;
-      await supabase.realtime.setAuth(data.session.access_token);
-      if (closed) return;
-      const table = { schema: "public", table: "crew_live_location" };
-      channel = supabase
-        .channel(`admin-live-map:${crypto.randomUUID()}`)
-        .on("postgres_changes", { event: "INSERT", ...table }, (payload) => take(payload.new))
-        .on("postgres_changes", { event: "UPDATE", ...table }, (payload) => take(payload.new))
-        .subscribe();
-    })();
-
-    return () => {
-      closed = true;
-      if (channel) void supabase.removeChannel(channel);
-    };
-  }, []);
-
+    },
+  });
   return positions;
-}
-
-/** The server's clock, every 5 s (see Tracking). Null until mounted. */
-function useServerNow(readAt: number): number | null {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const offset = readAt - Date.now();
-    const tick = () => setNow(Date.now() + offset);
-    tick();
-    const timer = window.setInterval(tick, 5000);
-    return () => window.clearInterval(timer);
-  }, [readAt]);
-  return now;
 }

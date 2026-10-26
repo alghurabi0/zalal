@@ -37,12 +37,10 @@ describe("ageSeconds and isStale", () => {
   const saved = "2026-10-26T10:00:00.000Z";
   const at = (iso: string) => new Date(iso).getTime();
 
-  it("counts from the server's clock, whatever the phone's says", () => {
-    expect(ageSeconds(saved, at("2026-10-26T10:00:30Z"), 0)).toBe(30);
-    // A phone 5 minutes slow: the offset puts it right.
-    expect(ageSeconds(saved, at("2026-10-26T09:55:30Z"), 5 * 60 * 1000)).toBe(30);
-    // Never negative when the phone runs a little ahead.
-    expect(ageSeconds(saved, at("2026-10-26T09:59:58Z"), 0)).toBe(0);
+  it("counts seconds from the save, never below zero", () => {
+    expect(ageSeconds(saved, at("2026-10-26T10:00:30Z"))).toBe(30);
+    expect(ageSeconds(saved, at("2026-10-26T10:03:00Z"))).toBe(180);
+    expect(ageSeconds(saved, at("2026-10-26T09:59:58Z"))).toBe(0);
   });
 
   it("calls a position stale after 2 minutes", () => {

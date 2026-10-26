@@ -1,25 +1,25 @@
-import { Check, Play } from "lucide-react";
+import { Check } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { type ReactNode, Suspense } from "react";
+import { Suspense } from "react";
 import { z } from "zod";
 
 import { Screen } from "@/components/layout/screen";
 import { LiveMedia } from "@/components/live/live-media";
-import { PhotoGallery } from "@/components/live/photo-gallery";
 import { LiveOrders } from "@/components/orders/live-orders";
 import { OrderMissing } from "@/components/orders/order-missing";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { formatTime } from "@/lib/dates";
 import { isLive, jobSteps } from "@/lib/live/job";
-import { getJobProgress, type JobFile, type JobProgressData } from "@/lib/live/queries";
+import { getJobProgress, type JobProgressData } from "@/lib/live/queries";
 import { canFollowJob, canTrack } from "@/lib/orders/status";
 import { routes } from "@/lib/routes";
+
+import { JobFiles } from "./job-files";
 
 /**
  * Job progress (spec §5.14, LiveJob.dc.html): the timeline وصل الفريق / بدأ
@@ -76,7 +76,7 @@ async function JobProgressContent({ params }: PageProps<"/orders/[id]/live">) {
 
       <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
         <Steps job={job} />
-        <Files job={job} />
+        <JobFiles files={job.files} done={job.status === "completed"} />
       </div>
 
       <footer className="sticky bottom-0 z-10 flex gap-2.5 border-t border-border bg-surface px-5 pt-3 pb-safe-5.5">
@@ -137,85 +137,6 @@ async function Steps({ job }: { job: JobProgressData }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-async function Files({ job }: { job: JobProgressData }) {
-  const t = await getTranslations("LiveJob");
-  const of = (kind: JobFile["kind"]) => job.files.filter((file) => file.kind === kind);
-  const before = of("before");
-  const clips = of("clip");
-  const after = of("after");
-
-  if (job.files.length === 0) {
-    return (
-      <Card className="p-4 text-14 text-muted" data-testid="no-files">
-        {job.status === "completed" ? t("noFilesDone") : t("noFilesOpen")}
-      </Card>
-    );
-  }
-
-  const photos = (files: JobFile[]) =>
-    files.map((file, index) => ({
-      id: file.id,
-      url: file.url,
-      label: t("photo", { n: index + 1 }),
-    }));
-  return (
-    <>
-      {before.length > 0 && (
-        <Section title={t("before")}>
-          <PhotoGallery photos={photos(before)} missing={t("fileMissing")} />
-        </Section>
-      )}
-      {clips.length > 0 && (
-        <Section title={t("clips")}>
-          <ul className="flex flex-col gap-2">
-            {clips.map((clip, index) => (
-              <li key={clip.id} className="relative overflow-hidden rounded-20 bg-navy-2">
-                {clip.url ? (
-                  <video
-                    src={clip.url}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    aria-label={t("clip", { n: index + 1 })}
-                    className="aspect-video w-full object-contain"
-                  />
-                ) : (
-                  <span className="flex aspect-video items-center justify-center text-13 text-on-dark-muted">
-                    {t("fileMissing")}
-                  </span>
-                )}
-                <span className="pointer-events-none absolute start-3 top-3 flex items-center gap-1 rounded-8 bg-navy/75 px-2.5 py-0.5 text-13 font-extrabold text-white">
-                  <Play aria-hidden className="size-3.5 fill-current" />
-                  {t("clip", { n: index + 1 })}
-                  {clip.durationS !== null && (
-                    <span dir="ltr" className="ms-1 font-bold">
-                      {`0:${String(Math.round(clip.durationS)).padStart(2, "0")}`}
-                    </span>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-      {after.length > 0 && (
-        <Section title={t("after")}>
-          <PhotoGallery photos={photos(after)} missing={t("fileMissing")} />
-        </Section>
-      )}
-    </>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card className="flex flex-col gap-2.5 p-4">
-      <h2 className="text-16 font-extrabold">{title}</h2>
-      {children}
-    </Card>
   );
 }
 

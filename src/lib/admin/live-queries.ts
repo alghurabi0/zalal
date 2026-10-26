@@ -37,6 +37,7 @@ type JobRow = {
   lng: number;
   crew_id: string;
   crews: { name: string } | null;
+  crew_live_location: (CrewPosition & { crew_id: string }) | null;
 };
 
 export async function adminLiveMap(): Promise<LiveMapData> {
@@ -44,7 +45,9 @@ export async function adminLiveMap(): Promise<LiveMapData> {
   const [orders, areas] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, number, district, landmark, lat, lng, crew_id, crews(name)")
+      .select(
+        "id, number, district, landmark, lat, lng, crew_id, crews(name), crew_live_location(crew_id, lat, lng, accuracy_m, updated_at)",
+      )
       .eq("status", "on_the_way")
       .not("crew_id", "is", null)
       .order("slot_start_at")
@@ -55,20 +58,9 @@ export async function adminLiveMap(): Promise<LiveMapData> {
   if (orders.error) throw new Error(`Live orders read failed: ${orders.error.message}`);
   if (areas.error) throw new Error(`Service areas read failed: ${areas.error.message}`);
 
-  const ids = orders.data.map((order) => order.id);
-  const positions = new Map<string, CrewPosition & { crew_id: string }>();
-  if (ids.length > 0) {
-    const { data, error } = await supabase
-      .from("crew_live_location")
-      .select("order_id, crew_id, lat, lng, accuracy_m, updated_at")
-      .in("order_id", ids);
-    if (error) throw new Error(`Positions read failed: ${error.message}`);
-    for (const { order_id, ...row } of data) positions.set(order_id, row);
-  }
-
   return {
     jobs: orders.data.map((order) => {
-      const position = positions.get(order.id);
+      const position = order.crew_live_location;
       return {
         orderId: order.id,
         number: order.number,

@@ -3,33 +3,44 @@
 import { MapPinOff, Navigation, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/cn";
 import { type Fix, fixOf, SEND_INTERVAL_MS, shouldSend } from "@/lib/crew/location";
 
-import { shareLocation } from "../../actions";
+import { shareLocation } from "./actions";
 
 type ShareState = "starting" | "sharing" | "denied" | "unavailable" | "offline" | "failed";
 
 const TICK_MS = 5_000;
 
+const noSubscription = () => () => {};
+
 /**
  * GPS while on the way (spec §8.1): sends the phone's position at most every
- * 15 s for the customer's Tracking and the admin live map, and keeps the
- * screen awake so it keeps sending. A PWA can't send from the background,
- * so the crew is asked to keep the app open. Stops when the job leaves the
- * way (the page re-renders without it).
+ * 15 s for each of `orderIds` (the crew's jobs on the way, usually one), for
+ * the customer's Tracking and the admin live map, and keeps the screen
+ * awake so it keeps sending. It sits in the crew layout, so it runs on every
+ * crew screen. A PWA can't send from the background, so a bar on top asks
+ * the crew to keep the app open.
  */
-export function LocationShare({ orderId }: { orderId: string }) {
+export function LocationShare({ orderIds }: { orderIds: string[] }) {
   const t = useTranslations("Crew.location");
   const router = useRouter();
-  const [state, setState] = useState<ShareState>(() =>
-    typeof navigator !== "undefined" && !("geolocation" in navigator) ? "unavailable" : "starting",
+  const [shareState, setState] = useState<ShareState>("starting");
+  // True on the server and during hydration, so both render the same bar.
+  const hasGps = useSyncExternalStore(
+    noSubscription,
+    () => "geolocation" in navigator,
+    () => true,
   );
+  const state: ShareState = hasGps ? shareState : "unavailable";
+  // A string, so a refresh that brings the same jobs doesn't restart GPS.
+  const idsKey = orderIds.join(",");
 
   useEffect(() => {
     if (!("geolocation" in navigator)) return;
+    const ids = idsKey.split(",");
     let latest: Fix | null = null;
     let last: { at: number; fixAt: number } | null = null;
     let sending = false;
@@ -48,20 +59,20 @@ export function LocationShare({ orderId }: { orderId: string }) {
       const fix = latest;
       sending = true;
       try {
-        const result = await shareLocation({
-          orderId,
-          lat: fix.lat,
-          lng: fix.lng,
-          accuracyM: fix.accuracyM,
-        });
+        const results = await Promise.all(
+          ids.map((orderId) =>
+            shareLocation({ orderId, lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracyM }),
+          ),
+        );
         if (stopped) return;
-        if (result.status === "error") {
-          if (result.error === "failed") setState("failed");
-          else {
-            // The job left the way or isn't ours any more: show its new state.
-            stopped = true;
-            router.refresh();
-          }
+        if (results.some((r) => r.status === "error" && r.error !== "failed")) {
+          // A job left the way or isn't ours any more: read the jobs again.
+          stopped = true;
+          router.refresh();
+          return;
+        }
+        if (results.some((r) => r.status === "error")) {
+          setState("failed");
           return;
         }
         last = { at: now, fixAt: fix.at };
@@ -112,7 +123,7 @@ export function LocationShare({ orderId }: { orderId: string }) {
         lock = await navigator.wakeLock.request("screen");
         if (stopped) void lock.release();
       } catch {
-        // Battery saver or an old browser: the banner still asks to keep it open.
+        // Battery saver or an old browser: the bar still asks to keep it open.
       }
     };
     // The browser drops the lock whenever the app is hidden; take it again.
@@ -134,15 +145,16 @@ export function LocationShare({ orderId }: { orderId: string }) {
       window.removeEventListener("online", onOnline);
       if (lock) void lock.release();
     };
-  }, [orderId, router]);
+  }, [idsKey, router]);
 
   const problem = state === "denied" || state === "unavailable" || state === "failed";
   const Icon = state === "offline" ? WifiOff : problem ? MapPinOff : Navigation;
   return (
     <section
       aria-live="polite"
+      aria-label={t("keepOpen")}
       className={cn(
-        "flex items-start gap-3 rounded-card p-4",
+        "sticky top-0 z-30 mx-auto flex w-full max-w-phone items-start gap-3 px-5 py-3",
         problem ? "bg-warn-bg text-warn-strong" : "bg-navy text-white",
       )}
     >
@@ -151,7 +163,7 @@ export function LocationShare({ orderId }: { orderId: string }) {
         className={cn("mt-0.5 size-5 shrink-0", problem ? "text-warn-icon" : "text-aqua")}
       />
       <div className="flex flex-col">
-        <h2 className="text-15 font-extrabold">{t("keepOpen")}</h2>
+        <p className="text-15 font-extrabold">{t("keepOpen")}</p>
         <p
           data-state={state}
           className={cn("text-14", problem ? "text-warn-fg" : "text-on-dark-body")}

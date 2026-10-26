@@ -36,7 +36,9 @@ export async function getTracking(id: string): Promise<TrackingData | null> {
   const [order, settings] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, number, status, lat, lng, crew_id")
+      .select(
+        "id, number, status, lat, lng, crew_id, crew_live_location(crew_id, lat, lng, accuracy_m, updated_at)",
+      )
       .eq("id", id)
       .maybeSingle(),
     supabase.from("settings").select("company_phone").single(),
@@ -44,19 +46,18 @@ export async function getTracking(id: string): Promise<TrackingData | null> {
   if (order.error) throw new Error(`Order read failed: ${order.error.message}`);
   if (settings.error) throw new Error(`Settings read failed: ${settings.error.message}`);
   if (!order.data) return null;
-  const { lat, lng, crew_id, ...rest } = order.data;
-
-  let position: CrewPosition | null = null;
-  if (crew_id && rest.status === "on_the_way") {
-    const { data, error } = await supabase
-      .from("crew_live_location")
-      .select("lat, lng, accuracy_m, updated_at")
-      .eq("order_id", id)
-      .eq("crew_id", crew_id)
-      .maybeSingle();
-    if (error) throw new Error(`Position read failed: ${error.message}`);
-    position = data;
-  }
+  const { lat, lng, crew_id, crew_live_location: live, ...rest } = order.data;
+  // RLS returns it only while on the way; a position from a crew the job
+  // was taken from doesn't count.
+  const position: CrewPosition | null =
+    live && live.crew_id === crew_id
+      ? {
+          lat: live.lat,
+          lng: live.lng,
+          accuracy_m: live.accuracy_m,
+          updated_at: live.updated_at,
+        }
+      : null;
 
   return {
     ...rest,

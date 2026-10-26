@@ -1,4 +1,5 @@
 import type { Database } from "@/lib/database.types";
+import { routes } from "@/lib/routes";
 
 // Order statuses as the customer screens show them: Orders' tabs and
 // buttons (spec §5.12), Order details (N4) and Home's active-order card
@@ -75,6 +76,20 @@ export function primaryAction(status: OrderStatus): OrderAction {
       return "progress";
     default:
       return "details";
+  }
+}
+
+/** Where an order's main button goes. */
+export function actionHref(action: OrderAction, orderId: string): string {
+  switch (action) {
+    case "rebook":
+      return routes.book;
+    case "track":
+      return routes.tracking(orderId);
+    case "progress":
+      return routes.jobProgress(orderId);
+    default:
+      return routes.order(orderId);
   }
 }
 

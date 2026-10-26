@@ -2,10 +2,10 @@
 
 import { Phone, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 
 import { TrackingMap } from "@/components/live/tracking-map";
 import { useCrewPosition } from "@/components/live/use-crew-position";
+import { useServerNow } from "@/components/live/use-server-now";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -25,9 +25,9 @@ export function TrackingView({ order }: { order: TrackingData }) {
   const t = useTranslations("Tracking");
   const onTheWay = order.status === "on_the_way";
   const position = useCrewPosition(order.id, order.crewId, order.position, onTheWay);
-  const now = useServerNow(order.readAt, onTheWay);
+  const now = useServerNow(order.readAt, 1000, onTheWay);
 
-  const age = position && now !== null ? ageSeconds(position.updated_at, now, 0) : null;
+  const age = position && now !== null ? ageSeconds(position.updated_at, now) : null;
   const stale = age !== null && isStale(age);
   const distance = position ? distanceParts(distanceKm(order.home, position)) : null;
 
@@ -140,21 +140,4 @@ export function TrackingView({ order }: { order: TrackingData }) {
       </SheetPanel>
     </div>
   );
-}
-
-/**
- * The server's clock, ticking every second while `running`: the device's
- * time plus the offset measured when the page arrived. Null until mounted.
- */
-function useServerNow(serverNow: number, running: boolean): number | null {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const offset = serverNow - Date.now();
-    const tick = () => setNow(Date.now() + offset);
-    tick();
-    if (!running) return;
-    const timer = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timer);
-  }, [serverNow, running]);
-  return now;
 }
