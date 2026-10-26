@@ -148,6 +148,27 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
   - `deploy-prod.yml`, manual (`workflow_dispatch`, `main` only), uses the `production` environment so you approve it: the same steps against prod, then the Vercel deploy hook releases the app (`docs/deploy-setup.md`).
 - `supabase/seed.sql` loads into local databases only (`pnpm db:reset`, CI). Hosted dev and prod never load it: the deploy runs migrations only, so rows a hosted project needs (the settings row, the starting service area) come from migrations. Prod gets its first admin from the `ADMIN_PHONE` seed script (spec §10.2) and real prices and slots from the dashboard.
 
+## 8. Media cleanup job (both projects, once)
+
+Two nightly jobs delete photos and videos that were uploaded but never booked or attached (spec §7 Storage). CI deploys the Edge Function `media-cleanup` and the migration `media_cleanup` that schedules them, but the jobs send nothing until the project has two secrets. Do this per project after the code reaches it: dev after the merge, prod after the next **Deploy prod**. Use a different secret for each project, and never paste it into a Claude chat.
+
+1. Make a random secret on your computer: `openssl rand -base64 32`.
+2. **Edge Functions → Secrets**: add `MEDIA_CLEANUP_SECRET` with that value. (`SUPABASE_URL` and the service keys are already there; Supabase adds them.)
+3. **Database → Vault → Add new secret**, twice. Vault keeps them encrypted; the SQL editor would keep the value in its history.
+   - Name `project_url`, value `https://<project-ref>.supabase.co`
+   - Name `media_cleanup_secret`, the same value as step 2
+4. Check it in the **SQL editor**:
+
+   ```sql
+   select private.invoke_media_cleanup('crew');
+   -- a few seconds later: 200 and {"folder":"crew","deleted":…,"failed":0,"more":false}
+   select status_code, content from net._http_response order by id desc limit 1;
+   ```
+
+   A 401 means the two secret values differ. A null from the first line means a Vault secret is missing or misnamed. Later runs show under **Integrations → Cron** (jobs `media-cleanup-customer` and `media-cleanup-crew`, 03:17 and 03:47 Baghdad time) and in the function's logs, which hold counts only.
+
+To change the secret, update both places (steps 2 and 3) together. The CI tokens need no new permission.
+
 ## Checklist
 
 - [ ] Two orgs: Zalal Dev (Free), Zalal (Pro)
@@ -158,4 +179,5 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 - [ ] Two personal access tokens, each scoped to one project (Project Settings and API Gateway Keys read, Migrations and Edge Functions read-write)
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets
 - [ ] Vercel, Sentry, PostHog and the `main` ruleset: `docs/deploy-setup.md`
+- [ ] Media cleanup secrets in both projects (step 8), after the code reaches each one
 - [ ] (Optional) Supabase domains allowed in this environment's network settings; plugin logged in to Zalal Dev only
