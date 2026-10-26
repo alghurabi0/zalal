@@ -115,6 +115,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      crew_live_location: {
+        Row: {
+          accuracy_m: number;
+          crew_id: string;
+          lat: number;
+          lng: number;
+          location: unknown;
+          order_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          accuracy_m: number;
+          crew_id: string;
+          lat: number;
+          lng: number;
+          location?: never;
+          order_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          accuracy_m?: number;
+          crew_id?: string;
+          lat?: number;
+          lng?: number;
+          location?: never;
+          order_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "crew_live_location_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: false;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "crew_live_location_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       crews: {
         Row: {
           active: boolean;
@@ -930,6 +976,10 @@ export type Database = {
         Returns: Record<string, unknown>;
       };
       set_login_password: { Args: { p_password: string; p_user_id: string }; Returns: undefined };
+      share_crew_location: {
+        Args: { p_accuracy_m: number; p_lat: number; p_lng: number; p_order_id: string };
+        Returns: boolean;
+      };
       transition_order: {
         Args: {
           p_order_id: string;
