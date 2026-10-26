@@ -31,6 +31,10 @@ import { JobMedia } from "./job-media";
  * notes, and the status button (C3a) with the finish form (C4). While the
  * job is on the way the crew layout shares the phone's position.
  */
+// خلصنا's Server Action makes the certificate PDF after answering (after()),
+// which starts Chromium: give the function time for it.
+export const maxDuration = 60;
+
 export default function JobPage(props: PageProps<"/crew/jobs/[id]">) {
   return (
     <Screen className="bg-bg">

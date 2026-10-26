@@ -32,6 +32,16 @@ export function formatMonthYear(value: Date | string): string {
   return monthYear.format(new Date(value));
 }
 
+/** A calendar day in Baghdad ("2027-04-26", Postgres `date`) as "26 نيسان 2027". */
+export function formatDay(day: string): string {
+  return formatDate(`${day}T12:00:00+03:00`);
+}
+
+/** A calendar day in Baghdad as "نيسان 2027". */
+export function formatDayMonth(day: string): string {
+  return formatMonthYear(`${day}T12:00:00+03:00`);
+}
+
 /** The hour (0–23) in Baghdad, for the Home greeting. */
 export function baghdadHour(now: Date = new Date()): number {
   return Number(hourInBaghdad.format(now));

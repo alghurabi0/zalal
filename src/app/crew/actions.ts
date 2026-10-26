@@ -1,8 +1,12 @@
 "use server";
 
 import * as Sentry from "@sentry/nextjs";
+import { headers } from "next/headers";
+import { after } from "next/server";
 
 import { requireViewer } from "@/lib/auth/viewer";
+import { printOrigin } from "@/lib/certificates/origins";
+import { makePdfAfterCompletion } from "@/lib/certificates/pdf";
 import {
   type CrewJobError,
   crewJobErrorFor,
@@ -11,6 +15,7 @@ import {
 } from "@/lib/crew/errors";
 import { type LocationError, locationErrorFor } from "@/lib/crew/location";
 import type { Json } from "@/lib/database.types";
+import { certificateEnv } from "@/lib/env.server";
 import type { OrderStatus } from "@/lib/orders/status";
 import { routes } from "@/lib/routes";
 import {
@@ -68,12 +73,24 @@ export async function finishJob(input: FinishJobInput): Promise<CrewJobResult> {
   const parsed = finishJobSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: finishErrorOf(parsed.error) };
   const { orderId, sterilant, residualChlorine, note } = parsed.data;
-  return transition(orderId, "completed", {
+  const result = await transition(orderId, "completed", {
     cash_collected: true,
     sterilant,
     residual_chlorine_mg_l: residualChlorine,
     note,
   });
+  if (result.status === "done") {
+    // The certificate is issued with the move; its PDF is made after the
+    // crew gets the answer (spec §6).
+    const requestHeaders = await headers();
+    const origin = printOrigin(
+      certificateEnv(),
+      requestHeaders.get("host"),
+      requestHeaders.get("x-forwarded-proto"),
+    );
+    after(() => makePdfAfterCompletion(orderId, origin));
+  }
+  return result;
 }
 
 /** الزبون مو موجود: the note is internal (order_event_notes). */
