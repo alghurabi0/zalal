@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { activeOrder, type OrderSummary } from "@/lib/orders/queries";
+import { actionHref, primaryAction } from "@/lib/orders/status";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import { tankStatus, type TankStatus } from "@/lib/tanks/status";
@@ -51,8 +52,8 @@ const activeLook: Record<ActiveStatus, { icon: LucideIcon; well: string }> = {
 
 /**
  * The soonest order from pending to in progress, with copy by status. It
- * opens Order details; when the crew is on the way it will open Tracking
- * (Phase 4), which also brings the distance.
+ * opens Tracking while the crew is on the way (تتبّع, as in Home.dc.html),
+ * Job progress once it has arrived, and Order details before that.
  */
 async function ActiveOrderCard({ order }: { order: OrderSummary }) {
   const t = await getTranslations("Home.activeOrder");
@@ -66,11 +67,13 @@ async function ActiveOrderCard({ order }: { order: OrderSummary }) {
     slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
   });
   const num = (chunks: ReactNode) => <span dir="ltr">{chunks}</span>;
+  const action = primaryAction(status);
+  const href = actionHref(action, order.id);
 
   return (
     <Card
       variant="raised"
-      href={routes.order(order.id)}
+      href={href}
       className="flex items-center gap-3 p-3.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
     >
       <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-input", well)}>
@@ -87,7 +90,9 @@ async function ActiveOrderCard({ order }: { order: OrderSummary }) {
             : t.rich("number", { number: order.number, num })}
         </span>
       </span>
-      <span className="text-14 font-extrabold text-teal">{t("open")}</span>
+      <span className="text-14 font-extrabold text-teal">
+        {action === "track" ? t("track") : action === "progress" ? t("progress") : t("open")}
+      </span>
     </Card>
   );
 }

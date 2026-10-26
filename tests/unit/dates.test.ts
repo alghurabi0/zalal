@@ -8,6 +8,7 @@ import {
   baghdadToday,
   formatDate,
   formatMonthYear,
+  formatTime,
 } from "@/lib/dates";
 
 describe("dates (Asia/Baghdad)", () => {
@@ -49,5 +50,12 @@ describe("baghdadMinutes", () => {
   it("counts minutes since midnight in Baghdad", () => {
     expect(baghdadMinutes("2026-10-26T05:30:00Z")).toBe(8 * 60 + 30);
     expect(baghdadMinutes("2026-10-26T21:15:00Z")).toBe(15);
+  });
+});
+
+describe("formatTime", () => {
+  it("shows a Baghdad clock time with ص / م", () => {
+    expect(formatTime("2026-10-26T06:52:00Z")).toBe("9:52 ص");
+    expect(formatTime("2026-10-26T13:05:00Z")).toBe("4:05 م");
   });
 });

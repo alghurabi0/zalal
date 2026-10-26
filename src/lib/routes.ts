@@ -18,6 +18,10 @@ export const routes = {
   orders: "/orders",
   /** Order details (N4). */
   order: (id: string) => `/orders/${id}`,
+  /** Tracking (§5.13), while the crew is on the way or has arrived. */
+  tracking: (id: string) => `/orders/${id}/track`,
+  /** Job progress (§5.14), from arrival on. */
+  jobProgress: (id: string) => `/orders/${id}/live`,
   /** Booking step 1 (§5.9): tanks, date and slot. */
   book: "/book",
   /** Booking step 2 (§5.10): photos, videos and a note. */
@@ -58,6 +62,8 @@ export const routes = {
   adminAdmins: "/admin/admins",
   /** The admin audit log, newest first; `?entity=`, `?admin=`, `?before=<id>`. */
   adminAudit: "/admin/audit",
+  /** Live map (A3): crews on the way. */
+  adminLive: "/admin/live",
 } as const;
 
 /**

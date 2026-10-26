@@ -128,6 +128,18 @@ export function formatDayTime(value: Date | string): string {
   return dayMonthTime.format(new Date(value));
 }
 
+const clockTime = new Intl.DateTimeFormat(LOCALE, {
+  timeZone,
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** "9:52 ص", for Job progress's steps (same day as the job). */
+export function formatTime(value: Date | string): string {
+  return clockTime.format(new Date(value));
+}
+
 const isoDayInBaghdad = new Intl.DateTimeFormat("en-CA", {
   timeZone,
   year: "numeric",

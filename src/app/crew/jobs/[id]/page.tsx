@@ -28,8 +28,8 @@ import { JobMedia } from "./job-media";
  * Job detail (C3, spec §8.1): the pin with directions, a call to the
  * customer while the job is open, tank lines, the customer's note and
  * files, the crew's own photos and clips (C3b), the timeline with staff
- * notes, and the status button (C3a) with the finish form (C4). Live GPS
- * comes with part C.
+ * notes, and the status button (C3a) with the finish form (C4). While the
+ * job is on the way the crew layout shares the phone's position.
  */
 export default function JobPage(props: PageProps<"/crew/jobs/[id]">) {
   return (

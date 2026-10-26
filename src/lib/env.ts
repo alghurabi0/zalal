@@ -13,6 +13,9 @@ const publicEnvSchema = z.object({
   // Optional: without it (local, CI) Location shows a drawn map and uses
   // only "موقعي الحالي" to place the pin.
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: optional(z.string().min(1)),
+  // A Map ID from the same Google Cloud project. Tracking and the admin live
+  // map need one for their markers; without it they show the drawn map.
+  NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: optional(z.string().min(1)),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -25,6 +28,7 @@ export function publicEnv(): PublicEnv {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID,
   });
   return cached;
 }
