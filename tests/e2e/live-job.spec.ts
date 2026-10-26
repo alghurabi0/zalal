@@ -275,7 +275,10 @@ test("Job progress shows the steps and the crew's photos and clips as they arriv
   await screenshot(page, "live-job");
 
   // The photo opens full screen and closes again.
-  await main.getByRole("button", { name: /صورة 1/ }).first().click();
+  await main
+    .getByRole("button", { name: /صورة 1/ })
+    .first()
+    .click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("img")).toBeVisible();
   const close = dialog.getByRole("button", { name: messages.UI.close });
@@ -366,9 +369,9 @@ test.describe("admin live map", () => {
       "href",
       `/admin/orders?order=${order.id}`,
     );
-    await expect(
-      page.getByRole("row").filter({ hasText: `#${noPosition.number}` }),
-    ).toContainText(Admin.liveMap.noPosition);
+    await expect(page.getByRole("row").filter({ hasText: `#${noPosition.number}` })).toContainText(
+      Admin.liveMap.noPosition,
+    );
     await expect(page.getByRole("row").filter({ hasText: `#${confirmed.number}` })).toHaveCount(0);
     await screenshot(page, "admin-live");
 

@@ -18,7 +18,8 @@ export function distanceKm(a: LatLng, b: LatLng): number {
   const dLat = (b.lat - a.lat) * rad;
   const dLng = (b.lng - a.lng) * rad;
   const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
@@ -57,7 +58,12 @@ export function trackingSteps(status: OrderStatus): { step: TrackingStep; state:
   const at = reached[status] ?? -1;
   return TRACKING_STEPS.map((step, index) => ({
     step,
-    state: index < at || (status === "completed" && index === at) ? "done" : index === at ? "now" : "next",
+    state:
+      index < at || (status === "completed" && index === at)
+        ? "done"
+        : index === at
+          ? "now"
+          : "next",
   }));
 }
 
@@ -69,7 +75,10 @@ export type MapPoint = { x: number; y: number };
  * scale and north up, both inside the middle of the box. Alone, the home
  * sits in the middle. `crew` may be missing (no position yet, or arrived).
  */
-export function placePins(home: LatLng, crew: LatLng | null): { home: MapPoint; crew: MapPoint | null } {
+export function placePins(
+  home: LatLng,
+  crew: LatLng | null,
+): { home: MapPoint; crew: MapPoint | null } {
   if (!crew) return { home: { x: 0.5, y: 0.5 }, crew: null };
   const cos = Math.cos((home.lat * Math.PI) / 180);
   const dx = (crew.lng - home.lng) * cos;

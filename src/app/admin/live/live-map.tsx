@@ -295,7 +295,9 @@ function GoogleLiveMap({
  * admins read all). Inserts and updates only: DELETE events skip RLS.
  */
 function useLivePositions(): ReadonlyMap<string, PositionRow> {
-  const [positions, setPositions] = useState<ReadonlyMap<string, PositionRow>>(() => new globalThis.Map());
+  const [positions, setPositions] = useState<ReadonlyMap<string, PositionRow>>(
+    () => new globalThis.Map(),
+  );
 
   useEffect(() => {
     const supabase = createClient();

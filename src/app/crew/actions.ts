@@ -131,8 +131,7 @@ export async function removeJobMedia(
 }
 
 export type ShareLocationResult =
-  | { status: "saved" | "skipped" }
-  | { status: "error"; error: LocationError };
+  { status: "saved" | "skipped" } | { status: "error"; error: LocationError };
 
 /**
  * GPS while on the way (§8.1): saves the phone's latest position for the
@@ -154,6 +153,7 @@ export async function shareLocation(input: ShareLocationInput): Promise<ShareLoc
   if (!error) return { status: data ? "saved" : "skipped" };
   const code = locationErrorFor(error);
   // Never the position itself: it says where a customer lives.
-  if (code === "failed") Sentry.captureMessage(`share_crew_location failed (${error.code})`, "error");
+  if (code === "failed")
+    Sentry.captureMessage(`share_crew_location failed (${error.code})`, "error");
   return { status: "error", error: code };
 }

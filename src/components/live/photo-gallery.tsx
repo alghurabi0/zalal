@@ -48,7 +48,9 @@ export function PhotoGallery({ photos, missing }: { photos: GalleryPhoto[]; miss
             className="fixed inset-0 z-50 mx-auto flex max-w-phone flex-col gap-3 px-4 pt-4 pb-safe-4"
           >
             <div className="flex items-center justify-between gap-3">
-              <Dialog.Title className="text-16 font-extrabold text-white">{open?.label}</Dialog.Title>
+              <Dialog.Title className="text-16 font-extrabold text-white">
+                {open?.label}
+              </Dialog.Title>
               <Dialog.Close
                 aria-label={tUI("close")}
                 className="flex size-11 items-center justify-center rounded-full bg-white/90 text-navy"

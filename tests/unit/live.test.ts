@@ -7,13 +7,7 @@ import {
   SEND_INTERVAL_MS,
   shouldSend,
 } from "@/lib/crew/location";
-import {
-  ageSeconds,
-  distanceKm,
-  distanceParts,
-  isStale,
-  trackingSteps,
-} from "@/lib/live/tracking";
+import { ageSeconds, distanceKm, distanceParts, isStale, trackingSteps } from "@/lib/live/tracking";
 import { isLive, jobSteps } from "@/lib/live/job";
 
 const karbalaShrine = { lat: 32.6163, lng: 44.0324 };

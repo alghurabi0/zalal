@@ -17,7 +17,8 @@ export function jobSteps(
   status: OrderStatus,
   times: Partial<Record<JobStep, string>>,
 ): { step: JobStep; state: StepState; at: string | null }[] {
-  const reached = status === "completed" ? 3 : status === "in_progress" ? 2 : status === "arrived" ? 1 : 0;
+  const reached =
+    status === "completed" ? 3 : status === "in_progress" ? 2 : status === "arrived" ? 1 : 0;
   return JOB_STEPS.map((step, index) => ({
     step,
     state:
