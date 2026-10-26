@@ -16,6 +16,7 @@ import {
 } from "@/lib/booking/draft";
 import { bookingErrorFor, stepFor } from "@/lib/booking/errors";
 import {
+  BOOKABLE_UPLOAD_MS,
   bookingObjectPath,
   bookingObjectPathPattern,
   contentTypeOf,
@@ -23,6 +24,7 @@ import {
   formatDuration,
   mediaKindOf,
   roundDuration,
+  uploadExpired,
   videoProblem,
 } from "@/lib/booking/media";
 import { serviceDayParts, slotParts } from "@/lib/dates";
@@ -251,6 +253,17 @@ describe("booking media rules", () => {
     expect(path).toBe(`customer/${USER}/${FILE}.mov`);
     expect(bookingObjectPathPattern.test(path)).toBe(true);
     expect(bookingObjectPathPattern.test(`customer/${USER}/../x.mov`)).toBe(false);
+  });
+
+  it("forgets an upload before create_order's 48 h cutoff", () => {
+    const hour = 60 * 60 * 1000;
+    const now = 1_000 * hour;
+    expect(BOOKABLE_UPLOAD_MS).toBe(46 * hour);
+    expect(uploadExpired(now - 45 * hour, now)).toBe(false);
+    expect(uploadExpired(now - 46 * hour, now)).toBe(false);
+    expect(uploadExpired(now - 46 * hour - 1, now)).toBe(true);
+    // Saved before the time was kept: kept, and create_order decides.
+    expect(uploadExpired(null, now)).toBe(false);
   });
 
   it("formats durations and sizes as the file rows show them", () => {

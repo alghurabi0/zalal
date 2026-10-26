@@ -14,6 +14,7 @@ import {
   type MediaKind,
   mediaKindOf,
   ORDER_MEDIA_BUCKET,
+  uploadExpired,
 } from "./media";
 
 // Booking step 2's uploads (spec §5.10), outside React so they keep running
@@ -22,7 +23,9 @@ import {
 // (order-media, customer/<user id>/…) over TUS, which resumes after a
 // dropped connection; the storage policy decides who may write there.
 // Finished uploads are remembered in sessionStorage per user, so a reload
-// keeps them; one still running when the page reloads is lost.
+// keeps them; one still running when the page reloads is lost. A finished
+// upload too old to book (uploadExpired) is forgotten: on reload, and when
+// Checkout confirms.
 
 export type UploadStatus = "preparing" | "uploading" | "done" | "failed";
 
@@ -38,6 +41,8 @@ export type UploadItem = {
   status: UploadStatus;
   /** 0–100. */
   progress: number;
+  /** When the upload finished (device clock, ms); null until then. */
+  uploadedAt: number | null;
 };
 
 export type AddProblem = "too_many" | "unsupported" | PrepareProblem;
@@ -51,6 +56,8 @@ const storedSchema = z
       bytes: z.number().int().nonnegative(),
       durationS: z.number().min(0).max(MAX_VIDEO_SECONDS).nullable(),
       path: z.string().regex(bookingObjectPathPattern),
+      // Missing in files saved before it was added: their age is unknown.
+      uploadedAt: z.number().int().nonnegative().nullable().optional(),
     }),
   )
   .max(MAX_BOOKING_FILES);
@@ -93,7 +100,15 @@ function restore(key: string): UploadItem[] {
   try {
     const parsed = storedSchema.safeParse(JSON.parse(window.sessionStorage.getItem(key) ?? "[]"));
     if (!parsed.success) return EMPTY;
-    return parsed.data.map((file) => ({ ...file, status: "done", progress: 100 }));
+    const now = Date.now();
+    return parsed.data
+      .map((file) => ({
+        ...file,
+        uploadedAt: file.uploadedAt ?? null,
+        status: "done" as const,
+        progress: 100,
+      }))
+      .filter((file) => !uploadExpired(file.uploadedAt, now));
   } catch {
     return EMPTY;
   }
@@ -106,7 +121,15 @@ function update(userId: string, change: (items: UploadItem[]) => UploadItem[]) {
   const done = JSON.stringify(
     items
       .filter((item) => item.status === "done")
-      .map(({ id, n, kind, bytes, durationS, path }) => ({ id, n, kind, bytes, durationS, path })),
+      .map(({ id, n, kind, bytes, durationS, path, uploadedAt }) => ({
+        id,
+        n,
+        kind,
+        bytes,
+        durationS,
+        path,
+        uploadedAt,
+      })),
   );
   if (done !== saved) {
     saved = done;
@@ -154,6 +177,7 @@ export async function addFiles(userId: string, files: File[]): Promise<AddProble
         path: bookingObjectPath(userId, id, contentType),
         status: "preparing",
         progress: 0,
+        uploadedAt: null,
       },
     ]);
 
@@ -225,6 +249,20 @@ export function uploadsSettled(userId: string): Promise<UploadItem[]> {
   });
 }
 
+/**
+ * Forgets finished uploads too old to book, without deleting them (the
+ * nightly cleanup does). Returns how many went, so Checkout can send the
+ * customer back to add them again.
+ */
+export function dropExpiredUploads(userId: string, now = Date.now()): number {
+  const items = getUploads(userId);
+  const kept = items.filter(
+    (item) => item.status !== "done" || !uploadExpired(item.uploadedAt, now),
+  );
+  if (kept.length !== items.length) update(userId, () => kept);
+  return items.length - kept.length;
+}
+
 /** After booking: the files now belong to the order, so forget them without deleting. */
 export function clearUploads(userId: string) {
   for (const job of running.values()) void job.upload?.abort().catch(() => undefined);
@@ -252,7 +290,9 @@ async function startUpload(userId: string, id: string) {
     {
       onProgress: (percent) => patch(userId, id, { progress: percent }),
       onSuccess: () => {
-        if (running.has(id)) patch(userId, id, { status: "done", progress: 100 });
+        if (running.has(id)) {
+          patch(userId, id, { status: "done", progress: 100, uploadedAt: Date.now() });
+        }
       },
       onError: () => {
         if (running.has(id)) patch(userId, id, { status: "failed" });

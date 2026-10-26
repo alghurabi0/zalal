@@ -44,7 +44,16 @@ export function ConfirmStep() {
   const tLabels = useTranslations("Location.labels");
   const tUI = useTranslations("UI");
   const router = useRouter();
-  const { data, draft, update, latestDraft, uploads, uploadsSettled, setNotice } = useBooking();
+  const {
+    data,
+    draft,
+    update,
+    latestDraft,
+    uploads,
+    uploadsSettled,
+    dropExpiredUploads,
+    setNotice,
+  } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   // The booking just made: the button stays busy until N5 opens and clears
   // the draft. Next keeps this page alive, so a plain flag would stay set
@@ -76,6 +85,12 @@ export function ConfirmStep() {
     try {
       const files = await uploadsSettled();
       if (files.some((file) => file.status === "failed")) return;
+      // A file too old to book (open in a tab for 2 days): forgotten here, so
+      // Photos shows it gone and the customer adds it again.
+      if (dropExpiredUploads() > 0) {
+        setError("upload_missing");
+        return;
+      }
       // The booking as it is now: the customer may have changed it while
       // the uploads finished.
       const current = latestDraft();

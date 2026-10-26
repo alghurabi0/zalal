@@ -306,3 +306,47 @@ test("a reload keeps the booking's choices and finished uploads", async ({ page 
   await page.goto("/book");
   await expect(page.getByRole("radio", { name: new RegExp(slot.label) })).toBeChecked();
 });
+
+test("an upload too old to book is forgotten, so the customer adds it again", async ({ page }) => {
+  // create_order() takes uploads only within 48 h (spec §7 Storage); the app
+  // forgets them at 46 h by the device's clock.
+  slot = await createSlot();
+  const date = baghdadDate(4);
+  const phone = await signUp(page);
+  const userId = await userIdFor(phone);
+  await page.goto("/book");
+  await pickSlot(page, date, slot.label);
+  await page.getByRole("link", { name: Booking.next }).click();
+  const files = page.getByRole("list", { name: Upload.filesLabel });
+  for (let i = 0; i < 2; i++) {
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: Upload.fromGallery }).click();
+    await (await chooser).setFiles(fixture("tank.jpg"));
+  }
+  await expect(files.getByText(Upload.uploaded)).toHaveCount(2, { timeout: 20_000 });
+
+  // Saved 47 h ago (a tab left open): a reload forgets that one.
+  await page.evaluate((key) => {
+    const saved = JSON.parse(window.sessionStorage.getItem(key) ?? "[]") as Array<{
+      uploadedAt: number;
+    }>;
+    saved[0]!.uploadedAt = Date.now() - 47 * 60 * 60 * 1000;
+    window.sessionStorage.setItem(key, JSON.stringify(saved));
+  }, `zl_booking_files:${userId}`);
+  await page.reload();
+  await expect(files.getByText(Upload.uploaded)).toHaveCount(1);
+
+  // Still open on Checkout 47 h later: confirming forgets it and sends the
+  // customer back to Photos instead of booking without it.
+  await page.getByRole("link", { name: Upload.next }).click();
+  await expect(page).toHaveURL("/book/confirm");
+  await page.clock.setSystemTime(Date.now() + 47 * 60 * 60 * 1000);
+  await page.getByRole("button", { name: Checkout.confirm }).click();
+  await expect(page.getByText(Checkout.errors.uploadMissing)).toBeVisible();
+  await page.getByRole("link", { name: Checkout.backToPhotos }).click();
+  await expect(page).toHaveURL("/book/photos");
+  // Next keeps the earlier Photos alive (hidden), with its list.
+  await expect(
+    page.getByRole("list", { name: Upload.filesLabel }).filter({ visible: true }),
+  ).toHaveCount(0);
+});
