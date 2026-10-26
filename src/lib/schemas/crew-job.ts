@@ -85,3 +85,13 @@ export type FinishJobInput = z.input<typeof finishJobSchema>;
 export type CrewNoShowInput = z.input<typeof crewNoShowSchema>;
 export type AttachJobMediaInput = z.input<typeof attachJobMediaSchema>;
 export type RemoveJobMediaInput = z.input<typeof removeJobMediaSchema>;
+
+/** GPS while on the way (§8.1): one fix as the phone reports it. */
+export const shareLocationSchema = z.object({
+  orderId: z.uuid(),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  accuracyM: z.number().min(0).max(100_000),
+});
+
+export type ShareLocationInput = z.input<typeof shareLocationSchema>;

@@ -8,6 +8,8 @@ import {
   type OrderStatus,
   ordersTab,
   pickActiveOrder,
+  canFollowJob,
+  canTrack,
   primaryAction,
 } from "@/lib/orders/status";
 import { buildTimeline, type OrderEventRow } from "@/lib/orders/timeline";
@@ -39,11 +41,27 @@ describe("badgeTone and primaryAction", () => {
     expect(badgeTone("cancelled")).toBe("neutral");
   });
 
-  it("offers أعد الحجز only for a cancelled order, details otherwise (until Phase 4)", () => {
+  it("tracks on the way, follows the job from arrival, rebooks a cancelled order", () => {
     expect(primaryAction("cancelled")).toBe("rebook");
-    for (const status of ["pending_confirmation", "on_the_way", "completed", "no_show"] as const) {
+    expect(primaryAction("on_the_way")).toBe("track");
+    expect(primaryAction("arrived")).toBe("progress");
+    expect(primaryAction("in_progress")).toBe("progress");
+    // The certificate comes with Phase 4, task 2.
+    for (const status of ["pending_confirmation", "confirmed", "completed", "no_show"] as const) {
       expect(primaryAction(status)).toBe("details");
     }
+  });
+
+  it("opens Tracking on the way and arrived, Job progress from arrival on", () => {
+    expect(canTrack("on_the_way")).toBe(true);
+    expect(canTrack("arrived")).toBe(true);
+    expect(canTrack("in_progress")).toBe(false);
+    expect(canTrack("confirmed")).toBe(false);
+    expect(canFollowJob("arrived")).toBe(true);
+    expect(canFollowJob("in_progress")).toBe(true);
+    expect(canFollowJob("completed")).toBe(true);
+    expect(canFollowJob("on_the_way")).toBe(false);
+    expect(canFollowJob("no_show")).toBe(false);
   });
 });
 

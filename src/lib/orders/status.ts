@@ -56,15 +56,36 @@ export function badgeTone(status: OrderStatus): BadgeTone {
 }
 
 /**
- * The main button on an order card (spec §5.12). The spec's تتبّع, تابع الشغل
- * and الشهادة open Tracking, Job progress and the certificate, which come in
- * Phase 4; until then those orders get تفاصيل الطلب, which opens Order
- * details. A cancelled order offers أعد الحجز.
+ * The main button on an order card (spec §5.12): تتبّع opens Tracking while
+ * the crew is on the way, تابع الشغل opens Job progress once it has arrived,
+ * and a cancelled order offers أعد الحجز. The certificate comes with
+ * Phase 4, task 2; until then a completed order, like the others, gets
+ * تفاصيل الطلب, which opens Order details.
  */
-export type OrderAction = "details" | "rebook";
+export type OrderAction = "details" | "rebook" | "track" | "progress";
 
 export function primaryAction(status: OrderStatus): OrderAction {
-  return status === "cancelled" ? "rebook" : "details";
+  switch (status) {
+    case "cancelled":
+      return "rebook";
+    case "on_the_way":
+      return "track";
+    case "arrived":
+    case "in_progress":
+      return "progress";
+    default:
+      return "details";
+  }
+}
+
+/** Tracking (§5.13) is open while the crew is on the way or has arrived. */
+export function canTrack(status: OrderStatus): boolean {
+  return status === "on_the_way" || status === "arrived";
+}
+
+/** Job progress (§5.14) is open from arrival on, and stays readable after completion. */
+export function canFollowJob(status: OrderStatus): boolean {
+  return status === "arrived" || status === "in_progress" || status === "completed";
 }
 
 /**

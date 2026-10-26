@@ -73,6 +73,14 @@ export function OrderCard({ order }: { order: OrderSummary }) {
           <Button href={routes.book} size="sm" className="flex-1 text-14">
             {t("rebook")}
           </Button>
+        ) : action === "track" ? (
+          <Button href={routes.tracking(order.id)} size="sm" className="flex-1 text-14">
+            {t("track")}
+          </Button>
+        ) : action === "progress" ? (
+          <Button href={routes.jobProgress(order.id)} size="sm" className="flex-1 text-14">
+            {t("progress")}
+          </Button>
         ) : (
           <Button href={routes.order(order.id)} size="sm" className="flex-1 text-14">
             {t("details")}

@@ -9,6 +9,7 @@ import {
   type JobMediaError,
   jobMediaErrorFor,
 } from "@/lib/crew/errors";
+import { type LocationError, locationErrorFor } from "@/lib/crew/location";
 import type { Json } from "@/lib/database.types";
 import type { OrderStatus } from "@/lib/orders/status";
 import { routes } from "@/lib/routes";
@@ -24,6 +25,8 @@ import {
   finishJobSchema,
   type RemoveJobMediaInput,
   removeJobMediaSchema,
+  type ShareLocationInput,
+  shareLocationSchema,
 } from "@/lib/schemas/crew-job";
 import { createClient } from "@/lib/supabase/server";
 
@@ -125,4 +128,32 @@ export async function removeJobMedia(
   // Best effort: the row is gone, so the file is only clutter if this fails.
   await supabase.storage.from("order-media").remove([path]);
   return { status: "done" };
+}
+
+export type ShareLocationResult =
+  | { status: "saved" | "skipped" }
+  | { status: "error"; error: LocationError };
+
+/**
+ * GPS while on the way (§8.1): saves the phone's latest position for the
+ * customer's Tracking and the admin live map. "skipped" means the database
+ * already has one from the last 10 s.
+ */
+export async function shareLocation(input: ShareLocationInput): Promise<ShareLocationResult> {
+  const parsed = shareLocationSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", error: "failed" };
+  const { orderId, lat, lng, accuracyM } = parsed.data;
+  await requireViewer(routes.crewJob(orderId), "crew");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("share_crew_location", {
+    p_order_id: orderId,
+    p_lat: lat,
+    p_lng: lng,
+    p_accuracy_m: accuracyM,
+  });
+  if (!error) return { status: data ? "saved" : "skipped" };
+  const code = locationErrorFor(error);
+  // Never the position itself: it says where a customer lives.
+  if (code === "failed") Sentry.captureMessage(`share_crew_location failed (${error.code})`, "error");
+  return { status: "error", error: code };
 }

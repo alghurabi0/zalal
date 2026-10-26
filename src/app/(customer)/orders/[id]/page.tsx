@@ -17,7 +17,7 @@ import { cn } from "@/lib/cn";
 import { formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { getOrder, type OrderDetails } from "@/lib/orders/queries";
-import { changeState } from "@/lib/orders/status";
+import { canFollowJob, changeState, primaryAction } from "@/lib/orders/status";
 import { buildTimeline, type TimelineEntry } from "@/lib/orders/timeline";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
@@ -28,8 +28,9 @@ import { RescheduleSheet } from "./reschedule-sheet";
 /**
  * Order details (N4): status, timeline, summary, price and attachments, with
  * the buttons its status allows. Cancel (N6) and reschedule (N7) open
- * sheets; track, progress and the certificate come with their screens in
- * Phase 4, help with Chat in Phase 5.
+ * sheets. From the crew setting off it links to Tracking and then Job
+ * progress; the certificate comes with Phase 4, task 2, help with Chat in
+ * Phase 5.
  */
 export default function OrderPage(props: PageProps<"/orders/[id]">) {
   return (
@@ -295,6 +296,24 @@ async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number 
         <Button href={routes.book} size="footer" className="w-full">
           {t("rebook")}
         </Button>
+      </Footer>
+    );
+  }
+
+  // From the crew setting off: Tracking, then Job progress (§5.13, §5.14).
+  const action = primaryAction(order.status);
+  if (action === "track" || canFollowJob(order.status)) {
+    return (
+      <Footer>
+        {action === "track" ? (
+          <Button href={routes.tracking(order.id)} size="footer" className="w-full">
+            {t("track")}
+          </Button>
+        ) : (
+          <Button href={routes.jobProgress(order.id)} size="footer" className="w-full">
+            {order.status === "completed" ? t("jobMedia") : t("progress")}
+          </Button>
+        )}
       </Footer>
     );
   }
