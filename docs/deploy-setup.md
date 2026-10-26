@@ -45,6 +45,7 @@ Two things to know:
 4. **Settings → Functions → Function Region**: `vercel.json` already pins `fra1` (Frankfurt, next to Supabase). Check it shows Frankfurt.
 5. **Settings → Git → Deploy Hooks**: create a hook named `deploy-prod` for branch `main`. Copy its URL; it goes into GitHub in step 4. Treat it like a password: anyone with it can start a production build.
 6. **Settings → Deployment Protection**: keep **Vercel Authentication** on for previews (the default). Production must stay public.
+   - Under **Protection Bypass for Automation**, create a secret (any name, e.g. `certificate-pdf`). Vercel then gives every deployment `VERCEL_AUTOMATION_BYPASS_SECRET`. Certificate PDFs need it (spec §10.1): the function that makes a PDF opens the deployment's own print page in headless Chromium, at the deployment's `*.vercel.app` address, which the protection blocks otherwise (on previews, and on production deployment URLs too). Without it, "تحميل الشهادة" fails and Sentry reports `Print page answered 401`. The app sends the secret only to its own deployment, never to Supabase or anyone else.
 7. When the first preview build passes, run **Deploy prod** once (step 4 must be done) to create the first Production deployment. Then add your domain under **Settings → Domains** when you have one.
 
 Then finish the Supabase step that waited on Vercel (`docs/supabase-setup.md` step 3, Authentication → URL Configuration): set prod's Site URL to the production URL, and add `https://<project>-*-<team-slug>.vercel.app/**` to dev's Redirect URLs.
@@ -121,11 +122,12 @@ Location (spec §5.4) shows a Google map with a search box. Tracking (§5.13) an
   Within a minute Sentry shows a "Sentry check" issue. Under **Settings → Source Maps**, each build has an uploaded bundle. (Errors thrown from the browser console don't count; Sentry ignores them.)
 - [ ] PostHog: open the production URL. **Activity** shows a `$pageview` within a minute.
 - [ ] Google Maps: log in on a preview, add an address. The map loads, search finds a Karbala street, and moving the map moves the saved pin.
+- [ ] Certificate PDF: on a preview, complete a job from a crew account, then open the order as the customer and tap the download button on the certificate. A one-page PDF downloads with the Arabic joined correctly, and its QR code opens the public certificate page.
 
 ## Checklist
 
 - [ ] Vercel Pro, repo imported, env vars set per environment (PostHog in Production only)
-- [ ] Region Frankfurt; deploy hook `deploy-prod` created; preview protection on
+- [ ] Region Frankfurt; deploy hook `deploy-prod` created; preview protection on; Protection Bypass for Automation secret created (certificate PDFs)
 - [ ] Supabase Auth URLs updated for the Vercel URLs
 - [ ] Sentry project in the EU region; DSN, org, project and auth token in Vercel; IP storage off
 - [ ] PostHog EU project; key in Vercel Production; client IP discarded; replay off
