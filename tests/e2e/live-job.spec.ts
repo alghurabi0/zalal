@@ -5,7 +5,7 @@ import { type Browser, expect, type Page, test } from "@playwright/test";
 
 import messages from "../../messages/ar.json" with { type: "json" };
 
-import { createCrew, logInAsCrew } from "./helpers/admin";
+import { createCrew, createCustomer, logInAsAdmin, logInAsCrew } from "./helpers/admin";
 import { screenshot, signUp } from "./helpers/auth";
 import {
   baghdadDate,
@@ -21,7 +21,7 @@ import { distanceKm, distanceParts } from "../../src/lib/live/tracking";
 // §8.2 A3): the crew phone shares its position on the way, the customer
 // tracks it live, then follows the crew's photos and clips.
 
-const { Tracking, LiveJob, Crew, Orders, Order } = messages;
+const { Tracking, LiveJob, Crew, Orders, Order, Admin } = messages;
 
 let slot: TestSlot | null = null;
 test.afterEach(async () => {
@@ -316,4 +316,72 @@ test("Job progress and Tracking send other statuses to the right screen", async 
   await expect(visible(page).getByRole("heading", { name: Order.notFound })).toBeVisible();
   await page.goto("/orders/not-an-id/live");
   await expect(visible(page).getByRole("heading", { name: Order.notFound })).toBeVisible();
+});
+
+test.describe("admin live map", () => {
+  test.use({ viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
+
+  test("lists the crews on the way with their orders, and follows their positions", async ({
+    page,
+  }) => {
+    slot = await createSlot();
+    const customer = await createCustomer();
+    const crew = await createCrew();
+    const waiting = await createCrew();
+    const order = await createOrder(customer.phone, {
+      slot,
+      date: baghdadDate(0),
+      status: "on_the_way",
+      crewId: crew.id,
+    });
+    const noPosition = await createOrder(customer.phone, {
+      slot,
+      date: baghdadDate(0),
+      status: "on_the_way",
+      crewId: waiting.id,
+    });
+    const confirmed = await createOrder(customer.phone, {
+      slot,
+      date: baghdadDate(0),
+      status: "confirmed",
+      crewId: crew.id,
+    });
+    // createCustomer's pin is 32.616, 44.024; the crew is 0.01° north (about 1.1 km).
+    await admin
+      .from("crew_live_location")
+      .insert({ order_id: order.id, crew_id: crew.id, lat: 32.626, lng: 44.024, accuracy_m: 9 })
+      .throwOnError();
+
+    await logInAsAdmin(page);
+    await page.getByRole("navigation").getByRole("link", { name: Admin.nav.live }).first().click();
+    await page.waitForURL("**/admin/live");
+    await expect(page.getByRole("heading", { name: Admin.liveMap.title })).toBeVisible();
+    await expect(page.getByRole("img", { name: Admin.liveMap.map })).toBeVisible();
+
+    const row = page.getByRole("row").filter({ hasText: `#${order.number}` });
+    await expect(row).toContainText(crew.name);
+    await expect(row).toContainText(customer.district);
+    await expect(row.getByTestId("distance")).toHaveText("1.1 كم");
+    await expect(row.getByRole("link", { name: `#${order.number}` })).toHaveAttribute(
+      "href",
+      `/admin/orders?order=${order.id}`,
+    );
+    await expect(
+      page.getByRole("row").filter({ hasText: `#${noPosition.number}` }),
+    ).toContainText(Admin.liveMap.noPosition);
+    await expect(page.getByRole("row").filter({ hasText: `#${confirmed.number}` })).toHaveCount(0);
+    await screenshot(page, "admin-live");
+
+    // The crew moves: the new position arrives without a reload.
+    await admin
+      .from("crew_live_location")
+      .update({ lat: 32.62, lng: 44.024 })
+      .eq("order_id", order.id)
+      .throwOnError();
+    await expect(row.getByTestId("distance")).toHaveText("440 متر");
+
+    // It arrives: the shell reloads the page and the job leaves the map.
+    await admin.from("orders").update({ status: "arrived" }).eq("id", order.id).throwOnError();
+    await expect(page.getByRole("row").filter({ hasText: `#${order.number}` })).toHaveCount(0);
+  });
 });
