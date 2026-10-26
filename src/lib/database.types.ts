@@ -151,6 +151,49 @@ export type Database = {
           },
         ];
       };
+      job_reports: {
+        Row: {
+          created_at: string;
+          crew_id: string;
+          order_id: string;
+          residual_chlorine_mg_l: number | null;
+          sterilant: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          crew_id: string;
+          order_id: string;
+          residual_chlorine_mg_l?: number | null;
+          sterilant: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          crew_id?: string;
+          order_id?: string;
+          residual_chlorine_mg_l?: number | null;
+          sterilant?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_reports_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: false;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_reports_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       order_event_notes: {
         Row: {
           created_at: string;
@@ -817,6 +860,15 @@ export type Database = {
         Returns: undefined;
       };
       assign_crew: { Args: { p_crew_id: string; p_order_id: string }; Returns: undefined };
+      attach_job_media: {
+        Args: {
+          p_duration_s?: number;
+          p_kind: Database["public"]["Enums"]["order_media_kind"];
+          p_order_id: string;
+          p_path: string;
+        };
+        Returns: string;
+      };
       booking_availability: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -868,6 +920,7 @@ export type Database = {
         };
         Returns: undefined;
       };
+      remove_job_media: { Args: { p_media_id: string }; Returns: string };
       request_otp: {
         Args: {
           p_channel: Database["public"]["Enums"]["otp_channel"];

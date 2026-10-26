@@ -3,7 +3,7 @@
 -- back to pending_confirmation) from pending_confirmation or confirmed, only
 -- while the slot starts at least cancel_cutoff_hours from now (ZL006).
 -- Crew (assigned, active): confirmed -> on_the_way -> arrived -> in_progress
--- -> completed (needs cash collected), or no_show from
+-- -> completed (needs cash collected and the C4 sterilant; job_reports.test.sql), or no_show from
 -- confirmed/on_the_way/arrived with a note. Before and after photos are
 -- optional (settled Oct 26, 2026; migration crew_jobs).
 -- Admin: confirm, cancel with a reason, reschedule and no_show at any time;
@@ -205,7 +205,7 @@ select throws_ok(
   'ZL011', 'cash_not_collected', 'the crew ticks that the cash was collected'
 );
 select lives_ok(
-  $$ select tests.go('job', 'completed', '{"cash_collected": true}') $$,
+  $$ select tests.go('job', 'completed', '{"cash_collected": true, "sterilant": "كلور"}') $$,
   'the crew completes the job without an after photo'
 );
 select is_empty(
