@@ -110,8 +110,9 @@ describe("crew job schemas", () => {
   });
 
   it("needs the cash tick to finish", () => {
-    expect(finishJobSchema.safeParse({ orderId: ID, cashCollected: true }).success).toBe(true);
-    expect(finishJobSchema.safeParse({ orderId: ID, cashCollected: false }).success).toBe(false);
+    const form = { orderId: ID, sterilant: "كلور", residualChlorine: null, note: "" };
+    expect(finishJobSchema.safeParse({ ...form, cashCollected: true }).success).toBe(true);
+    expect(finishJobSchema.safeParse({ ...form, cashCollected: false }).success).toBe(false);
   });
 
   it("needs a no-show note of at most 500 characters", () => {

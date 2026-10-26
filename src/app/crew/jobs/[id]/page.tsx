@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { requireViewer } from "@/lib/auth/viewer";
 import { mapsLink } from "@/lib/crew/jobs";
-import { getJob, type JobDetails } from "@/lib/crew/queries";
+import { getJob, getSterilantText, type JobDetails } from "@/lib/crew/queries";
 import { nextStep } from "@/lib/crew/status";
 import { formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
@@ -22,12 +22,14 @@ import { buildTimeline } from "@/lib/orders/timeline";
 import { routes } from "@/lib/routes";
 
 import { JobActions } from "./job-actions";
+import { JobMedia } from "./job-media";
 
 /**
  * Job detail (C3, spec §8.1): the pin with directions, a call to the
  * customer while the job is open, tank lines, the customer's note and
- * files, the timeline with staff notes, and the status button (C3a).
- * Photos and clips come with part B, live GPS with part C.
+ * files, the crew's own photos and clips (C3b), the timeline with staff
+ * notes, and the status button (C3a) with the finish form (C4). Live GPS
+ * comes with part C.
  */
 export default function JobPage(props: PageProps<"/crew/jobs/[id]">) {
   return (
@@ -41,10 +43,13 @@ export default function JobPage(props: PageProps<"/crew/jobs/[id]">) {
 
 async function JobContent({ params }: PageProps<"/crew/jobs/[id]">) {
   const { id } = await params;
-  await requireViewer(routes.crewJob(id), "crew");
+  const viewer = await requireViewer(routes.crewJob(id), "crew");
   const t = await getTranslations("Crew");
   const jobId = z.uuid().safeParse(id);
-  const job = jobId.success ? await getJob(jobId.data) : null;
+  const [job, sterilantText] = await Promise.all([
+    jobId.success ? getJob(jobId.data) : null,
+    getSterilantText(),
+  ]);
 
   if (!job) {
     return (
@@ -88,10 +93,19 @@ async function JobContent({ params }: PageProps<"/crew/jobs/[id]">) {
           </Section>
         )}
         {job.media.length > 0 && <Files job={job} />}
+        <JobMedia
+          userId={viewer.id}
+          orderId={job.id}
+          crewId={job.crew_id}
+          status={job.status}
+          files={job.crewMedia}
+        />
         <Timeline job={job} />
         {!nextStep(job.status) && <p className="px-1 text-14 text-muted">{t("job.closed")}</p>}
       </div>
       <JobActions
+        userId={viewer.id}
+        sterilantText={sterilantText}
         orderId={job.id}
         status={job.status}
         amount={tUI("iqd", { amount: formatIQD(job.total_iqd) })}

@@ -25,7 +25,12 @@ const types = {
   "video/webm": "webm",
 } as const;
 
-type ContentType = keyof typeof types;
+export type ContentType = keyof typeof types;
+
+/** The extension a file of this type is saved under. */
+export function extensionFor(contentType: ContentType): string {
+  return types[contentType];
+}
 
 // Some browsers leave `type` empty for HEIC photos and .mov videos.
 const byExtension: Record<string, ContentType> = {
@@ -78,7 +83,7 @@ export function bookingObjectPath(
   fileId: string,
   contentType: ContentType,
 ): string {
-  return `customer/${userId}/${fileId}.${types[contentType]}`;
+  return `customer/${userId}/${fileId}.${extensionFor(contentType)}`;
 }
 
 /** The pattern bookingObjectPath() makes, for checking paths the client sends. */

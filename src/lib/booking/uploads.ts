@@ -1,7 +1,8 @@
 import type { Upload } from "tus-js-client";
 import { z } from "zod";
 
-import { publicEnv } from "@/lib/env";
+import { checkVideo, type PrepareProblem, shrinkPhoto } from "@/lib/media/prepare";
+import { createTusUpload } from "@/lib/media/tus";
 import { createClient } from "@/lib/supabase/browser";
 
 import {
@@ -9,14 +10,10 @@ import {
   bookingObjectPathPattern,
   contentTypeOf,
   MAX_BOOKING_FILES,
-  MAX_FILE_BYTES,
   MAX_VIDEO_SECONDS,
   type MediaKind,
   mediaKindOf,
   ORDER_MEDIA_BUCKET,
-  PHOTO_MAX_EDGE,
-  roundDuration,
-  videoProblem,
 } from "./media";
 
 // Booking step 2's uploads (spec §5.10), outside React so they keep running
@@ -43,7 +40,7 @@ export type UploadItem = {
   progress: number;
 };
 
-export type AddProblem = "too_many" | "unsupported" | "too_long" | "too_big" | "unreadable";
+export type AddProblem = "too_many" | "unsupported" | PrepareProblem;
 
 const storedSchema = z
   .array(
@@ -249,112 +246,19 @@ async function startUpload(userId: string, id: string) {
   const item = getUploads(userId).find((i) => i.id === id);
   if (!job || !item) return;
 
-  const { Upload } = await import("tus-js-client");
-  const env = publicEnv();
-  const supabase = createClient();
-  let shown = 0;
-
-  const upload = new Upload(job.file, {
-    endpoint: `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/upload/resumable`,
-    retryDelays: [0, 1000, 3000, 5000, 10000],
-    // Supabase's TUS server takes 6 MB chunks only.
-    chunkSize: 6 * 1024 * 1024,
-    uploadDataDuringCreation: true,
-    // tus would resume a stored upload of the same file (by name, size and
-    // date), even one made for another item's object name. Each item makes
-    // its own upload; retry resumes that one from memory.
-    storeFingerprintForResuming: false,
-    headers: { apikey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, "x-upsert": "false" },
-    metadata: {
-      bucketName: ORDER_MEDIA_BUCKET,
-      objectName: item.path,
-      contentType: job.contentType,
-      cacheControl: "3600",
+  const upload = await createTusUpload(
+    job.file,
+    { path: item.path, contentType: job.contentType },
+    {
+      onProgress: (percent) => patch(userId, id, { progress: percent }),
+      onSuccess: () => {
+        if (running.has(id)) patch(userId, id, { status: "done", progress: 100 });
+      },
+      onError: () => {
+        if (running.has(id)) patch(userId, id, { status: "failed" });
+      },
     },
-    // A fresh token for every request: a long video can outlive one.
-    onBeforeRequest: async (request) => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) request.setHeader("Authorization", `Bearer ${data.session.access_token}`);
-    },
-    onProgress: (sent, total) => {
-      // 100 waits for onSuccess, when Storage has the whole file.
-      const percent = Math.min(99, Math.floor((sent / total) * 100));
-      if (percent !== shown) {
-        shown = percent;
-        patch(userId, id, { progress: percent });
-      }
-    },
-    onSuccess: () => {
-      if (running.has(id)) patch(userId, id, { status: "done", progress: 100 });
-    },
-    onError: () => {
-      if (running.has(id)) patch(userId, id, { status: "failed" });
-    },
-  });
+  );
   job.upload = upload;
   if (running.get(id) === job) upload.start();
-}
-
-type Prepared = { file: File; durationS: number | null } | { problem: AddProblem };
-
-async function checkVideo(file: File): Promise<Prepared> {
-  const seconds = await readDuration(file);
-  const problem = videoProblem({ bytes: file.size, durationS: seconds });
-  if (problem || seconds === null) return { problem: problem ?? "unreadable" };
-  return { file, durationS: roundDuration(seconds) };
-}
-
-/** Reads a video's length from its metadata, or null when the browser can't. */
-function readDuration(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
-    const video = document.createElement("video");
-    const url = URL.createObjectURL(file);
-    let settled = false;
-    const finish = (value: number | null) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      video.removeAttribute("src");
-      video.load();
-      URL.revokeObjectURL(url);
-      resolve(value);
-    };
-    const timer = setTimeout(() => finish(null), 15_000);
-    video.preload = "metadata";
-    video.muted = true;
-    video.onerror = () => finish(null);
-    video.onloadedmetadata = () => {
-      if (Number.isFinite(video.duration)) {
-        finish(video.duration);
-        return;
-      }
-      // Some WebM recordings carry no duration: seeking to the end finds it.
-      video.ontimeupdate = () => finish(Number.isFinite(video.duration) ? video.duration : null);
-      video.currentTime = Number.MAX_SAFE_INTEGER;
-    };
-    video.src = url;
-  });
-}
-
-/**
- * Scales a photo down to about 1600 px on its longer edge (spec §5.10). A
- * photo the browser can't decode (HEIC outside Safari) goes up as it is.
- */
-async function shrinkPhoto(file: File): Promise<Prepared> {
-  let result: File = file;
-  try {
-    const { default: imageCompression } = await import("browser-image-compression");
-    const smaller = await imageCompression(file, {
-      maxWidthOrHeight: PHOTO_MAX_EDGE,
-      initialQuality: 0.8,
-      // The worker would load the library from a CDN; the main thread is
-      // fast enough for four photos.
-      useWebWorker: false,
-    });
-    if (smaller.size < file.size) result = new File([smaller], file.name, { type: file.type });
-  } catch {
-    result = file;
-  }
-  if (result.size > MAX_FILE_BYTES) return { problem: "too_big" };
-  return { file: result, durationS: null };
 }

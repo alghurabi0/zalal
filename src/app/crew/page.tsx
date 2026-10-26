@@ -17,6 +17,8 @@ import { type JobCard, listJobs } from "@/lib/crew/queries";
 import { baghdadToday, serviceDayParts, slotParts } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
+import { QueuedCount, QueuedLogoutWarning } from "./queued-files";
+
 /**
  * My jobs (C2, spec §8.1): today and tomorrow, grouped by slot. An open job
  * from an earlier day comes first, today's finished jobs last.
@@ -41,7 +43,7 @@ async function Content() {
   return (
     <>
       <LiveJobs poll />
-      <Header name={viewer.fullName} />
+      <Header name={viewer.fullName} userId={viewer.id} />
       {isEmpty(groups) ? (
         <EmptyState
           icon={CalendarCheck}
@@ -53,14 +55,14 @@ async function Content() {
         <div className="flex flex-col gap-6 px-4 pb-8">
           {groups.earlier.length > 0 && (
             <Group title={t("earlier")} tone="warn">
-              <CardList jobs={groups.earlier} />
+              <CardList jobs={groups.earlier} userId={viewer.id} />
             </Group>
           )}
-          <Day group={groups.today} which="today" />
-          <Day group={groups.tomorrow} which="tomorrow" />
+          <Day group={groups.today} which="today" userId={viewer.id} />
+          <Day group={groups.tomorrow} which="tomorrow" userId={viewer.id} />
           {groups.done.length > 0 && (
             <Group title={t("done")}>
-              <CardList jobs={groups.done} />
+              <CardList jobs={groups.done} userId={viewer.id} />
             </Group>
           )}
         </div>
@@ -69,7 +71,7 @@ async function Content() {
   );
 }
 
-async function Header({ name }: { name: string | null }) {
+async function Header({ name, userId }: { name: string | null; userId: string }) {
   const t = await getTranslations("Crew");
   const tProfile = await getTranslations("Profile");
   return (
@@ -78,7 +80,7 @@ async function Header({ name }: { name: string | null }) {
         <h1 className="text-24 font-black">{t("title")}</h1>
         {name && <p className="text-14 text-muted">{t("hello", { name })}</p>}
       </div>
-      <LogoutButton>
+      <LogoutButton warning={<QueuedLogoutWarning userId={userId} />}>
         <Button variant="secondary" size="sm">
           {tProfile("logout")}
         </Button>
@@ -102,7 +104,15 @@ function Group({ title, tone, children }: { title: string; tone?: "warn"; childr
   );
 }
 
-async function Day({ group, which }: { group: DayGroup<JobCard>; which: "today" | "tomorrow" }) {
+async function Day({
+  group,
+  which,
+  userId,
+}: {
+  group: DayGroup<JobCard>;
+  which: "today" | "tomorrow";
+  userId: string;
+}) {
   const t = await getTranslations("Crew");
   const { weekday, day } = serviceDayParts(group.date);
   return (
@@ -112,37 +122,37 @@ async function Day({ group, which }: { group: DayGroup<JobCard>; which: "today" 
           {t("noJobs")}
         </p>
       ) : (
-        group.slots.map((slot) => <Slot key={slot.slotStartAt} slot={slot} />)
+        group.slots.map((slot) => <Slot key={slot.slotStartAt} slot={slot} userId={userId} />)
       )}
     </Group>
   );
 }
 
-async function Slot({ slot }: { slot: SlotGroup<JobCard> }) {
+async function Slot({ slot, userId }: { slot: SlotGroup<JobCard>; userId: string }) {
   const tBooking = await getTranslations("Booking");
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-14 font-bold text-muted">
         {tBooking("slot", slotParts(slot.slotStartAt, slot.slotEndAt))}
       </h3>
-      <CardList jobs={slot.jobs} />
+      <CardList jobs={slot.jobs} userId={userId} />
     </div>
   );
 }
 
-function CardList({ jobs }: { jobs: JobCard[] }) {
+function CardList({ jobs, userId }: { jobs: JobCard[]; userId: string }) {
   return (
     <ul className="flex flex-col gap-2.5">
       {jobs.map((job) => (
         <li key={job.id}>
-          <JobCardView job={job} />
+          <JobCardView job={job} userId={userId} />
         </li>
       ))}
     </ul>
   );
 }
 
-async function JobCardView({ job }: { job: JobCard }) {
+async function JobCardView({ job, userId }: { job: JobCard; userId: string }) {
   const t = await getTranslations("Crew");
   const tBooking = await getTranslations("Booking");
   const tTanks = await getTranslations("Tanks");
@@ -192,6 +202,7 @@ async function JobCardView({ job }: { job: JobCard }) {
           {t("files", { count: job.mediaCount })}
         </p>
       )}
+      <QueuedCount userId={userId} orderId={job.id} />
     </Card>
   );
 }
