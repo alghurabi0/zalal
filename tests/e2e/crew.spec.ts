@@ -100,7 +100,7 @@ test("a crew runs a job from confirmed to completed without photos", async ({ pa
   await expect(call).toHaveAttribute("href", `tel:${e164(customer.phone)}`);
   await expect(page.getByRole("link", { name: Crew.job.openMaps })).toHaveAttribute(
     "href",
-    /google\.com\/maps\/search\/\?api=1&query=32\.616,44\.024/,
+    /google\.com\/maps\/dir\/\?api=1&destination=32\.616,44\.024/,
   );
   await screenshot(page, "crew-job");
 

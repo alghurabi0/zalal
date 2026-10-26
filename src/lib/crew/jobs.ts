@@ -73,5 +73,5 @@ export function isEmpty(groups: JobGroups<unknown>): boolean {
 
 /** Google Maps directions to the pin, opened in the Maps app on phones. */
 export function mapsLink(lat: number, lng: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }

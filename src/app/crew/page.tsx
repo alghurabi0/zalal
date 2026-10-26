@@ -40,7 +40,7 @@ async function Content() {
 
   return (
     <>
-      <LiveJobs />
+      <LiveJobs poll />
       <Header name={viewer.fullName} />
       {isEmpty(groups) ? (
         <EmptyState

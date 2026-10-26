@@ -11,11 +11,9 @@ import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/s
 import type { CrewJobError } from "@/lib/crew/errors";
 import { canMarkNoShow, nextStep } from "@/lib/crew/status";
 import type { OrderStatus } from "@/lib/orders/status";
+import { STAFF_NOTE_MAX } from "@/lib/schemas/admin-order";
 
 import { advanceJob, type CrewJobResult, finishJob, markNoShow } from "../../actions";
-
-/** Staff notes are 1–500 characters (order_event_notes). */
-const NOTE_MAX = 500;
 
 /**
  * C3a: one big button that moves the job on (طلعنا → وصلنا → بدينا الشغل →
@@ -33,25 +31,9 @@ export function JobActions({
   amount: string;
 }) {
   const t = useTranslations("Crew");
-  const router = useRouter();
-  const [error, setError] = useState<CrewJobError | null>(null);
-  const [pending, startTransition] = useTransition();
+  const { error, pending, submit } = useJobAction();
   const step = nextStep(status);
   if (!step) return null;
-
-  /** Runs an action; on success or a stale page, the page reloads its data. */
-  const run = (action: () => Promise<CrewJobResult>, onDone?: () => void) =>
-    startTransition(async () => {
-      const result = await action();
-      if (result.status === "done") {
-        setError(null);
-        onDone?.();
-        router.refresh();
-        return;
-      }
-      setError(result.error);
-      if (result.error === "invalid_transition" || result.error === "not_found") router.refresh();
-    });
 
   return (
     <footer className="sticky bottom-0 z-10 flex flex-col gap-2.5 border-t border-border bg-surface px-5 pt-3 pb-safe-5.5">
@@ -67,7 +49,7 @@ export function JobActions({
           size="footer"
           className="w-full"
           loading={pending}
-          onClick={() => run(() => advanceJob({ orderId, toStatus: step.to }))}
+          onClick={() => submit(() => advanceJob({ orderId, toStatus: step.to }))}
         >
           {t(`steps.${step.label}`)}
         </Button>
@@ -97,18 +79,28 @@ function ErrorText({ error }: { error: CrewJobError }) {
   );
 }
 
-/** Shared state for the two sheets: open, the error, and the pending call. */
-function useSheetAction() {
+/**
+ * Runs a status change. On success (then `onDone`) or a stale page, the page
+ * reloads its data. A request that never gets an answer (no signal in the
+ * field) shows "ما انحفظ" instead of the error screen.
+ */
+function useJobAction(onDone?: () => void) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [error, setError] = useState<CrewJobError | null>(null);
   const [pending, startTransition] = useTransition();
 
   const submit = (action: () => Promise<CrewJobResult>) =>
     startTransition(async () => {
-      const result = await action();
+      let result: CrewJobResult;
+      try {
+        result = await action();
+      } catch {
+        setError("failed");
+        return;
+      }
       if (result.status === "done") {
-        setOpen(false);
+        setError(null);
+        onDone?.();
         router.refresh();
         return;
       }
@@ -116,7 +108,13 @@ function useSheetAction() {
       if (result.error === "invalid_transition" || result.error === "not_found") router.refresh();
     });
 
-  return { open, setOpen, error, setError, pending, submit };
+  return { error, setError, pending, submit };
+}
+
+/** A sheet's open state plus its action. */
+function useSheetAction() {
+  const [open, setOpen] = useState(false);
+  return { open, setOpen, ...useJobAction(() => setOpen(false)) };
 }
 
 function FinishSheet({
@@ -200,7 +198,7 @@ function NoShowSheet({ orderId, children }: { orderId: string; children: ReactNo
             <Textarea
               {...control}
               rows={4}
-              maxLength={NOTE_MAX}
+              maxLength={STAFF_NOTE_MAX}
               value={note}
               onChange={(event) => setNote(event.target.value)}
             />

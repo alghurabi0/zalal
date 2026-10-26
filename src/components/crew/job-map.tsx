@@ -8,8 +8,8 @@ import { publicEnv } from "@/lib/env";
 
 /**
  * C3's map: the customer's pin. A Google map when the key is set; without
- * one (local, CI) the drawn map, as on Location (spec §5.4). Directions open
- * in Google Maps from the link under it.
+ * one (local, CI) the drawn map, as on Location (spec §5.4). It doesn't
+ * move; directions open in Google Maps from the link under it.
  */
 export function JobMap({ lat, lng }: { lat: number; lng: number }) {
   const apiKey = publicEnv().NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -21,7 +21,8 @@ export function JobMap({ lat, lng }: { lat: number; lng: number }) {
             className="absolute inset-0"
             defaultCenter={{ lat, lng }}
             defaultZoom={16}
-            gestureHandling="cooperative"
+            // Fixed: the pin is an overlay at the center, so the map must not move.
+            gestureHandling="none"
             disableDefaultUI
             clickableIcons={false}
           />

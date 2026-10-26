@@ -124,7 +124,7 @@ describe("crew job schemas", () => {
 describe("mapsLink", () => {
   it("opens the pin in Google Maps", () => {
     expect(mapsLink(32.616, 44.024)).toBe(
-      "https://www.google.com/maps/search/?api=1&query=32.616,44.024",
+      "https://www.google.com/maps/dir/?api=1&destination=32.616,44.024",
     );
   });
 });

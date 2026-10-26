@@ -59,7 +59,9 @@ export async function listJobs(today: string): Promise<JobCard[]> {
       `and(status.in.(${open}),service_date.lte.${addDays(today, 1)}),` +
         `and(status.in.(${done}),service_date.eq.${today})`,
     )
-    .order("slot_start_at", { ascending: true })
+    // Newest first, so a pile of unfinished old jobs can't push today's
+    // past the limit; groupJobs() sorts each group again.
+    .order("slot_start_at", { ascending: false })
     .limit(200)
     .overrideTypes<CardRow[], { merge: false }>();
   if (error) throw new Error(`Jobs read failed: ${error.message}`);
