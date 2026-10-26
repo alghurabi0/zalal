@@ -160,6 +160,132 @@ export type Database = {
           },
         ];
       };
+      chat_messages: {
+        Row: {
+          author: Database["public"]["Enums"]["chat_author"];
+          body: string | null;
+          bytes: number | null;
+          client_id: string | null;
+          created_at: string;
+          customer_id: string;
+          duration_s: number | null;
+          id: string;
+          kind: Database["public"]["Enums"]["chat_message_kind"];
+          media_path: string | null;
+          media_type: Database["public"]["Enums"]["media_type"] | null;
+          order_id: string | null;
+          read_at: string | null;
+          sender_id: string | null;
+          thread_id: string;
+          ticket_id: string | null;
+          topic: Database["public"]["Enums"]["chat_topic"] | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          author: Database["public"]["Enums"]["chat_author"];
+          body?: string | null;
+          bytes?: number | null;
+          client_id?: string | null;
+          created_at?: string;
+          customer_id: string;
+          duration_s?: number | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["chat_message_kind"];
+          media_path?: string | null;
+          media_type?: Database["public"]["Enums"]["media_type"] | null;
+          order_id?: string | null;
+          read_at?: string | null;
+          sender_id?: string | null;
+          thread_id: string;
+          ticket_id?: string | null;
+          topic?: Database["public"]["Enums"]["chat_topic"] | null;
+        };
+        Update: {
+          author?: Database["public"]["Enums"]["chat_author"];
+          body?: string | null;
+          bytes?: number | null;
+          client_id?: string | null;
+          created_at?: string;
+          customer_id?: string;
+          duration_s?: number | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["chat_message_kind"];
+          media_path?: string | null;
+          media_type?: Database["public"]["Enums"]["media_type"] | null;
+          order_id?: string | null;
+          read_at?: string | null;
+          sender_id?: string | null;
+          thread_id?: string;
+          ticket_id?: string | null;
+          topic?: Database["public"]["Enums"]["chat_topic"] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_order_id_customer_id_fkey";
+            columns: ["order_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id", "customer_id"];
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey";
+            columns: ["sender_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "chat_messages_thread_id_customer_id_fkey";
+            columns: ["thread_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "chat_threads";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "chat_messages_ticket_id_customer_id_fkey";
+            columns: ["ticket_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "tickets";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      chat_threads: {
+        Row: {
+          admin_unread: number;
+          created_at: string;
+          customer_unread: number;
+          id: string;
+          last_message_at: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          admin_unread?: number;
+          created_at?: string;
+          customer_unread?: number;
+          id?: string;
+          last_message_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          admin_unread?: number;
+          created_at?: string;
+          customer_unread?: number;
+          id?: string;
+          last_message_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       crew_live_location: {
         Row: {
           accuracy_m: number;
@@ -763,6 +889,7 @@ export type Database = {
           privacy_md: string;
           sms_enabled: boolean;
           sterilant_text: string;
+          support_response_text: string;
           terms_md: string;
           updated_at: string;
           working_days: number[];
@@ -783,6 +910,7 @@ export type Database = {
           privacy_md?: string;
           sms_enabled?: boolean;
           sterilant_text?: string;
+          support_response_text?: string;
           terms_md?: string;
           updated_at?: string;
           working_days?: number[];
@@ -802,6 +930,7 @@ export type Database = {
           privacy_md?: string;
           sms_enabled?: boolean;
           sterilant_text?: string;
+          support_response_text?: string;
           terms_md?: string;
           updated_at?: string;
           working_days?: number[];
@@ -992,6 +1121,24 @@ export type Database = {
       admin_add_admin: { Args: { p_name: string; p_phone: string }; Returns: boolean };
       admin_addresses_outside_area: { Args: Record<PropertyKey, never>; Returns: number };
       admin_block_date: { Args: { p_date: string; p_reason: string }; Returns: undefined };
+      admin_chat_inbox: {
+        Args: { p_limit?: number; p_search?: string };
+        Returns: {
+          admin_unread: number;
+          customer_unread: number;
+          full_name: string;
+          last_author: Database["public"]["Enums"]["chat_author"];
+          last_body: string;
+          last_kind: Database["public"]["Enums"]["chat_message_kind"];
+          last_media_type: Database["public"]["Enums"]["media_type"];
+          last_message_at: string;
+          last_order_id: string;
+          last_topic: Database["public"]["Enums"]["chat_topic"];
+          phone: string;
+          thread_id: string;
+          user_id: string;
+        }[];
+      };
       admin_create_crew: { Args: { p_name: string; p_phone: string }; Returns: string };
       admin_create_slot: {
         Args: {
@@ -1076,6 +1223,7 @@ export type Database = {
           start_at: string;
         }[];
       };
+      chat_thread: { Args: Record<PropertyKey, never>; Returns: string };
       check_otp: {
         Args: { p_code_hash: string; p_phone: string };
         Returns: Record<string, unknown>;
@@ -1102,6 +1250,7 @@ export type Database = {
       };
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
       in_service_area: { Args: { p_lat: number; p_lng: number }; Returns: boolean };
+      mark_chat_read: { Args: { p_thread_id: string }; Returns: number };
       otp_locked_until: { Args: { p_phone: string }; Returns: string };
       public_certificate: {
         Args: { p_code: string };
@@ -1142,11 +1291,48 @@ export type Database = {
         };
         Returns: Record<string, unknown>;
       };
+      send_chat_message: {
+        Args: {
+          p_body?: string;
+          p_client_id: string;
+          p_duration_s?: number;
+          p_media_path?: string;
+          p_order_id?: string;
+          p_thread_id?: string;
+          p_topic?: Database["public"]["Enums"]["chat_topic"];
+        };
+        Returns: {
+          author: Database["public"]["Enums"]["chat_author"];
+          body: string | null;
+          bytes: number | null;
+          client_id: string | null;
+          created_at: string;
+          customer_id: string;
+          duration_s: number | null;
+          id: string;
+          kind: Database["public"]["Enums"]["chat_message_kind"];
+          media_path: string | null;
+          media_type: Database["public"]["Enums"]["media_type"] | null;
+          order_id: string | null;
+          read_at: string | null;
+          sender_id: string | null;
+          thread_id: string;
+          ticket_id: string | null;
+          topic: Database["public"]["Enums"]["chat_topic"] | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "chat_messages";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       set_login_password: { Args: { p_password: string; p_user_id: string }; Returns: undefined };
       share_crew_location: {
         Args: { p_accuracy_m: number; p_lat: number; p_lng: number; p_order_id: string };
         Returns: boolean;
       };
+      support_is_open: { Args: Record<PropertyKey, never>; Returns: boolean };
       transition_order: {
         Args: {
           p_order_id: string;
@@ -1172,6 +1358,9 @@ export type Database = {
       address_label: "home" | "family" | "work";
       app_role: "customer" | "crew" | "admin";
       cancel_reason: "plans_changed" | "time_unsuitable" | "other";
+      chat_author: "customer" | "admin" | "system";
+      chat_message_kind: "message" | "auto_reply" | "no_show" | "ticket";
+      chat_topic: "reschedule" | "cancel" | "price" | "complaint";
       media_type: "photo" | "video";
       order_media_kind: "customer" | "before" | "after" | "clip";
       order_status:
@@ -1305,6 +1494,9 @@ export const Constants = {
       address_label: ["home", "family", "work"],
       app_role: ["customer", "crew", "admin"],
       cancel_reason: ["plans_changed", "time_unsuitable", "other"],
+      chat_author: ["customer", "admin", "system"],
+      chat_message_kind: ["message", "auto_reply", "no_show", "ticket"],
+      chat_topic: ["reschedule", "cancel", "price", "complaint"],
       media_type: ["photo", "video"],
       order_media_kind: ["customer", "before", "after", "clip"],
       order_status: [

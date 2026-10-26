@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AdminLive } from "@/components/admin/admin-live";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { Skeleton } from "@/components/ui/skeleton";
+import { unreadThreads } from "@/lib/admin/chat-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
 
@@ -29,9 +30,10 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
 
 async function Chrome() {
   const viewer = await requireViewer(routes.admin, "admin");
+  const unread = await unreadThreads();
   return (
-    <AdminNav name={viewer.fullName}>
-      <AdminLive />
+    <AdminNav name={viewer.fullName} chatUnread={unread.map((thread) => thread.id)}>
+      <AdminLive chatUnread={unread} />
     </AdminNav>
   );
 }

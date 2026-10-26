@@ -65,7 +65,7 @@ export function CancelSheet({
       <SheetTrigger asChild>{children}</SheetTrigger>
       {blocked ? (
         <SheetContent title={t("blocked.title")}>
-          <BlockedChange />
+          <BlockedChange orderId={orderId} />
         </SheetContent>
       ) : (
         <SheetContent title={t("cancelSheet.title")} description={t("cancelSheet.description")}>

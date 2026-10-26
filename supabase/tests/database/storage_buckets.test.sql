@@ -64,9 +64,12 @@ select policies_are(
     'Crews upload job media to their open jobs',
     'Crews read their job uploads while the job is theirs',
     'Crews delete their job uploads until they are attached',
-    'Certificate PDFs are read with their certificate'
+    'Certificate PDFs are read with their certificate',
+    'Customers and admins upload chat files to their own folder',
+    'Chat files are read by their uploader and with their message',
+    'Uploaders delete chat files until they are sent'
   ]::name[],
-  'storage.objects has only the order-media and certificates policies'
+  'storage.objects has only the order-media, certificates and chat-media policies'
 );
 
 -- One file in every bucket, written the way the server would write it.

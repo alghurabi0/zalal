@@ -6,12 +6,13 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SheetClose } from "@/components/ui/sheet";
 import type { OrderChangeError } from "@/lib/orders/errors";
+import { routes } from "@/lib/routes";
 
 /**
- * Inside the cutoff (N6, N7): "راسلنا بالمحادثة". The chat button comes with
- * Chat in Phase 5.
+ * Inside the cutoff (N6, N7): "راسلنا بالمحادثة", with Chat tagged with the
+ * order. The sheet closes before the link navigates.
  */
-export function BlockedChange() {
+export function BlockedChange({ orderId }: { orderId: string }) {
   const t = useTranslations("Order");
   return (
     <>
@@ -19,6 +20,11 @@ export function BlockedChange() {
         <MessageCircle aria-hidden className="mt-1 size-5 shrink-0" strokeWidth={2} />
         <span className="font-bold">{t("blocked.body")}</span>
       </p>
+      <SheetClose asChild>
+        <Button href={routes.chatAbout(orderId)} size="footer" className="w-full">
+          {t("blocked.chat")}
+        </Button>
+      </SheetClose>
       <SheetClose asChild>
         <Button variant="secondary" size="footer" className="w-full">
           {t("blocked.ok")}

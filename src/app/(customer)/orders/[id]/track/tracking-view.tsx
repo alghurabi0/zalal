@@ -1,6 +1,6 @@
 "use client";
 
-import { Phone, TriangleAlert } from "lucide-react";
+import { MessageSquare, Phone, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { TrackingMap } from "@/components/live/tracking-map";
@@ -112,21 +112,28 @@ export function TrackingView({ order }: { order: TrackingData }) {
           ))}
         </ol>
 
-        {order.companyPhone && (
-          <div className="flex items-center gap-3 rounded-card bg-bg p-3">
-            <div className="flex flex-1 flex-col">
-              <span className="text-15 font-extrabold">{t("contact")}</span>
-              <span className="text-12 text-muted">{t("contactBody")}</span>
-            </div>
-            {/* Chat joins it in Phase 5. */}
+        <div className="flex items-center gap-3 rounded-card bg-bg p-3">
+          <div className="flex flex-1 flex-col">
+            <span className="text-15 font-extrabold">{t("contact")}</span>
+            <span className="text-12 text-muted">
+              {order.companyPhone ? t("contactBody") : t("contactChat")}
+            </span>
+          </div>
+          {order.companyPhone && (
             <IconButton
               href={`tel:${order.companyPhone}`}
               label={t("call")}
               icon={Phone}
               className="border border-border bg-surface"
             />
-          </div>
-        )}
+          )}
+          <IconButton
+            href={routes.chatAbout(order.id)}
+            label={t("chat")}
+            icon={MessageSquare}
+            className="border border-border bg-surface"
+          />
+        </div>
 
         {onTheWay ? (
           <Button size="footer" disabled className="w-full">

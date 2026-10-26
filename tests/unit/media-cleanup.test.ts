@@ -25,7 +25,10 @@ type Fake = {
  * p_limit after the cursor; remove deletes the ones that exist, except those
  * in `stuck`.
  */
-function fakeClient(names: string[], options: { stuck?: string[]; rpcError?: string } = {}): Fake {
+function fakeClient(
+  names: string[],
+  options: { stuck?: string[]; rpcError?: string; bucket?: string } = {},
+): Fake {
   const createdAt = new Map(
     names.map((name, i) => [name, new Date(Date.UTC(2026, 9, 1, 0, 0, i)).toISOString()]),
   );
@@ -50,7 +53,7 @@ function fakeClient(names: string[], options: { stuck?: string[]; rpcError?: str
     },
     storage: {
       from: (bucket: string) => {
-        expect(bucket).toBe("order-media");
+        expect(bucket).toBe(options.bucket ?? "order-media");
         return {
           remove: async (paths: string[]) => {
             removeCalls.push(paths);
@@ -93,6 +96,17 @@ describe("cleanUp", () => {
       },
     ]);
     expect(fake.removeCalls.map((chunk) => chunk.length)).toEqual([4, 4, 2, 4, 4, 2, 3]);
+  });
+
+  it("deletes unsent chat files from chat-media", async () => {
+    const fake = fakeClient(names(3, "u"), { bucket: "chat-media" });
+    expect(await cleanUp(fake.client, "chat", small)).toEqual({
+      folder: "chat",
+      deleted: 3,
+      failed: 0,
+      more: false,
+    });
+    expect(fake.rpcCalls[0]?.args).toMatchObject({ p_folder: "chat" });
   });
 
   it("does nothing when nothing is unattached", async () => {

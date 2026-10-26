@@ -14,6 +14,7 @@ import type { AdminEditError } from "@/lib/admin/edit-errors";
 import { normalizeIraqiPhone } from "@/lib/phone";
 import {
   CERTIFICATE_TEXT_MAX,
+  SUPPORT_REPLY_MAX,
   LEGAL_MAX,
   SETTING_RANGES,
   type SettingsSectionInput,
@@ -28,6 +29,7 @@ export function SettingsForms({ settings }: { settings: AdminSettings }) {
     <div className="grid items-start gap-4 lg:grid-cols-2">
       <LoginSection settings={settings} />
       <SupportSection settings={settings} />
+      <ChatSection settings={settings} />
       <BookingSection settings={settings} />
       <CrewSection settings={settings} />
       <CertificateSection settings={settings} />
@@ -329,6 +331,30 @@ function CrewSection({ settings }: { settings: AdminSettings }) {
             name="sterilant_text"
             value={sterilant}
             onChange={(event) => setSterilant(event.target.value)}
+          />
+        )}
+      </Field>
+    </Section>
+  );
+}
+
+function ChatSection({ settings }: { settings: AdminSettings }) {
+  const t = useTranslations("Admin.settings.chat");
+  const [text, setText] = useState(settings.support_response_text);
+  return (
+    <Section
+      title={t("title")}
+      input={{ section: "chat", values: { support_response_text: text } }}
+    >
+      <Field label={t("text")} variant="compact" hint={t("textHint")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            rows={3}
+            maxLength={SUPPORT_REPLY_MAX}
+            name="support_response_text"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
           />
         )}
       </Field>

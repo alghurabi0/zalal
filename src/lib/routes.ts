@@ -42,6 +42,8 @@ export const routes = {
   /** Booking success (N5). */
   booked: (id: string) => `/book/done/${id}`,
   chat: "/chat",
+  /** Chat with the next message tagged with an order (مساعدة, Tracking, Job progress). */
+  chatAbout: (orderId: string) => `/chat?order=${encodeURIComponent(orderId)}`,
   profile: "/profile",
   /** POST only: ends the session, then Welcome. */
   logout: "/logout",
@@ -73,6 +75,10 @@ export const routes = {
   adminAdmins: "/admin/admins",
   /** The admin audit log, newest first; `?entity=`, `?admin=`, `?before=<id>`. */
   adminAudit: "/admin/audit",
+  /** Chat inbox (A4); `?q=` searches by name or phone, `&n=` shows more. */
+  adminChat: "/admin/chat",
+  /** One conversation in the inbox, with the customer panel. */
+  adminChatThread: (threadId: string) => `/admin/chat/${threadId}`,
   /** Live map (A3): crews on the way. */
   adminLive: "/admin/live",
 } as const;

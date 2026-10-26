@@ -274,7 +274,7 @@ test("Job progress shows the steps and the crew's photos and clips as they arriv
   await expect(main.getByRole("heading", { name: LiveJob.clips })).toBeVisible();
   await expect(main.getByRole("heading", { name: LiveJob.after })).toBeVisible();
   await expect(main.locator("video")).toHaveCount(1);
-  await expect(main.getByText("0:05")).toBeVisible();
+  await expect(main.getByText("0:05", { exact: true })).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await screenshot(page, "live-job");
 

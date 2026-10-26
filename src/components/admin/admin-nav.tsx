@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPinned,
+  MessagesSquare,
   Settings,
   ShieldCheck,
   Tag,
@@ -16,15 +17,18 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
+import { createClient } from "@/lib/supabase/browser";
+import { usePostgresChanges } from "@/lib/supabase/use-postgres-changes";
 
 const items = [
   { href: routes.admin, key: "overview", icon: LayoutDashboard },
   { href: routes.adminOrders, key: "orders", icon: ClipboardList },
+  { href: routes.adminChat, key: "chat", icon: MessagesSquare },
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
   { href: routes.adminLive, key: "live", icon: MapPinned },
   { href: routes.adminPrices, key: "prices", icon: Tag },
@@ -51,9 +55,19 @@ function activeHref(pathname: string): string | undefined {
  * The admin shell's navigation (spec §8.2): a sidebar on the start side on
  * desktop, a scrolling row of links on top on tablets.
  */
-export function AdminNav({ name, children }: { name: string | null; children?: ReactNode }) {
+export function AdminNav({
+  name,
+  chatUnread,
+  children,
+}: {
+  name: string | null;
+  /** Threads with customer messages no admin has read, when the page loaded. */
+  chatUnread: string[];
+  children?: ReactNode;
+}) {
   const t = useTranslations("Admin.nav");
   const pathname = usePathname();
+  const unread = useUnreadThreads(chatUnread);
 
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 bg-navy px-4 py-3 text-white lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:flex-col lg:flex-nowrap lg:items-stretch lg:px-3 lg:py-5">
@@ -93,6 +107,12 @@ export function AdminNav({ name, children }: { name: string | null; children?: R
                 >
                   <Icon aria-hidden className="size-5 shrink-0" />
                   {t(item.key)}
+                  {item.key === "chat" && unread > 0 && (
+                    <span className="ms-auto flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-aqua px-1.5 text-12 font-extrabold text-navy">
+                      {unread}
+                      <span className="sr-only"> {t("chatUnread", { count: unread })}</span>
+                    </span>
+                  )}
                 </Link>
               </li>
             );
@@ -101,4 +121,45 @@ export function AdminNav({ name, children }: { name: string | null; children?: R
       </nav>
     </header>
   );
+}
+
+/**
+ * How many threads have customer messages no admin has read (A4), live:
+ * each thread row carries its count, and RLS sends admins every thread.
+ */
+function useUnreadThreads(initial: string[]): number {
+  const [threads, setThreads] = useState(() => new Set(initial));
+  // A fresh server read wins (React's pattern for state derived from props).
+  const [seen, setSeen] = useState(initial);
+  if (seen !== initial) {
+    setSeen(initial);
+    setThreads(new Set(initial));
+  }
+  usePostgresChanges({
+    table: "chat_threads",
+    events: ["INSERT", "UPDATE"],
+    onChange: (row) => {
+      const id = String(row.id);
+      const unread = Number(row.admin_unread) > 0;
+      setThreads((current) => {
+        if (current.has(id) === unread) return current;
+        const next = new Set(current);
+        if (unread) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    },
+    // A change before the subscription was live: read the unread threads again.
+    onSubscribed: () => {
+      void createClient()
+        .from("chat_threads")
+        .select("id")
+        .gt("admin_unread", 0)
+        .limit(1000)
+        .then(({ data }) => {
+          if (data) setThreads(new Set(data.map((thread) => thread.id)));
+        });
+    },
+  });
+  return threads.size;
 }
