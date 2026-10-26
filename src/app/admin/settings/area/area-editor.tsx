@@ -36,7 +36,8 @@ function download(name: string, contents: string) {
   link.href = url;
   link.download = name;
   link.click();
-  URL.revokeObjectURL(url);
+  // Some browsers start the download after click() returns.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 type Draft = { id: number | null; name: string; active: boolean; area: MultiPolygonCoords };

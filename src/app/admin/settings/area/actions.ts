@@ -3,7 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 
-import { type AdminEditResult, editFailure } from "@/lib/admin/edit-errors";
+import { type AdminEditFailure, editFailure } from "@/lib/admin/edit-errors";
 import { toGeometry } from "@/lib/admin/geojson";
 import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
@@ -15,8 +15,7 @@ const report = (message: string) => Sentry.captureMessage(message, "error");
 // admin_save_service_area()'s OUT parameters.
 const savedSchema = z.object({ area_id: z.number(), addresses_outside: z.number() });
 
-export type SaveAreaResult =
-  { status: "done"; addressesOutside: number } | Extract<AdminEditResult, { status: "error" }>;
+export type SaveAreaResult = { status: "done"; addressesOutside: number } | AdminEditFailure;
 
 /**
  * A13: adds or changes a service area (admin_save_service_area). The
@@ -37,10 +36,7 @@ export async function saveServiceArea(input: ServiceAreaInput): Promise<SaveArea
       p_active: active,
     })
     .single();
-  if (error) {
-    const failure = editFailure("admin_save_service_area", error, report);
-    return failure.status === "error" ? failure : { status: "error", error: "failed" };
-  }
+  if (error) return editFailure("admin_save_service_area", error, report);
   const saved = savedSchema.safeParse(data);
   if (!saved.success) return { status: "error", error: "failed" };
   return { status: "done", addressesOutside: saved.data.addresses_outside };

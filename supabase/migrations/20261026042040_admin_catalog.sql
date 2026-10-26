@@ -241,14 +241,19 @@ begin
     raise exception using errcode = '22023', message = 'date_in_past';
   end if;
 
-  select * into v_old from public.blocked_dates as b where b.date = p_date for update;
-
-  if not found then
-    insert into public.blocked_dates (date, reason) values (p_date, p_reason);
+  -- A new day; on conflict (already blocked, maybe by another admin a
+  -- moment ago) the reason is updated below instead.
+  insert into public.blocked_dates (date, reason) values (p_date, p_reason)
+  on conflict (date) do nothing;
+  if found then
     perform private.log_admin_action(
       'blocked_date.add', 'blocked_dates', p_date::text, jsonb_build_object('reason', p_reason)
     );
-  elsif v_old.reason is distinct from p_reason then
+    return;
+  end if;
+
+  select * into v_old from public.blocked_dates as b where b.date = p_date for update;
+  if v_old.reason is distinct from p_reason then
     update public.blocked_dates as b set reason = p_reason where b.date = p_date;
     perform private.log_admin_action(
       'blocked_date.update', 'blocked_dates', p_date::text,

@@ -2,7 +2,7 @@ import "server-only";
 
 import type { PriceTable } from "@/lib/booking/draft";
 import type { Database } from "@/lib/database.types";
-import { baghdadToday } from "@/lib/dates";
+import { addDays, baghdadToday } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 import { areaFromDatabase, type MultiPolygonCoords } from "./geojson";
@@ -32,21 +32,45 @@ export type AdminSlot = {
   upcoming: number;
 };
 
+/**
+ * Places held per day and slot from `from` to `to` (at most 31 days), from
+ * admin_slot_board. Counted in the database: reading slot_bookings rows
+ * would stop at PostgREST's 1,000-row limit. Only cells with places come
+ * back, so 31 days stay under that limit too (20 slots × 31 days).
+ */
+async function heldPlaces(from: string, to: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("admin_slot_board", { p_from: from, p_to: to })
+    .gt("taken", 0)
+    .select("service_date, slot_id, taken");
+  if (error) throw new Error(`Places read failed: ${error.message}`);
+  return data;
+}
+
+/** Days ahead the upcoming counts cover: past the longest booking window (60). */
+const UPCOMING_DAYS = 62;
+
 /** Every slot, switched-off ones too, by time of day. */
 export async function adminSlots(now: Date = new Date()): Promise<AdminSlot[]> {
   const supabase = await createClient();
-  const [slots, held] = await Promise.all([
+  const today = baghdadToday(now);
+  const chunks = Array.from({ length: Math.ceil(UPCOMING_DAYS / 31) }, (_, i) =>
+    heldPlaces(addDays(today, i * 31), addDays(today, Math.min(i * 31 + 30, UPCOMING_DAYS - 1))),
+  );
+  const [slots, ...held] = await Promise.all([
     supabase
       .from("slots")
       .select("id, start_time, end_time, capacity, weekdays, active")
       .order("start_time")
       .order("end_time"),
-    supabase.from("slot_bookings").select("slot_id").gte("service_date", baghdadToday(now)),
+    ...chunks,
   ]);
   if (slots.error) throw new Error(`Slots read failed: ${slots.error.message}`);
-  if (held.error) throw new Error(`Bookings read failed: ${held.error.message}`);
   const upcoming = new Map<number, number>();
-  for (const { slot_id } of held.data) upcoming.set(slot_id, (upcoming.get(slot_id) ?? 0) + 1);
+  for (const cell of held.flat()) {
+    upcoming.set(cell.slot_id, (upcoming.get(cell.slot_id) ?? 0) + cell.taken);
+  }
   return slots.data.map((s) => ({
     id: s.id,
     startTime: s.start_time,
@@ -71,7 +95,7 @@ export async function scheduleConflicts(): Promise<ScheduleConflict[]> {
 
 export type CalendarDay = { blocked: boolean; reason: string | null; booked: number };
 
-/** Blocked days and places held per day, from `from` to `to` (inclusive). */
+/** Blocked days and places held per day, from `from` to `to` (inclusive, at most 31 days). */
 export async function scheduleCalendar(
   from: string,
   to: string,
@@ -79,19 +103,14 @@ export async function scheduleCalendar(
   const supabase = await createClient();
   const [blocked, held] = await Promise.all([
     supabase.from("blocked_dates").select("date, reason").gte("date", from).lte("date", to),
-    supabase
-      .from("slot_bookings")
-      .select("service_date")
-      .gte("service_date", from)
-      .lte("service_date", to),
+    heldPlaces(from, to),
   ]);
   if (blocked.error) throw new Error(`Blocked dates read failed: ${blocked.error.message}`);
-  if (held.error) throw new Error(`Bookings read failed: ${held.error.message}`);
   const days: Record<string, CalendarDay> = {};
   const day = (date: string) => (days[date] ??= { blocked: false, reason: null, booked: 0 });
   for (const row of blocked.data)
     Object.assign(day(row.date), { blocked: true, reason: row.reason });
-  for (const row of held.data) day(row.service_date).booked += 1;
+  for (const cell of held) day(cell.service_date).booked += cell.taken;
   return days;
 }
 

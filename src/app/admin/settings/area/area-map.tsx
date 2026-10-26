@@ -21,8 +21,9 @@ function toPaths(polygon: PolygonCoords): google.maps.LatLngLiteral[][] {
   return polygon.map((ring) => ring.slice(0, -1).map(([lng, lat]) => ({ lat, lng })));
 }
 
+/** The part's rings, closed. A ring dragged down to two corners is no ring: a hole is dropped, an outline drops the whole part (empty). */
 function fromPolygon(polygon: google.maps.Polygon): PolygonCoords {
-  return polygon
+  const rings = polygon
     .getPaths()
     .getArray()
     .map((path) => {
@@ -30,8 +31,14 @@ function fromPolygon(polygon: google.maps.Polygon): PolygonCoords {
       const first = ring[0];
       if (first) ring.push([first[0], first[1]]);
       return ring;
-    })
-    .filter((ring) => ring.length >= 4);
+    });
+  if ((rings[0]?.length ?? 0) < 4) return [];
+  return rings.filter((ring) => ring.length >= 4);
+}
+
+/** Every part still drawn, without the ones reduced to nothing. */
+function partsOf(polygons: google.maps.Polygon[]): MultiPolygonCoords {
+  return polygons.map(fromPolygon).filter((part) => part.length > 0);
 }
 
 export function AreaMap({
@@ -89,7 +96,7 @@ function Parts({
     onChangeRef.current = onChange;
   });
 
-  const current = () => polygons.current.map(fromPolygon);
+  const current = () => partsOf(polygons.current);
 
   useEffect(() => {
     if (!map) return;

@@ -4,7 +4,7 @@ import { Calendar, type LucideIcon, MapPin, Video } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type ComponentType, type SVGProps, useEffect, useState } from "react";
+import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "react";
 
 import { RoofTankIcon } from "@/components/icons/tank-icons";
 import { Screen } from "@/components/layout/screen";
@@ -52,6 +52,12 @@ export function ConfirmStep() {
   const [bookedRequest, setBookedRequest] = useState<string | null>(null);
   const [error, setError] = useState<BookingError | null>(null);
   const busy = submitting || (bookedRequest !== null && draft?.requestId === bookedRequest);
+  // The prices on screen when the request goes out: a refresh during a long
+  // upload can bring new ones after the tap.
+  const latestData = useRef(data);
+  useEffect(() => {
+    latestData.current = data;
+  });
 
   const ready = draft !== null && detailsComplete(draft, data.days, data.maxTanks);
   useEffect(() => {
@@ -89,7 +95,11 @@ export function ConfirmStep() {
           path: file.path,
           durationS: file.kind === "video" ? file.durationS : null,
         })),
-        expectedTotal: draftTotal(current.lines, data.savedTanks, data.prices),
+        expectedTotal: draftTotal(
+          current.lines,
+          latestData.current.savedTanks,
+          latestData.current.prices,
+        ),
       });
 
       if (result.status === "booked") {

@@ -37,7 +37,8 @@ export function adminEditErrorFor(
 }
 
 /** A Server Action's answer to an admin edit. */
-export type AdminEditResult = { status: "done" } | { status: "error"; error: AdminEditError };
+export type AdminEditFailure = { status: "error"; error: AdminEditError };
+export type AdminEditResult = { status: "done" } | AdminEditFailure;
 
 /**
  * The result for a failed admin RPC. Unexpected failures go to Sentry with
@@ -47,7 +48,7 @@ export function editFailure(
   rpc: string,
   error: { code?: string; message?: string },
   report: (message: string) => void,
-): AdminEditResult {
+): AdminEditFailure {
   const code = adminEditErrorFor(error);
   if (code === "failed") report(`${rpc} failed (${error.code})`);
   return { status: "error", error: code };

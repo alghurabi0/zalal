@@ -61,6 +61,9 @@ test("a price changed during Checkout is shown before booking", async ({ page })
     await expect(page.getByText("80,000 د.ع").filter({ visible: true }).first()).toBeVisible();
     await pickSlot(page, baghdadDate(1), slot.label);
     await page.getByRole("link", { name: Booking.next }).click();
+    // Step 2's link has the same name as step 1's: wait for step 2 first.
+    await expect(page).toHaveURL("/book/photos");
+    await expect(page.getByRole("heading", { name: Upload.title })).toBeVisible();
     await page.getByRole("link", { name: Upload.next }).click();
     await expect(page).toHaveURL("/book/confirm");
 

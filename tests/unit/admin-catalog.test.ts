@@ -296,6 +296,7 @@ describe("normalizeIraqiPhone", () => {
     expect(normalizeIraqiPhone("+964 32 123 4567")).toBe("+964321234567");
     expect(normalizeIraqiPhone("032 123 4567")).toBe("+964321234567");
     expect(normalizeIraqiPhone("12")).toBeNull();
+    expect(normalizeIraqiPhone("0771234567")).toBeNull();
     expect(normalizeIraqiPhone("+1 202 555 0100")).toBeNull();
   });
 });
