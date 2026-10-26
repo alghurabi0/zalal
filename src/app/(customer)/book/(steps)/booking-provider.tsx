@@ -25,6 +25,7 @@ import type { BookingError } from "@/lib/booking/errors";
 import {
   type AddProblem,
   addFiles,
+  dropExpiredUploads,
   getUploads,
   noUploads,
   removeUpload,
@@ -56,6 +57,8 @@ type BookingContextValue = {
   uploads: UploadItem[];
   /** Waits until no file is being checked or uploaded. */
   uploadsSettled: () => Promise<UploadItem[]>;
+  /** Forgets finished uploads too old to book; returns how many (see uploads.ts). */
+  dropExpiredUploads: (options?: { unknownAge?: boolean }) => number;
   addFiles: (files: File[]) => Promise<AddProblem[]>;
   retryUpload: (id: string) => void;
   removeUpload: (id: string) => void;
@@ -114,6 +117,7 @@ export function BookingProvider({ data, children }: { data: BookingData; childre
       latestDraft,
       uploads,
       uploadsSettled: () => uploadsSettled(userId),
+      dropExpiredUploads: (options) => dropExpiredUploads(userId, options),
       addFiles: (files) => addFiles(userId, files),
       retryUpload: (id) => retryUpload(userId, id),
       removeUpload: (id) => removeUpload(userId, id),

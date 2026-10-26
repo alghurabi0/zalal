@@ -44,7 +44,16 @@ export function ConfirmStep() {
   const tLabels = useTranslations("Location.labels");
   const tUI = useTranslations("UI");
   const router = useRouter();
-  const { data, draft, update, latestDraft, uploads, uploadsSettled, setNotice } = useBooking();
+  const {
+    data,
+    draft,
+    update,
+    latestDraft,
+    uploads,
+    uploadsSettled,
+    dropExpiredUploads,
+    setNotice,
+  } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   // The booking just made: the button stays busy until N5 opens and clears
   // the draft. Next keeps this page alive, so a plain flag would stay set
@@ -76,6 +85,13 @@ export function ConfirmStep() {
     try {
       const files = await uploadsSettled();
       if (files.some((file) => file.status === "failed")) return;
+      // A file too old to book (open in a tab for 2 days), forgotten here or
+      // by a reload: Photos shows it gone and the customer adds it again,
+      // rather than booking without it unawares.
+      if (dropExpiredUploads() > 0) {
+        setError("upload_missing");
+        return;
+      }
       // The booking as it is now: the customer may have changed it while
       // the uploads finished.
       const current = latestDraft();
@@ -121,6 +137,9 @@ export function ConfirmStep() {
       // A price changed: reload the prices, so the total shown is the one
       // the next "أكّد الحجز" sends.
       if (result.error === "price_changed") router.refresh();
+      // Refused although the device thought it fresh (a file saved before
+      // upload times were kept): forget those, or every retry fails again.
+      if (result.error === "upload_missing") dropExpiredUploads({ unknownAge: true });
       setError(result.error);
     } catch {
       // The request never got an answer (offline). The same requestId is

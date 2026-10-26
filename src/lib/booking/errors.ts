@@ -10,7 +10,7 @@ export type BookingError =
   | "outside_area"
   /** ZL007: more tanks than max_tanks_per_order. */
   | "too_many_tanks"
-  /** ZL008 or ZL009: an upload is missing, someone else's or already used. */
+  /** ZL008 or ZL009: an upload is missing, too old to book (48 h), someone else's or already used. */
   | "upload_missing"
   /** ZL018: an admin changed a price after Checkout showed the total. */
   | "price_changed"

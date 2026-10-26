@@ -11,6 +11,19 @@ export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 export const PHOTO_MAX_EDGE = 1600;
 export const ORDER_MEDIA_BUCKET = "order-media";
 
+/**
+ * create_order() takes an upload only within 48 hours of it finishing, and
+ * the nightly cleanup deletes unattached ones after 72 (spec §7 Storage).
+ * The app forgets an upload a little sooner, by the device's clock, so the
+ * customer adds it again instead of being refused at Checkout.
+ */
+export const BOOKABLE_UPLOAD_MS = 46 * 60 * 60 * 1000;
+
+/** Whether a finished upload is too old to book (null: age unknown, keep it). */
+export function uploadExpired(uploadedAt: number | null, now: number): boolean {
+  return uploadedAt !== null && now - uploadedAt > BOOKABLE_UPLOAD_MS;
+}
+
 export type MediaKind = "photo" | "video";
 
 // The bucket's allow-list, with the extension each type is saved under.
