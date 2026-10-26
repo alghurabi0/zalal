@@ -273,7 +273,7 @@ using (user_id = (select auth.uid()) or (select private.is_admin()));
 create table public.ratings (
   order_id uuid primary key references public.orders (id) on delete cascade,
   stars smallint not null check (stars between 1 and 5),
-  tags public.rating_tag[] not null default '{}',
+  tags public.rating_tag[] not null default '{}' check (array_position(tags, null) is null),
   comment text check (
     comment is null or (char_length(comment) between 1 and 500 and comment = btrim(comment))
   ),
@@ -351,7 +351,11 @@ begin
   values (
     v_order.id,
     p_stars,
-    (select coalesce(array_agg(distinct t order by t), '{}') from unnest(coalesce(p_tags, '{}')) as t),
+    (
+      select coalesce(array_agg(distinct t order by t), '{}')
+      from unnest(coalesce(p_tags, '{}')) as t
+      where t is not null
+    ),
     v_comment,
     v_ticket.id
   );

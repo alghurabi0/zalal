@@ -14,7 +14,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(30);
+select plan(33);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -103,6 +103,23 @@ select results_eq(
   $$ values (5::smallint, '{on_time,clean_work}'::public.rating_tag[], 'شغل ممتاز', null::uuid) $$,
   'the rating is saved with tags once each and the comment trimmed'
 );
+select results_eq(
+  $$ select tests.rate('three', 4, array['respectful', null]::public.rating_tag[]) $$,
+  $$ values (null::bigint) $$,
+  'a null tag'
+);
+select results_eq(
+  $$ select tags from public.ratings where order_id = tests.id('three') $$,
+  $$ values ('{respectful}'::public.rating_tag[]) $$,
+  'is dropped'
+);
+select tests.clear_authentication();
+select throws_ok(
+  $$ insert into public.ratings (order_id, stars, tags) values (tests.id('open'), 5, array[null]::public.rating_tag[]) $$,
+  '23514', null, 'and the table refuses one'
+);
+delete from public.ratings where order_id = tests.id('three');
+select tests.authenticate_as(tests.a());
 select throws_ok(
   $$ select tests.rate('good', 4) $$,
   'ZL026', 'already_rated', 'an order is rated once'
