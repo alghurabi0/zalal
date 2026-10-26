@@ -734,8 +734,6 @@
         "invalid_transition": "حالة الطلب تغيّرت. شوف الحالة الجديدة وجرّب مرة ثانية.",
         "reason_required": "اكتب السبب",
         "crew_not_assigned": "عيّن فريق أول",
-        "before_photo_required": "لازم صورة قبل الشغل",
-        "after_photo_required": "لازم صورة بعد الشغل",
         "cash_not_collected": "لازم يتأشر استلام المبلغ",
         "crew_inactive": "هذا الفريق موقوف. اختار فريق ثاني.",
         "crew_change_not_allowed": "ما يصير تغيّر الفريق بهذي الحالة",
