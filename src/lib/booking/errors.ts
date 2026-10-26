@@ -12,6 +12,8 @@ export type BookingError =
   | "too_many_tanks"
   /** ZL008 or ZL009: an upload is missing, someone else's or already used. */
   | "upload_missing"
+  /** ZL018: an admin changed a price after Checkout showed the total. */
+  | "price_changed"
   /** P0002: the address or a saved tank was deleted meanwhile. */
   | "stale"
   | "failed";
@@ -23,6 +25,7 @@ const byCode: Record<string, BookingError> = {
   ZL007: "too_many_tanks",
   ZL008: "upload_missing",
   ZL009: "upload_missing",
+  ZL018: "price_changed",
   P0002: "stale",
 };
 

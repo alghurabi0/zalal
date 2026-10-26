@@ -39,6 +39,8 @@ export const createBookingSchema = z.object({
       }),
     )
     .max(MAX_BOOKING_FILES),
+  /** The total Checkout showed; create_order() refuses another (ZL018). */
+  expectedTotal: z.number().int().min(0),
 });
 
 export type CreateBookingInput = z.input<typeof createBookingSchema>;

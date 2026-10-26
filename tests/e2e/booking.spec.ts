@@ -39,6 +39,50 @@ async function expectTouchTargets(page: Page, names: (string | RegExp)[]) {
   }
 }
 
+test("a price changed during Checkout is shown before booking", async ({ page }) => {
+  // ground/m: no other test reads or changes it.
+  const setPrice = (price: number) =>
+    admin
+      .from("price_list")
+      .update({ price_iqd: price })
+      .eq("tank_type", "ground")
+      .eq("size", "m")
+      .throwOnError();
+  await setPrice(80000);
+  slot = await createSlot();
+  try {
+    await signUp(page);
+    await page.goto("/book");
+    await page.getByRole("button", { name: `${Booking.edit} خزان سطح · 1,000–2,000` }).click();
+    const sheet = page.getByRole("dialog", { name: Booking.editTitle });
+    await sheet.getByText(Tanks.types.ground).click();
+    await sheet.getByRole("button", { name: Booking.editSave }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByText("80,000 د.ع").filter({ visible: true }).first()).toBeVisible();
+    await pickSlot(page, baghdadDate(1), slot.label);
+    await page.getByRole("link", { name: Booking.next }).click();
+    await page.getByRole("link", { name: Upload.next }).click();
+    await expect(page).toHaveURL("/book/confirm");
+
+    // An admin raises the price while the customer reads the summary.
+    await setPrice(85000);
+    await page.getByRole("button", { name: Checkout.confirm }).click();
+    await expect(page.getByText(Checkout.errors.priceChanged)).toBeVisible();
+    await expect(page.getByText("85,000 د.ع").filter({ visible: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: Checkout.confirm }).click();
+    await page.waitForURL(/\/book\/done\//);
+    const { data: order } = await admin
+      .from("orders")
+      .select("total_iqd")
+      .eq("id", page.url().split("/").pop()!)
+      .single()
+      .throwOnError();
+    expect(order.total_iqd).toBe(85000);
+  } finally {
+    await setPrice(80000);
+  }
+});
+
 test("a guest opening Book logs in and comes back", async ({ page }) => {
   const phone = await signUp(page);
   await page.context().clearCookies();

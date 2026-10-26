@@ -89,6 +89,7 @@ export function ConfirmStep() {
           path: file.path,
           durationS: file.kind === "video" ? file.durationS : null,
         })),
+        expectedTotal: draftTotal(current.lines, data.savedTanks, data.prices),
       });
 
       if (result.status === "booked") {
@@ -107,6 +108,9 @@ export function ConfirmStep() {
         router.push(routes.book);
         return;
       }
+      // A price changed: reload the prices, so the total shown is the one
+      // the next "أكّد الحجز" sends.
+      if (result.error === "price_changed") router.refresh();
       setError(result.error);
     } catch {
       // The request never got an answer (offline). The same requestId is
@@ -188,9 +192,11 @@ export function ConfirmStep() {
       ? t("errors.outsideArea")
       : error === "upload_missing"
         ? t("errors.uploadMissing")
-        : error
-          ? t("errors.failed")
-          : null;
+        : error === "price_changed"
+          ? t("errors.priceChanged")
+          : error
+            ? t("errors.failed")
+            : null;
 
   return (
     <Screen className="bg-bg">
