@@ -417,6 +417,9 @@ begin
   where m.id = p_media_id
     and m.kind in ('before', 'after', 'clip')
     and o.crew_id = private.current_crew_id()
+    -- Only its own files: a crew given a reopened job can't remove the
+    -- first crew's (keyed by folder, so a crew on a new phone keeps them).
+    and starts_with(m.path, 'crew/' || private.current_crew_id() || '/')
   for update of o;
   if not found then
     raise exception using errcode = 'P0002', message = 'media_not_found';
