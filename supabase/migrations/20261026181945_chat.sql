@@ -63,8 +63,10 @@
 --    stars or fewer open, §5.15; the Issue report's in Phase 5, task 2).
 --
 -- 5. Storage (chat-media): customers and admins upload to <user id>/<file>;
---    a file is read by its uploader and by whoever reads its message; the
---    uploader deletes it until it is sent. The nightly media cleanup gets a
+--    a file is read by its uploader until it is sent, then by whoever reads
+--    its message; the uploader deletes it until it is sent. "Sent" is
+--    checked without RLS (private.chat_media_sent), so an admin who is no
+--    longer one can't delete or replace what customers were sent. The nightly media cleanup gets a
 --    chat folder: unsent chat files over 72 hours old (job media-cleanup-chat,
 --    00:37 UTC).
 --
@@ -373,9 +375,11 @@ begin
   end if;
 
   -- A retry returns the first message (the thread lock queues two at once).
+  -- Only in the same thread: an admin turned customer must not read back,
+  -- by client id, what they sent in a customer's thread (RLS audit).
   select * into v_message
   from public.chat_messages as m
-  where m.sender_id = v_user_id and m.client_id = p_client_id;
+  where m.sender_id = v_user_id and m.client_id = p_client_id and m.thread_id = v_thread.id;
   if found then
     return v_message;
   end if;
@@ -649,6 +653,21 @@ for each row execute function private.post_ticket_message();
 
 -- Storage: chat-media ------------------------------------------------------------------------
 
+-- Whether a message has sent the file, whoever may read that message. The
+-- storage policies need it without RLS: an admin turned customer (or a
+-- deleted admin) can no longer read the messages that carry their files, so
+-- an RLS-bound check would let them delete a file customers were sent and
+-- upload something else under its name (RLS audit).
+create function private.chat_media_sent(p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.chat_messages as m where m.media_path = p_name);
+$$;
+
 create policy "Customers and admins upload chat files to their own folder"
 on storage.objects
 for insert
@@ -667,7 +686,10 @@ to authenticated
 using (
   bucket_id = 'chat-media'
   and (
-    (storage.foldername(name))[1] = (select auth.uid())::text
+    (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      and not private.chat_media_sent(objects.name)
+    )
     or exists (select 1 from public.chat_messages as m where m.media_path = objects.name)
   )
 );
@@ -679,7 +701,7 @@ to authenticated
 using (
   bucket_id = 'chat-media'
   and (storage.foldername(name))[1] = (select auth.uid())::text
-  and not exists (select 1 from public.chat_messages as m where m.media_path = objects.name)
+  and not private.chat_media_sent(objects.name)
 );
 
 -- Media cleanup: the chat folder ---------------------------------------------------------------
@@ -814,3 +836,4 @@ select cron.schedule(
 );
 
 revoke execute on all functions in schema private from public;
+grant execute on function private.chat_media_sent(text) to authenticated;

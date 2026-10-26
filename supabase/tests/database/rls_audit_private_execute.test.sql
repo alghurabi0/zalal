@@ -34,8 +34,8 @@ select is(
     where p.pronamespace = 'private'::regnamespace
       and has_function_privilege('authenticated', p.oid, 'execute')
   ),
-  array['current_crew_id', 'current_user_role', 'is_admin'],
-  'authenticated can execute only the role helpers'
+  array['chat_media_sent', 'current_crew_id', 'current_user_role', 'is_admin'],
+  'authenticated can execute only the role helpers and the chat-media sent check'
 );
 
 -- Supabase also grants anon and authenticated every privilege on new
