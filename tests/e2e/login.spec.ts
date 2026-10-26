@@ -18,7 +18,7 @@ import { admin } from "./helpers/supabase";
 // Serial: one test switches sms_enabled off, which Login reads.
 test.describe.configure({ mode: "serial" });
 
-const { Login, Otp, Name, Location, Home, Placeholder } = messages;
+const { Login, Otp, Name, Location, Home, Crew } = messages;
 
 test("Login: أرسل الرمز stays disabled until the number is valid", async ({ page }) => {
   await page.goto("/login");
@@ -169,7 +169,7 @@ for (const role of ["crew", "admin"] as const) {
     await enterCode(page, phone);
     await page.waitForURL(`**/${role}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      role === "crew" ? Placeholder.crewTitle : messages.Admin.overview.title,
+      role === "crew" ? Crew.title : messages.Admin.overview.title,
     );
 
     // Customer pages send them back to their own surface.

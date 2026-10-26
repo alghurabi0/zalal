@@ -156,7 +156,18 @@ export async function createOrder(
     status = "pending_confirmation",
     startAt,
     lines = [{ tank_type: "roof", size: "m", qty: 1, unit_price_iqd: 35000 }],
-  }: { slot: TestSlot; date: string; status?: OrderStatus; startAt?: Date; lines?: TestLine[] },
+    crewId = null,
+    note = null,
+  }: {
+    slot: TestSlot;
+    date: string;
+    status?: OrderStatus;
+    startAt?: Date;
+    lines?: TestLine[];
+    /** The assigned crew. */
+    crewId?: string | null;
+    note?: string | null;
+  },
 ): Promise<{ id: string; number: number }> {
   const customerId = await userIdFor(phone);
   const { data: address } = await admin
@@ -181,6 +192,8 @@ export async function createOrder(
       slot_start_at: slotStart.toISOString(),
       slot_end_at: new Date(slotStart.getTime() + 2 * 60 * 60 * 1000).toISOString(),
       status,
+      crew_id: crewId,
+      customer_note: note,
       total_iqd: lines.reduce((sum, l) => sum + l.qty * l.unit_price_iqd, 0),
       client_request_id: randomUUID(),
     })

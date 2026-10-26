@@ -457,9 +457,91 @@
     "logoutConfirm": "إي، اطلع",
     "logoutCancel": "لا"
   },
-  "Placeholder": {
-    "crewTitle": "تطبيق الفرق قريباً",
-    "crewBody": "هنا راح تشوفون شغلكم اليومي. ديجهز بالمرحلة الجاية."
+  "Crew": {
+    "title": "شغلنا",
+    "hello": "هلا {name}",
+    "today": "اليوم · {weekday} {day}",
+    "tomorrow": "باجر · {weekday} {day}",
+    "earlier": "شغل من أيام سابقة ما خلص",
+    "done": "خلص اليوم",
+    "noJobs": "ماكو شغل",
+    "emptyTitle": "ما عندكم شغل اليوم وباجر",
+    "emptyBody": "من تعيّنكم الشركة على طلب، يطلع هنا.",
+    "refresh": "حدّث",
+    "number": "<num>#{number}</num>",
+    "files": "{count, plural, one {ملف واحد من الزبون} two {ملفين من الزبون} few {# ملفات من الزبون} other {# ملف من الزبون}}",
+    "line": "{type} · {size} × {qty}",
+    "status": {
+      "pending_confirmation": "بانتظار التأكيد",
+      "confirmed": "مؤكد",
+      "on_the_way": "بالطريق",
+      "arrived": "وصلنا",
+      "in_progress": "الشغل شغال",
+      "completed": "خلص",
+      "cancelled": "ملغي",
+      "no_show": "ما لكينا أحد"
+    },
+    "job": {
+      "back": "رجوع لشغلنا",
+      "openMaps": "افتح بخرائط كوكل",
+      "call": "اتصل بالزبون",
+      "callNamed": "اتصل بـ{name}",
+      "when": "الموعد",
+      "whenValue": "{weekday} {day} · {slot}",
+      "address": "العنوان",
+      "tanks": "الخزانات",
+      "note": "ملاحظة الزبون",
+      "files": "صور وفيديوات الزبون",
+      "photo": "صورة {n}",
+      "video": "فيديو {n}",
+      "fileMissing": "الملف مو متوفر",
+      "timeline": "سجل الطلب",
+      "noteLabel": "ملاحظة:",
+      "notFound": "هذا الشغل مو إلكم",
+      "notFoundBody": "يمكن الشركة نقلته لفريق ثاني أو ألغته.",
+      "closed": "هذا الشغل خلص، ماكو شي تسوونه بعد."
+    },
+    "steps": {
+      "leave": "طلعنا",
+      "arrive": "وصلنا",
+      "start": "بدينا الشغل",
+      "finish": "خلصنا"
+    },
+    "noShow": {
+      "open": "الزبون مو موجود",
+      "title": "الزبون مو موجود",
+      "description": "اكتبوا شنو صار. الملاحظة للشركة بس، الزبون ما يشوفها.",
+      "label": "شنو صار؟",
+      "confirm": "سجّل ما لكينا أحد",
+      "keep": "رجوع"
+    },
+    "finish": {
+      "title": "خلصنا الشغل",
+      "description": "تأكدوا من استلام المبلغ قبل ما تسجلون.",
+      "cash": "استلمنا المبلغ {amount}",
+      "confirm": "سجّل انتهاء الشغل",
+      "keep": "رجوع"
+    },
+    "errors": {
+      "invalid_transition": "حالة الشغل تغيّرت. شوفوا الحالة الجديدة.",
+      "reason_required": "اكتبوا شنو صار",
+      "cash_not_collected": "أشّروا على استلام المبلغ",
+      "crew_not_assigned": "هذا الشغل ما معيّن إلكم",
+      "not_found": "هذا الشغل ما بقى إلكم",
+      "failed": "ما انحفظ. اعد المحاولة."
+    },
+    "events": {
+      "booked": "انحجز الطلب",
+      "rescheduled": "تغيّر الموعد",
+      "cancelled": "انلغى الطلب",
+      "pending_confirmation": "رجع لانتظار التأكيد",
+      "confirmed": "الشركة أكدت الطلب",
+      "on_the_way": "طلعتوا للزبون",
+      "arrived": "وصلتوا",
+      "in_progress": "بديتوا الشغل",
+      "completed": "خلص الشغل",
+      "no_show": "ما لكيتوا أحد"
+    }
   },
   "Legal": {
     "terms": "شروط الاستخدام",
