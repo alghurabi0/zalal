@@ -17,7 +17,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(48);
+select plan(49);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -230,6 +230,17 @@ select throws_ok(
   $$ select public.send_chat_message(gen_random_uuid(), gen_random_uuid(), 'x') $$,
   'P0002', 'thread_not_found', 'an unknown thread is refused'
 );
+insert into tests.ids values ('admin_client', gen_random_uuid());
+select public.send_chat_message(tests.id('admin_client'), tests.id('thread_a'), 'رد');
+select tests.clear_authentication();
+insert into public.chat_threads (user_id) values (tests.user_id('+9647803333333'));
+select tests.authenticate_as(tests.admin());
+select throws_ok(
+  $$ select public.send_chat_message(
+       tests.id('admin_client'),
+       (select id from public.chat_threads where user_id = tests.user_id('+9647803333333')), 'رد') $$,
+  '22023', 'client_id_taken', 'a client id used in another thread is refused, not looked up'
+);
 select throws_ok(
   $$ select public.send_chat_message(gen_random_uuid(), tests.id('thread_a'), p_topic => 'price') $$,
   '22023', 'invalid_topic', 'an admin message has no topic'
@@ -312,7 +323,6 @@ select is(
 -- Rate limit -----------------------------------------------------------------------
 
 select tests.clear_authentication();
-insert into public.chat_threads (user_id) values (tests.user_id('+9647803333333'));
 insert into public.chat_messages (thread_id, customer_id, author, sender_id, body, client_id)
 select t.id, t.user_id, 'customer', t.user_id, 'رسالة ' || n, gen_random_uuid()
 from public.chat_threads as t, generate_series(1, 20) as n

@@ -76,12 +76,14 @@ export function MessageList({
   const groups: DayGroup[] = groupByDay(messages, new Date(serverNow ?? readAt));
 
   // To the newest message on open and when one arrives, unless the reader
-  // is looking at older ones; always after their own.
+  // is looking at older ones; always after their own. Only a new last
+  // message moves the list: upload progress and read receipts don't.
+  const lastMine = last ? isMine(last, side) : false;
   useLayoutEffect(() => {
     const element = scroller.current;
     if (!element) return;
-    if (pinned.current || (last && isMine(last, side))) element.scrollTop = element.scrollHeight;
-  }, [lastKey, last, side]);
+    if (pinned.current || lastMine) element.scrollTop = element.scrollHeight;
+  }, [lastKey, lastMine]);
 
   const onScroll = () => {
     const element = scroller.current;

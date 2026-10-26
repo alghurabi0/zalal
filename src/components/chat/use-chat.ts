@@ -13,6 +13,7 @@ import {
   type ChatTopic,
   fromRow,
   mergeMessages,
+  messageKey,
   unreadBy,
 } from "@/lib/chat/messages";
 import { checkVideo, type PrepareProblem, shrinkPhoto } from "@/lib/media/prepare";
@@ -100,8 +101,12 @@ export function useChat({
           .then(({ data }) => {
             if (data?.signedUrl) {
               setMessages((current) =>
+                // A local preview gives way to the stored file, so its
+                // memory can go (below).
                 current.map((m) =>
-                  m.id === message.id && !m.url ? { ...m, url: data.signedUrl } : m,
+                  m.id === message.id && (!m.url || m.url.startsWith("blob:"))
+                    ? { ...m, url: data.signedUrl }
+                    : m,
                 ),
               );
             }
@@ -112,24 +117,49 @@ export function useChat({
   });
 
   // Read marks: while the screen is visible and the other side's messages
-  // wait. A hidden copy of the page (Next keeps visited pages) has no effects.
-  const unread = messages.some((message) => unreadBy(message, side));
+  // wait, again for each newer one. A mark asked for while one is running
+  // runs after it, so a message that lands meanwhile is marked too. A hidden
+  // copy of the page (Next keeps visited pages) has no effects.
+  const newestUnread = messages.findLast((message) => unreadBy(message, side));
+  const unreadKey = newestUnread ? messageKey(newestUnread) : null;
   const marking = useRef(false);
+  const markAgain = useRef(false);
   useEffect(() => {
-    if (!unread) return;
+    if (!unreadKey) return;
     const mark = () => {
-      if (document.visibilityState !== "visible" || marking.current) return;
+      if (document.visibilityState !== "visible") return;
+      if (marking.current) {
+        markAgain.current = true;
+        return;
+      }
       marking.current = true;
       void markRead(threadId)
         .catch(() => undefined)
         .finally(() => {
           marking.current = false;
+          if (markAgain.current) {
+            markAgain.current = false;
+            mark();
+          }
         });
     };
     mark();
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [unread, threadId, markRead]);
+  }, [unreadKey, threadId, markRead]);
+
+  // Local previews (object URLs) are freed once nothing shows them: the
+  // stored file's link replaced them, or the message went.
+  const previews = useRef(new Set<string>());
+  useEffect(() => {
+    const shown = new Set(messages.map((message) => message.url));
+    for (const url of previews.current) {
+      if (!shown.has(url)) {
+        URL.revokeObjectURL(url);
+        previews.current.delete(url);
+      }
+    }
+  }, [messages]);
 
   const deliver = useCallback(
     async (clientId: string) => {
@@ -157,10 +187,19 @@ export function useChat({
       }
       patch(clientId, { state: "failed" });
       setNotice(result.error);
-      // A file the server can't find won't appear by sending again.
-      if (result.error === "upload_missing") job.uploaded = false;
+      // A file the server can't find (gone, or too old to send) won't appear
+      // by sending again: the retry uploads it anew, under a new name, since
+      // Storage refuses to overwrite one that is still there.
+      if (result.error === "upload_missing" && job.file) {
+        job.uploaded = false;
+        job.file = {
+          ...job.file,
+          path: chatObjectPath(uploaderId, crypto.randomUUID(), job.file.contentType),
+        };
+        patch(clientId, { mediaPath: job.file.path });
+      }
     },
-    [patch, send],
+    [patch, send, uploaderId],
   );
 
   const upload = useCallback(
@@ -249,6 +288,7 @@ export function useChat({
         progress: 0,
         url: file ? URL.createObjectURL(file.blob) : null,
       };
+      if (local.url) previews.current.add(local.url);
       setMessages((current) => [...current, local]);
       if (file) void upload(clientId);
       else void deliver(clientId);

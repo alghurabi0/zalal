@@ -82,6 +82,14 @@ describe("mergeMessages", () => {
     expect(merged[0]).toMatchObject({ id: server.id, state: "sent", url: "blob:local" });
   });
 
+  it("keeps a link already shown, but lets a stored file's link replace a local preview", () => {
+    const shown = { ...fromRow(row({ media_path: "x/a.jpg" })), url: "https://signed/1" };
+    const again = { ...shown, url: "https://signed/2" };
+    expect(mergeMessages([shown], [again])[0]?.url).toBe("https://signed/1");
+    const preview = { ...shown, url: "blob:local" };
+    expect(mergeMessages([preview], [again])[0]?.url).toBe("https://signed/2");
+  });
+
   it("updates a row seen again (a read receipt) without duplicating it", () => {
     const first = fromRow(row({}));
     const read = { ...first, readAt: "2026-10-26T09:05:00+00:00" };

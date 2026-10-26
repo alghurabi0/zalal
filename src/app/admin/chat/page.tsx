@@ -7,7 +7,8 @@ import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
 
 import { first, InboxFrame } from "./inbox-frame";
-import { InboxList, InboxListSkeleton, inboxQuerySchema } from "./inbox-list";
+import { InboxList, InboxListSkeleton } from "./inbox-list";
+import { inboxQuerySchema } from "./inbox-query";
 
 /**
  * Chat inbox (A4, spec §8.2): every customer thread, unread first. Opening

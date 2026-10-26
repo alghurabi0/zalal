@@ -296,6 +296,8 @@ const KNOWN_FIELDS = [
   "terms_md",
   "privacy_md",
   "sterilant_text",
+  "certificate_text",
+  "support_response_text",
   "min_app_version",
   "maintenance_mode",
 ] as const;

@@ -3,10 +3,11 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { Bell, BellOff } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import type { UnreadThread } from "@/lib/admin/chat-queries";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -74,7 +75,7 @@ function chime(context: AudioContext) {
  * starts off and the admin turns it on; the choice is remembered on this
  * browser.
  */
-export function AdminLive() {
+export function AdminLive({ chatUnread: initialUnread }: { chatUnread: UnreadThread[] }) {
   const t = useTranslations("Admin.live");
   const router = useRouter();
   const soundOn = useSyncExternalStore(subscribeSoundPref, soundPref, () => false);
@@ -82,6 +83,17 @@ export function AdminLive() {
   const [latestChat, setLatestChat] = useState<string | null>(null);
   const audio = useRef<AudioContext | null>(null);
   const soundRef = useRef(false);
+  // Each thread's unread count as last seen (from the page load, then from
+  // events), to tell a new customer message from a reply or a read.
+  const chatUnread = useRef(
+    new Map(initialUnread.map((thread) => [thread.id, thread.admin_unread])),
+  );
+  // A1 lists unread chats, so it reads again when they change.
+  const pathname = usePathname();
+  const onOverview = useRef(false);
+  useEffect(() => {
+    onOverview.current = pathname === routes.admin;
+  }, [pathname]);
 
   const context = useCallback(() => {
     audio.current ??= new AudioContext();
@@ -108,8 +120,6 @@ export function AdminLive() {
     let closed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stale = false;
-    // Each thread's unread count as last seen, to tell a new message from a read.
-    const chatUnread = new Map<string, number>();
     // A burst of changes (confirm + assign, a crew moving on) refetches once;
     // a hidden tab waits until it is shown again.
     const refresh = () => {
@@ -154,8 +164,9 @@ export function AdminLive() {
           (payload) => {
             const row = payload.new as { id?: unknown; admin_unread?: unknown };
             if (typeof row.id !== "string" || typeof row.admin_unread !== "number") return;
-            const before = chatUnread.get(row.id) ?? 0;
-            chatUnread.set(row.id, row.admin_unread);
+            const before = chatUnread.current.get(row.id) ?? 0;
+            chatUnread.current.set(row.id, row.admin_unread);
+            if (row.admin_unread !== before && onOverview.current) refresh();
             if (row.admin_unread <= before) return;
             setLatestChat(row.id);
             if (soundRef.current && audio.current?.state === "running") chime(audio.current);

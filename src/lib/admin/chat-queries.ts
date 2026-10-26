@@ -22,16 +22,18 @@ export async function chatInbox(search: string | undefined, limit: number): Prom
   return data;
 }
 
-/** The threads with customer messages no admin has read (nav badge, A1). */
-export async function unreadThreadIds(): Promise<string[]> {
+export type UnreadThread = { id: string; admin_unread: number };
+
+/** The threads with customer messages no admin has read (nav badge, chime, A1). */
+export async function unreadThreads(): Promise<UnreadThread[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("chat_threads")
-    .select("id")
+    .select("id, admin_unread")
     .gt("admin_unread", 0)
     .limit(1000);
   if (error) throw new Error(`Unread threads failed: ${error.message}`);
-  return data.map((thread) => thread.id);
+  return data;
 }
 
 export type AdminThread = {

@@ -383,6 +383,14 @@ begin
   if found then
     return v_message;
   end if;
+  -- The same client id from this sender in another thread is a client bug:
+  -- say so rather than hit the unique key.
+  if exists (
+    select 1 from public.chat_messages as m
+    where m.sender_id = v_user_id and m.client_id = p_client_id
+  ) then
+    raise exception using errcode = '22023', message = 'client_id_taken';
+  end if;
 
   if char_length(v_body) > 2000 then
     raise exception using errcode = '22023', message = 'invalid_body';

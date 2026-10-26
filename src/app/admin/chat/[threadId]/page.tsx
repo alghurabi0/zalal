@@ -16,7 +16,8 @@ import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 
 import { first, InboxFrame } from "../inbox-frame";
-import { InboxList, InboxListSkeleton, inboxQuerySchema } from "../inbox-list";
+import { InboxList, InboxListSkeleton } from "../inbox-list";
+import { inboxQuerySchema } from "../inbox-query";
 
 import { AdminConversation } from "./conversation";
 import { CustomerPanel } from "./customer-panel";

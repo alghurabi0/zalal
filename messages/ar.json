@@ -1560,6 +1560,8 @@
         "terms_md": "الشروط",
         "privacy_md": "الخصوصية",
         "sterilant_text": "مادة التعقيم",
+        "certificate_text": "وصف الخدمة بالشهادة",
+        "support_response_text": "الرد التلقائي بالمحادثة",
         "min_app_version": "أقل نسخة",
         "maintenance_mode": "وضع الصيانة"
       },

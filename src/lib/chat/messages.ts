@@ -86,7 +86,7 @@ export function messageKey(message: ChatMessage): string {
 /**
  * Adds or updates messages. A server row replaces the local message with
  * its client id; a row seen again replaces the old copy (a read receipt),
- * keeping a link already shown. Server rows come in time order; messages
+ * keeping a link already shown (links last an hour, like Job progress's). Server rows come in time order; messages
  * still sending stay at the end.
  */
 export function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
@@ -96,7 +96,13 @@ export function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): 
     if (local && message.id) byKey.delete(`local:${message.clientId}`);
     const key = messageKey(message);
     const previous = byKey.get(key) ?? local;
-    byKey.set(key, { ...message, url: message.url ?? previous?.url ?? null });
+    // A link already shown stays, so a refresh doesn't restart a playing
+    // video or download photos again; a local preview gives way to the
+    // stored file's link.
+    const shown = previous?.url ?? null;
+    const url =
+      shown && !(shown.startsWith("blob:") && message.url) ? shown : (message.url ?? shown);
+    byKey.set(key, { ...message, url });
   }
   const all = [...byKey.values()];
   const sent = all

@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { adminOrdersHref, ORDER_STATUSES } from "@/lib/admin/orders-query";
-import { chatInbox, unreadThreadIds } from "@/lib/admin/chat-queries";
+import { chatInbox, unreadThreads } from "@/lib/admin/chat-queries";
 import { openTickets, pendingConfirmations, todayCounts } from "@/lib/admin/queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { ticketNumber } from "@/lib/certificates/format";
@@ -53,7 +53,7 @@ async function Overview() {
     todayCounts(now),
     pendingConfirmations(PENDING_SHOWN),
     openTickets(TICKETS_SHOWN),
-    unreadThreadIds(),
+    unreadThreads(),
     chatInbox(undefined, CHATS_SHOWN),
   ]);
   const unreadChats = inbox.filter((row) => row.admin_unread > 0);
