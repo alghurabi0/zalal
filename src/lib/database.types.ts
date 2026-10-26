@@ -119,6 +119,7 @@ export type Database = {
         Row: {
           accuracy_m: number;
           crew_id: string;
+          id: number;
           lat: number;
           lng: number;
           location: unknown;
@@ -129,6 +130,7 @@ export type Database = {
         Insert: {
           accuracy_m: number;
           crew_id: string;
+          id?: never;
           lat: number;
           lng: number;
           location?: never;
@@ -138,6 +140,7 @@ export type Database = {
         Update: {
           accuracy_m?: number;
           crew_id?: string;
+          id?: never;
           lat?: number;
           lng?: number;
           location?: never;

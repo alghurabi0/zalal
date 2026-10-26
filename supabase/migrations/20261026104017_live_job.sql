@@ -5,6 +5,9 @@
 --    way, one row per order. The crew app sends it at most every 15 s through
 --    share_crew_location(); the customer's Tracking screen and the admin
 --    live map read it through Realtime. Departures from §7:
+--    - its own `id` key, with order_id unique: Realtime sends a DELETE
+--      event's primary key to every subscriber whatever RLS says, so an
+--      order_id key would hand out other customers' order ids (RLS audit);
 --    - lat/lng columns with a generated `location` point (as on addresses),
 --      so the app never handles PostGIS binary;
 --    - updated_at is the server's time, never the phone's, so "last update
@@ -14,11 +17,9 @@
 --    from the crew now assigned (an admin can give a job on the way to
 --    another crew; the old crew's position must not show); the assigned
 --    crew; admins. Nobody writes the table directly.
---    Rows are not deleted when the crew arrives: Realtime sends DELETE events
---    to every subscriber of a table, whatever RLS says, so live screens
---    would learn other orders' ids. The policy hides the row from the
---    customer instead, and a nightly job deletes rows of orders no longer on
---    the way 24 h after their last update (settled Oct 26, 2026).
+--    Rows are not deleted when the crew arrives (the policy hides them from
+--    the customer); a nightly job deletes rows of orders no longer on the
+--    way 24 h after their last update (settled Oct 26, 2026).
 --
 -- 2. share_crew_location(order_id, lat, lng, accuracy_m): the only writer.
 --    The assigned, active crew, while the order is on_the_way (new error
@@ -29,13 +30,16 @@
 --
 -- 3. order_media joins the Realtime publication, so Job progress shows the
 --    crew's photos and clips as they are attached. Screens subscribe to
---    INSERT only (removals arrive with the next page load), for the same
---    reason as above.
+--    INSERT only (removals arrive with the next page load): DELETE events
+--    skip RLS, though they carry only the media row's own id.
 
 -- crew_live_location --------------------------------------------------------------------
 
 create table public.crew_live_location (
-  order_id uuid primary key references public.orders (id) on delete cascade,
+  -- A key of its own: Realtime sends a DELETE event's primary key to every
+  -- subscriber, so the key must say nothing (the order id would).
+  id bigint generated always as identity primary key,
+  order_id uuid not null unique references public.orders (id) on delete cascade,
   crew_id uuid not null references public.crews (id),
   lat double precision not null check (lat between -90 and 90),
   lng double precision not null check (lng between -180 and 180),
@@ -56,6 +60,7 @@ before update on public.crew_live_location
 for each row execute function private.set_updated_at();
 
 revoke all on public.crew_live_location from anon, authenticated;
+revoke all on sequence public.crew_live_location_id_seq from anon, authenticated;
 grant select on public.crew_live_location to authenticated;
 
 create policy "Customers read the position on the way; the assigned crew and admins read it"
