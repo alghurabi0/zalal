@@ -1,19 +1,26 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-// The nightly cleanup of order-media files no order uses (spec §7 Storage).
-// pg_cron posts {"folder": "customer" | "crew"} here through pg_net
+// The nightly cleanup of uploads nothing uses (spec §7 Storage): order-media
+// files no order uses, and chat-media files no message sent (migration chat).
+// pg_cron posts {"folder": "customer" | "crew" | "chat"} here through pg_net
 // (private.invoke_media_cleanup, migration media_cleanup) with the job's
 // secret in x-media-cleanup-secret. The rules for what may go live in
 // Postgres (public.unattached_media); this only deletes, through the Storage
 // API, which also removes the stored file. Plain TypeScript with no Deno
 // APIs, so Vitest runs it too; index.ts serves it.
 
-export const BUCKET = "order-media";
 export const SECRET_HEADER = "x-media-cleanup-secret";
 
-export const requestSchema = z.object({ folder: z.enum(["customer", "crew"]) }).strict();
+export const requestSchema = z.object({ folder: z.enum(["customer", "crew", "chat"]) }).strict();
 export type Folder = z.infer<typeof requestSchema>["folder"];
+
+/** The bucket each folder's files are in. */
+export const BUCKETS = {
+  customer: "order-media",
+  crew: "order-media",
+  chat: "chat-media",
+} as const satisfies Record<Folder, string>;
 
 const pageSchema = z.array(z.object({ name: z.string().min(1), created_at: z.string().min(1) }));
 
@@ -76,7 +83,9 @@ export async function cleanUp(
     const names = rows.map((row) => row.name);
     for (let i = 0; i < names.length; i += limits.chunkSize) {
       const chunk = names.slice(i, i + limits.chunkSize);
-      const { data: removed, error: removeError } = await client.storage.from(BUCKET).remove(chunk);
+      const { data: removed, error: removeError } = await client.storage
+        .from(BUCKETS[folder])
+        .remove(chunk);
       const gone = new Set(removeError ? [] : (removed ?? []).map((file) => file.name));
       const removedNow = chunk.filter((name) => gone.has(name)).length;
       deleted += removedNow;
