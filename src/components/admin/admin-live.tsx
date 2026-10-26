@@ -66,9 +66,10 @@ function chime(context: AudioContext) {
 }
 
 /**
- * Keeps every admin page live and rings for new bookings (spec §6, §8.2 A1):
- * any order change refetches the page's server data, and a new order plays
- * a chime (while sound is on) and shows a link to it. Push alerts come in
+ * Keeps every admin page live and rings for new bookings and customer
+ * messages (spec §6, §8.2 A1, A4): any order change refetches the page's
+ * server data; a new order or a new unread chat message plays a chime
+ * (while sound is on) and shows a link to it. Push alerts come in
  * Phase 5. Browsers allow sound only after a click on the page, so sound
  * starts off and the admin turns it on; the choice is remembered on this
  * browser.
@@ -78,6 +79,7 @@ export function AdminLive() {
   const router = useRouter();
   const soundOn = useSyncExternalStore(subscribeSoundPref, soundPref, () => false);
   const [latest, setLatest] = useState<{ id: string; number: number } | null>(null);
+  const [latestChat, setLatestChat] = useState<string | null>(null);
   const audio = useRef<AudioContext | null>(null);
   const soundRef = useRef(false);
 
@@ -106,6 +108,8 @@ export function AdminLive() {
     let closed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stale = false;
+    // Each thread's unread count as last seen, to tell a new message from a read.
+    const chatUnread = new Map<string, number>();
     // A burst of changes (confirm + assign, a crew moving on) refetches once;
     // a hidden tab waits until it is shown again.
     const refresh = () => {
@@ -142,6 +146,21 @@ export function AdminLive() {
           }
           if (soundRef.current && audio.current?.state === "running") chime(audio.current);
         })
+        // A customer message no admin has read yet (A4): the thread's count
+        // goes up. Reads set it back to 0, which rings nothing.
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "chat_threads" },
+          (payload) => {
+            const row = payload.new as { id?: unknown; admin_unread?: unknown };
+            if (typeof row.id !== "string" || typeof row.admin_unread !== "number") return;
+            const before = chatUnread.get(row.id) ?? 0;
+            chatUnread.set(row.id, row.admin_unread);
+            if (row.admin_unread <= before) return;
+            setLatestChat(row.id);
+            if (soundRef.current && audio.current?.state === "running") chime(audio.current);
+          },
+        )
         .subscribe();
     })();
 
@@ -193,6 +212,15 @@ export function AdminLive() {
                 num: (chunks) => <span dir="ltr">{chunks}</span>,
               })}
             </span>
+          </Link>
+        )}
+        {latestChat && (
+          <Link
+            href={routes.adminChatThread(latestChat)}
+            onClick={() => setLatestChat(null)}
+            className="flex min-h-11 items-center rounded-chip bg-aqua px-3 text-14 font-extrabold text-navy focus-visible:outline-white"
+          >
+            {t("newMessage")}
           </Link>
         )}
       </p>

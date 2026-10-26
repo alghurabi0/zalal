@@ -4,6 +4,7 @@ import { Navigation, Paperclip } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useId, useRef, useState } from "react";
 
+import { ChipButton } from "@/components/ui/chip";
 import { IconButton } from "@/components/ui/icon-button";
 import { CHAT_BODY_MAX } from "@/lib/schemas/chat";
 
@@ -16,15 +17,19 @@ export function Composer({
   onSend,
   onAttach,
   above,
+  suggestions,
 }: {
   /** Returns false when nothing was sent, so the text stays. */
   onSend: (body: string) => Promise<boolean> | boolean;
   onAttach: (file: File, caption: string) => Promise<boolean> | boolean;
   above?: ReactNode;
+  /** Canned replies (A4): a tap puts the text in the box to edit and send. */
+  suggestions?: { label: string; items: string[] };
 }) {
   const t = useTranslations("Chat.composer");
   const [draft, setDraft] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const textInput = useRef<HTMLInputElement>(null);
   const id = useId();
 
   const submit = async (event: FormEvent) => {
@@ -47,6 +52,25 @@ export function Composer({
   return (
     <div className="sticky bottom-0 z-10 border-t border-border bg-surface">
       {above}
+      {suggestions && (
+        <div
+          role="group"
+          aria-label={suggestions.label}
+          className="flex gap-1.5 overflow-x-auto px-3 pt-2.5"
+        >
+          {suggestions.items.map((item) => (
+            <ChipButton
+              key={item}
+              onClick={() => {
+                setDraft(item);
+                textInput.current?.focus();
+              }}
+            >
+              {item}
+            </ChipButton>
+          ))}
+        </div>
+      )}
       <form onSubmit={submit} className="flex items-center gap-2 px-3 pt-2.5 pb-safe-5.5">
         <IconButton
           label={t("attach")}
@@ -68,6 +92,7 @@ export function Composer({
           {t("label")}
         </label>
         <input
+          ref={textInput}
           id={id}
           type="text"
           value={draft}

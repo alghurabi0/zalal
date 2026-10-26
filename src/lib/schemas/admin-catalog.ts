@@ -144,6 +144,12 @@ export const certificateSettingsSchema = z.object({
   certificate_text: z.string().trim().max(CERTIFICATE_TEXT_MAX),
 });
 
+/** settings.support_response_text: Chat's off-hours automatic reply (spec §5.16); empty turns it off. */
+export const SUPPORT_REPLY_MAX = 300;
+export const chatSettingsSchema = z.object({
+  support_response_text: z.string().trim().max(SUPPORT_REPLY_MAX),
+});
+
 /** settings.terms_md / privacy_md */
 export const LEGAL_MAX = 50_000;
 export const legalSettingsSchema = z.object({
@@ -157,6 +163,7 @@ export const settingsSectionSchema = z.discriminatedUnion("section", [
   z.object({ section: z.literal("booking"), values: bookingSettingsSchema }),
   z.object({ section: z.literal("crew"), values: crewSettingsSchema }),
   z.object({ section: z.literal("certificate"), values: certificateSettingsSchema }),
+  z.object({ section: z.literal("chat"), values: chatSettingsSchema }),
   z.object({ section: z.literal("legal"), values: legalSettingsSchema }),
 ]);
 

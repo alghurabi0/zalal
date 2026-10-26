@@ -75,6 +75,10 @@ export const routes = {
   adminAdmins: "/admin/admins",
   /** The admin audit log, newest first; `?entity=`, `?admin=`, `?before=<id>`. */
   adminAudit: "/admin/audit",
+  /** Chat inbox (A4); `?q=` searches by name or phone, `&n=` shows more. */
+  adminChat: "/admin/chat",
+  /** One conversation in the inbox, with the customer panel. */
+  adminChatThread: (threadId: string) => `/admin/chat/${threadId}`,
   /** Live map (A3): crews on the way. */
   adminLive: "/admin/live",
 } as const;

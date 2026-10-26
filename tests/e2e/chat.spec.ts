@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 import messages from "../../messages/ar.json" with { type: "json" };
 
-import { createCustomer } from "./helpers/admin";
+import { createCustomer, logInAsAdmin } from "./helpers/admin";
 import { e164, enterCode, newPhone, requestCode, screenshot, signUp } from "./helpers/auth";
 import {
   baghdadDate,
@@ -18,7 +18,7 @@ import { admin } from "./helpers/supabase";
 // inbox. Working hours are shared settings, so this file runs in order and
 // puts them back.
 
-const { Chat, Orders, Order, UI } = messages;
+const { Chat, Orders, Order, UI, Admin } = messages;
 
 test.describe.configure({ mode: "serial" });
 
@@ -304,4 +304,94 @@ test("the tab bar shows unread answers until Chat is opened", async ({ page }) =
   await page.goto("/orders");
   await expect(tab(UI.tabs.chat)).toBeVisible();
   await expect(tab(UI.tabs.chatUnread)).toHaveCount(0);
+});
+
+test("support answers from the inbox: the customer sees ✓✓ and the answer live", async ({
+  page,
+  browser,
+}) => {
+  slot = await createSlot();
+  const phone = await signUp(page, { name: "زيد التجربة" });
+  const order = await createOrder(phone, { slot, date: baghdadDate(2), status: "confirmed" });
+  await page.goto(`/chat?order=${order.id}`);
+  const chat = main(page);
+  const box = chat.getByLabel(Chat.composer.label);
+  await box.fill("متى يوصل الفريق؟");
+  await box.press("Enter");
+  const list = chat.getByRole("list", { name: Chat.messagesLabel });
+  await expect(list.getByText(Chat.status.sent)).toBeAttached();
+
+  const desk = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    locale: "ar-IQ",
+    timezoneId: "Asia/Baghdad",
+  });
+  const adminPage = await desk.newPage();
+  await logInAsAdmin(adminPage);
+  const nav = adminPage.getByRole("navigation", { name: Admin.nav.label });
+  await expect(nav.getByRole("link", { name: Admin.nav.chat })).toContainText(/\d/);
+
+  // A1 lists the unread conversation.
+  const unreadOnA1 = adminPage.getByRole("list", { name: Admin.overview.chatsCaption });
+  await expect(unreadOnA1.getByRole("link", { name: /زيد التجربة/ })).toBeVisible();
+
+  // The inbox finds it by phone, unread.
+  await adminPage.goto(`/admin/chat?q=${phone}`);
+  const inbox = adminPage.getByRole("navigation", { name: Admin.chat.listLabel });
+  await inbox.getByRole("link", { name: /زيد التجربة/ }).click();
+  await adminPage.waitForURL(/\/admin\/chat\/[0-9a-f-]{36}/);
+  const thread = main(adminPage);
+  const conversation = thread.getByRole("list", { name: Chat.messagesLabel });
+  await expect(thread.getByRole("heading", { name: "زيد التجربة" })).toBeVisible();
+  await expect(conversation.getByText("متى يوصل الفريق؟")).toBeVisible();
+  await expect(conversation.getByRole("link", { name: `عن طلب #${order.number}` })).toHaveAttribute(
+    "href",
+    `/admin/orders?order=${order.id}`,
+  );
+  // The side panel lists the order.
+  await expect(
+    thread
+      .getByRole("complementary")
+      .getByRole("link", { name: new RegExp(`طلب #${order.number}`) }),
+  ).toBeVisible();
+
+  // Opening it marked the message read: ✓✓ on the customer's phone, live.
+  await expect(list.getByText(Chat.status.read)).toBeAttached();
+
+  // A canned reply, edited before sending.
+  await thread.getByRole("button", { name: Admin.chat.canned.greet }).click();
+  const reply = thread.getByLabel(Chat.composer.label);
+  await expect(reply).toHaveValue(Admin.chat.canned.greet);
+  await reply.press("Enter");
+  await expect(list.getByText(Admin.chat.canned.greet)).toBeVisible();
+  await screenshot(adminPage, "admin-chat");
+  await desk.close();
+});
+
+test("an admin edits the automatic reply in A13", async ({ page }) => {
+  const { data } = await admin
+    .from("settings")
+    .select("support_response_text")
+    .single()
+    .throwOnError();
+  try {
+    await logInAsAdmin(page);
+    await page.goto("/admin/settings");
+    const form = page.getByRole("form", { name: Admin.settings.chat.title });
+    await form.getByLabel(Admin.settings.chat.text).fill("وصلت رسالتك، نرد عليك الصبح.");
+    await form.getByRole("button", { name: Admin.settings.save }).click();
+    await expect(form.getByText(Admin.settings.saved, { exact: true })).toBeVisible();
+    const { data: saved } = await admin
+      .from("settings")
+      .select("support_response_text")
+      .single()
+      .throwOnError();
+    expect(saved.support_response_text).toBe("وصلت رسالتك، نرد عليك الصبح.");
+  } finally {
+    await admin
+      .from("settings")
+      .update({ support_response_text: data.support_response_text })
+      .eq("id", true)
+      .throwOnError();
+  }
 });
