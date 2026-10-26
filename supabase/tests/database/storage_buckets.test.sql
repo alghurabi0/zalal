@@ -53,13 +53,17 @@ select ok(
 
 -- Fails as soon as someone adds a storage policy, so that each new policy
 -- comes with its own allow and deny tests (CLAUDE.md). The order-media ones
--- are tested in order_media_storage.test.sql.
+-- are tested in order_media_storage.test.sql and
+-- crew_job_media_storage.test.sql.
 select policies_are(
   'storage', 'objects',
   array[
     'Customers upload booking media to their own folder',
     'Customers read their uploads; media is read with its order',
-    'Customers delete their uploads until they are attached'
+    'Customers delete their uploads until they are attached',
+    'Crews upload job media to their open jobs',
+    'Crews read their job uploads while the job is theirs',
+    'Crews delete their job uploads until they are attached'
   ]::name[],
   'storage.objects has only the order-media policies'
 );

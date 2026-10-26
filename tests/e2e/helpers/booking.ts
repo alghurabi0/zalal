@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { expect, type Page } from "@playwright/test";
 
+import type { Database } from "../../../src/lib/database.types";
+
 import { e164 } from "./auth";
 import { admin } from "./supabase";
 
@@ -132,8 +134,7 @@ export async function pickSlot(page: Page, date: string, label: string) {
   ).toBeChecked();
 }
 
-type OrderStatus =
-  "pending_confirmation" | "confirmed" | "on_the_way" | "in_progress" | "cancelled" | "completed";
+type OrderStatus = Database["public"]["Enums"]["order_status"];
 
 type TestLine = {
   tank_type: "roof" | "ground";
