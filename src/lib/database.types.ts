@@ -751,8 +751,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_add_admin: { Args: { p_name: string; p_phone: string }; Returns: boolean };
       admin_addresses_outside_area: { Args: Record<PropertyKey, never>; Returns: number };
       admin_block_date: { Args: { p_date: string; p_reason: string }; Returns: undefined };
+      admin_create_crew: { Args: { p_name: string; p_phone: string }; Returns: string };
       admin_create_slot: {
         Args: {
           p_capacity: number;
@@ -762,6 +764,7 @@ export type Database = {
         };
         Returns: number;
       };
+      admin_remove_admin: { Args: { p_user_id: string }; Returns: undefined };
       admin_save_service_area: {
         Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
         Returns: Record<string, unknown>;
@@ -788,6 +791,7 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      admin_set_crew_phone: { Args: { p_crew_id: string; p_phone: string }; Returns: undefined };
       admin_slot_board: {
         Args: { p_from: string; p_to: string };
         Returns: {
@@ -802,6 +806,10 @@ export type Database = {
         }[];
       };
       admin_unblock_date: { Args: { p_date: string }; Returns: undefined };
+      admin_update_crew: {
+        Args: { p_active: boolean; p_crew_id: string; p_name: string };
+        Returns: number;
+      };
       admin_update_prices: { Args: { p_prices: Json }; Returns: number };
       admin_update_settings: { Args: { p_patch: Json }; Returns: undefined };
       admin_update_slot: {
