@@ -1,36 +1,165 @@
-import { LayoutDashboard } from "lucide-react";
+import { ClipboardCheck, Headset, MessagesSquare, Repeat } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
-import { SurfacePlaceholder } from "@/components/layout/surface-placeholder";
+import { AdminPage } from "@/components/admin/admin-page";
+import { OrderTable } from "@/components/admin/order-table";
+import { StatusBadge } from "@/components/orders/status-badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
+import { adminOrdersHref, ORDER_STATUSES } from "@/lib/admin/orders-query";
+import { pendingConfirmations, todayCounts } from "@/lib/admin/queries";
+import { requireViewer } from "@/lib/auth/viewer";
+import { baghdadToday, formatDate } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
-/** The admin surface (spec §8), a placeholder until Phase 3. */
-export default function AdminPage() {
+const PENDING_SHOWN = 10;
+
+/**
+ * Overview (A1): today's orders by status and the orders waiting for
+ * confirmation, kept live by the shell (AdminLive). Unread chats, open
+ * tickets and subscription requests arrive with their phases (5 and 6).
+ */
+export default async function OverviewPage() {
+  const t = await getTranslations("Admin.overview");
   return (
-    <Suspense
-      fallback={
-        <SkeletonGroup className="mx-auto flex min-h-dvh max-w-phone flex-col items-center justify-center gap-4 px-8">
-          <Skeleton className="size-22 rounded-full" />
-          <Skeleton className="h-7 w-48" />
-        </SkeletonGroup>
-      }
-    >
-      <Content />
-    </Suspense>
+    <AdminPage title={t("title")}>
+      <Suspense fallback={<OverviewSkeleton />}>
+        <Overview />
+      </Suspense>
+    </AdminPage>
   );
 }
 
-async function Content() {
-  const t = await getTranslations("Placeholder");
+async function Overview() {
+  await requireViewer(routes.admin, "admin");
+  const t = await getTranslations("Admin.overview");
+  // The server's clock, in Baghdad.
+  const now = new Date();
+  const today = baghdadToday(now);
+  const [counts, pending] = await Promise.all([
+    todayCounts(now),
+    pendingConfirmations(PENDING_SHOWN),
+  ]);
+  const todayTotal = ORDER_STATUSES.reduce((sum, status) => sum + counts[status], 0);
+
   return (
-    <SurfacePlaceholder
-      role="admin"
-      path={routes.admin}
-      icon={LayoutDashboard}
-      title={t("adminTitle")}
-      body={t("adminBody")}
-    />
+    <>
+      <section aria-labelledby="today" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="today" className="text-18 font-extrabold">
+            {t("today", { date: formatDate(now), count: todayTotal })}
+          </h2>
+          <Button
+            href={adminOrdersHref({ status: "all", date: today })}
+            variant="link"
+            size="sm"
+            className="px-0"
+          >
+            {t("todayAll")}
+          </Button>
+        </div>
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {ORDER_STATUSES.map((status) => (
+            <li key={status}>
+              <Card
+                href={adminOrdersHref({ status, date: today })}
+                className="flex h-full flex-col items-start gap-2 p-4"
+              >
+                <StatusBadge status={status} />
+                <span className="text-28 font-black" data-testid={`today-${status}`}>
+                  {counts[status]}
+                </span>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="pending" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="pending" className="text-18 font-extrabold">
+            {t("pending", { count: pending.total })}
+          </h2>
+          {pending.total > pending.orders.length && (
+            <Button
+              href={adminOrdersHref({ status: "pending_confirmation" })}
+              variant="link"
+              size="sm"
+              className="px-0"
+            >
+              {t("pendingAll")}
+            </Button>
+          )}
+        </div>
+        {pending.orders.length === 0 ? (
+          <Card className="py-6">
+            <EmptyState
+              icon={ClipboardCheck}
+              tone="success"
+              title={t("pendingEmpty")}
+              description={t("pendingEmptyBody")}
+              action={
+                <Button href={routes.adminOrders} variant="secondary" size="sm">
+                  {t("toOrders")}
+                </Button>
+              }
+            />
+          </Card>
+        ) : (
+          <OrderTable
+            orders={pending.orders}
+            hrefFor={routes.adminOrder}
+            caption={t("pendingCaption")}
+          />
+        )}
+      </section>
+
+      <section aria-labelledby="later" className="flex flex-col gap-3">
+        <h2 id="later" className="text-18 font-extrabold">
+          {t("later")}
+        </h2>
+        <ul className="grid gap-3 sm:grid-cols-3">
+          <Later icon={MessagesSquare} title={t("chats")} />
+          <Later icon={Headset} title={t("tickets")} />
+          <Later icon={Repeat} title={t("subscriptions")} />
+        </ul>
+      </section>
+    </>
+  );
+}
+
+async function Later({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
+  const t = await getTranslations("Admin.overview");
+  return (
+    <li>
+      <Card className="flex items-center gap-3 p-4 text-muted">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-well">
+          <Icon aria-hidden className="size-5" />
+        </span>
+        <span className="flex flex-col">
+          <span className="text-15 font-bold text-navy">{title}</span>
+          <span className="text-13">{t("comingSoon")}</span>
+        </span>
+      </Card>
+    </li>
+  );
+}
+
+function OverviewSkeleton() {
+  return (
+    <SkeletonGroup className="flex flex-col gap-5">
+      <Skeleton className="h-7 w-64" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {ORDER_STATUSES.map((status) => (
+          <Skeleton key={status} className="h-24 rounded-card" />
+        ))}
+      </div>
+      <Skeleton className="h-7 w-48" />
+      <Skeleton className="h-48 rounded-card" />
+    </SkeletonGroup>
   );
 }

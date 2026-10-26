@@ -748,6 +748,20 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_slot_board: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          blocked: boolean;
+          bookable: boolean;
+          capacity: number;
+          end_at: string;
+          service_date: string;
+          slot_id: number;
+          start_at: string;
+          taken: number;
+        }[];
+      };
+      assign_crew: { Args: { p_crew_id: string; p_order_id: string }; Returns: undefined };
       booking_availability: {
         Args: Record<PropertyKey, never>;
         Returns: {

@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Field } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { Input, Textarea } from "@/components/ui/input";
+import { Input, Select, Textarea } from "@/components/ui/input";
 import { SheetPanel } from "@/components/ui/sheet-panel";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { StepProgress } from "@/components/ui/step-progress";
@@ -221,6 +221,14 @@ export default function KitPage() {
               {(control) => <Input {...control} variant="compact" disabled />}
             </Field>
           </div>
+          <Field label={t("selectLabel")} variant="compact">
+            {(control) => (
+              <Select {...control} variant="compact" defaultValue="1">
+                <option value="1">{t("selectOne")}</option>
+                <option value="2">{t("selectTwo")}</option>
+              </Select>
+            )}
+          </Field>
           <Field label={t("note")} className="gap-1.5">
             {(control) => <Textarea {...control} rows={2} placeholder={t("notePlaceholder")} />}
           </Field>

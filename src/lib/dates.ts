@@ -117,3 +117,30 @@ const dayMonthTime = new Intl.DateTimeFormat(LOCALE, {
 export function formatDayTime(value: Date | string): string {
   return dayMonthTime.format(new Date(value));
 }
+
+const isoDayInBaghdad = new Intl.DateTimeFormat("en-CA", {
+  timeZone,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** Today's calendar day in Baghdad, "2026-10-25" (Postgres `date`). */
+export function baghdadToday(now: Date = new Date()): string {
+  return isoDayInBaghdad.format(now);
+}
+
+/** A calendar day ("2026-10-25") moved by whole days. */
+export function addDays(serviceDate: string, days: number): string {
+  const date = new Date(`${serviceDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Minutes since midnight in Baghdad (0–1439), to order slots by time of day. */
+export function baghdadMinutes(value: Date | string): number {
+  const parts = timeInBaghdad.formatToParts(new Date(value));
+  const hour = Number(parts.find((p) => p.type === "hour")?.value);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value);
+  return hour * 60 + minute;
+}

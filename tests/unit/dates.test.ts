@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { addMonths, baghdadHour, formatDate, formatMonthYear } from "@/lib/dates";
+import {
+  addDays,
+  addMonths,
+  baghdadHour,
+  baghdadMinutes,
+  baghdadToday,
+  formatDate,
+  formatMonthYear,
+} from "@/lib/dates";
 
 describe("dates (Asia/Baghdad)", () => {
   it("formats in Baghdad time with Iraqi month names and Western digits", () => {
@@ -20,5 +28,26 @@ describe("dates (Asia/Baghdad)", () => {
     expect(addMonths("2026-08-31T09:00:00Z", 6).toISOString()).toBe("2027-02-28T09:00:00.000Z");
     // 23:00 UTC on 31 Jan is 1 Feb in Baghdad: one month later is 1 Mar there.
     expect(addMonths("2027-01-31T23:00:00Z", 1).toISOString()).toBe("2027-02-28T23:00:00.000Z");
+  });
+});
+
+describe("baghdadToday and addDays", () => {
+  it("takes the day in Baghdad, not UTC", () => {
+    // 22:30 UTC is 01:30 the next day in Baghdad.
+    expect(baghdadToday(new Date("2026-10-24T22:30:00Z"))).toBe("2026-10-25");
+    expect(baghdadToday(new Date("2026-10-24T20:59:00Z"))).toBe("2026-10-24");
+  });
+
+  it("moves across months and years", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2027-01-01", -1)).toBe("2026-12-31");
+    expect(addDays("2026-10-25", 0)).toBe("2026-10-25");
+  });
+});
+
+describe("baghdadMinutes", () => {
+  it("counts minutes since midnight in Baghdad", () => {
+    expect(baghdadMinutes("2026-10-26T05:30:00Z")).toBe(8 * 60 + 30);
+    expect(baghdadMinutes("2026-10-26T21:15:00Z")).toBe(15);
   });
 });
