@@ -446,6 +446,7 @@ export type Database = {
       };
       notifications: {
         Row: {
+          audience: Database["public"]["Enums"]["app_role"];
           created_at: string;
           data: NonNullable<Json>;
           id: string;
@@ -457,6 +458,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          audience?: never;
           created_at?: string;
           data?: NonNullable<Json>;
           id?: string;
@@ -467,6 +469,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          audience?: never;
           created_at?: string;
           data?: NonNullable<Json>;
           id?: string;

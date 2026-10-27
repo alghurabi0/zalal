@@ -4,7 +4,10 @@
 -- 1. notifications: one row per event per person. The customer's list
 --    (Notifications.dc.html, the Home bell) reads them; every row except
 --    work_started is also sent as Web Push. Each user reads only their own
---    rows, admins too (nothing needs another user's). Nobody writes the
+--    rows, admins too (nothing needs another user's), and only while they
+--    still hold the role the row is for (audience, generated from the type):
+--    a removed admin or a switched-off crew stops reading staff rows, which
+--    copy customers' messages and orders (RLS audit). Nobody writes the
 --    table through the API: rows come from the triggers and the reminder job
 --    below. mark_notification_read(id) and mark_all_notifications_read()
 --    set read_at. In the Realtime publication (uuid keys: DELETE events
@@ -112,7 +115,20 @@ create table public.notifications (
   order_id uuid references public.orders (id) on delete cascade,
   ticket_id uuid references public.tickets (id) on delete cascade,
   read_at timestamptz,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Who the type is for. A row is read only while its user still has that
+  -- role (RLS audit): staff rows copy customers' messages and orders, which a
+  -- removed admin or a switched-off crew must stop seeing, as they do in the
+  -- source tables. A type missing here counts as a customer's, so an admin
+  -- or crew can't read it.
+  audience public.app_role not null generated always as (
+    case
+      when type in ('new_booking', 'customer_rescheduled', 'customer_cancelled', 'customer_message', 'new_ticket')
+        then 'admin'::public.app_role
+      when type in ('new_job', 'job_changed') then 'crew'::public.app_role
+      else 'customer'::public.app_role
+    end
+  ) stored
 );
 
 alter table public.notifications enable row level security;
@@ -126,11 +142,15 @@ create index notifications_created_at_idx on public.notifications (created_at);
 revoke all on public.notifications from anon, authenticated;
 grant select on public.notifications to authenticated;
 
-create policy "Users read their own notifications"
+create policy "Users read their own notifications while they hold its role"
 on public.notifications
 for select
 to authenticated
-using (user_id = (select auth.uid()));
+using (
+  user_id = (select auth.uid())
+  and audience = (select private.current_user_role())
+  and (audience <> 'crew' or (select private.current_crew_id()) is not null)
+);
 
 alter publication supabase_realtime add table public.notifications;
 
@@ -272,7 +292,7 @@ begin
   insert into public.push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, saved_at)
   values (
     v_user_id, p_endpoint, p_p256dh, p_auth,
-    nullif(left(btrim(coalesce(p_user_agent, '')), 300), ''), clock_timestamp()
+    nullif(btrim(left(btrim(coalesce(p_user_agent, '')), 300)), ''), clock_timestamp()
   )
   on conflict (endpoint) do update
   set

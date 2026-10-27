@@ -15,7 +15,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(30);
+select plan(31);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -167,6 +167,15 @@ select is(tests.count_for(tests.b()), 10, 'a user keeps at most 10 subscriptions
 select is(
   tests.owner_of('https://fcm.googleapis.com/fcm/send/a-phone'), null,
   'the least recently saved one was dropped'
+);
+
+-- A long user agent is cut to 300 characters without a trailing space.
+select tests.authenticate_as(tests.b());
+select lives_ok(
+  $$ select public.save_push_subscription(
+       'https://fcm.googleapis.com/fcm/send/b-long-ua', tests.p256dh(), tests.auth_key(),
+       repeat('x', 299) || ' tail') $$,
+  'a user agent cut at a space still saves'
 );
 
 -- Deleting ---------------------------------------------------------------------------------
