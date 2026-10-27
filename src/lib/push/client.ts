@@ -137,8 +137,10 @@ export async function syncPush(): Promise<void> {
  * Gives up after a few seconds rather than hold the logout.
  */
 export async function forgetPush(): Promise<void> {
+  // Push off here (no key, no worker): nothing to forget, so no wait.
+  if (!vapidKey() || !("serviceWorker" in navigator)) return;
   const work = async () => {
-    const reg = await registration();
+    const reg = await navigator.serviceWorker.getRegistration();
     const subscription = await reg?.pushManager.getSubscription();
     if (!subscription) return;
     await createClient()

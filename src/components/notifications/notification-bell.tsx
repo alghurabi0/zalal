@@ -2,7 +2,7 @@
 
 import { Bell } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { IconButton } from "@/components/ui/icon-button";
 import { routes } from "@/lib/routes";
@@ -25,14 +25,20 @@ export function NotificationBell({ userId, unread: initial }: { userId: string; 
     setUnread(initial);
   }
 
+  // "قراءة الكل" sends one event per row: a burst counts once.
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
   const recount = useCallback(() => {
-    void createClient()
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .is("read_at", null)
-      .then(({ count, error }) => {
-        if (!error) setUnread((count ?? 0) > 0);
-      });
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      void createClient()
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .is("read_at", null)
+        .then(({ count, error }) => {
+          if (!error) setUnread((count ?? 0) > 0);
+        });
+    }, 300);
   }, []);
 
   usePostgresChanges({

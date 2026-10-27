@@ -70,7 +70,11 @@ async function HomeBell({ userId }: { userId: string }) {
   return (
     <>
       <PushSync />
-      <NotificationBell userId={userId} unread={await hasUnreadNotifications()} />
+      {/* A failed read only hides the dot; the bell reads again once live. */}
+      <NotificationBell
+        userId={userId}
+        unread={await hasUnreadNotifications().catch(() => false)}
+      />
     </>
   );
 }

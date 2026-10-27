@@ -15,7 +15,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(31);
+select plan(32);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -153,13 +153,24 @@ select lives_ok(
   'an admin saves one'
 );
 
--- The same browser, now logged in as B: the endpoint moves to B.
+-- The same browser (same keys), now logged in as B: the endpoint moves to B.
 select tests.authenticate_as(tests.b());
-select tests.save('https://fcm.googleapis.com/fcm/send/a-phone');
+select tests.save('https://fcm.googleapis.com/fcm/send/a-phone', 'B' || repeat('c', 86), repeat('d', 22));
 select is(
   tests.owner_of('https://fcm.googleapis.com/fcm/send/a-phone'), tests.b(),
   'a browser saved by another account now belongs to that account'
 );
+
+-- Knowing the endpoint isn't enough: other keys can't take it over.
+select tests.authenticate_as(tests.a());
+select tests.save('https://web.push.apple.com/QGa-iphone', 'B' || repeat('z', 86), repeat('z', 22));
+select tests.authenticate_as(tests.b());
+select tests.save('https://web.push.apple.com/QGa-iphone', 'B' || repeat('e', 86), repeat('e', 22));
+select is(
+  tests.owner_of('https://web.push.apple.com/QGa-iphone'), tests.a(),
+  'another account with different keys can''t take a saved endpoint'
+);
+select tests.authenticate_as(tests.b());
 
 -- At most 10 per user: the least recently saved go.
 select tests.save('https://fcm.googleapis.com/fcm/send/b-' || n) from generate_series(1, 11) as n;

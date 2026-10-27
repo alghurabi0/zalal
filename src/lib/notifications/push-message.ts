@@ -4,6 +4,7 @@ import { routes } from "@/lib/routes";
 
 // Only this namespace is bundled into the service worker (a named JSON import).
 import { Notifications } from "../../../messages/ar.json";
+import type { PushPayload } from "../../../supabase/functions/send-push/push";
 import { describeNotification } from "./describe";
 
 // What the service worker shows for a push (spec §9.2). send-push sends the
@@ -21,13 +22,9 @@ const t = createTranslator({
 const LRI = "⁦";
 const PDI = "⁩";
 
-type Payload = {
-  id: string;
-  type: string;
-  data: Record<string, unknown>;
-  orderId: string | null;
-  ticketId: string | null;
-};
+// The shape send-push builds; a type-only import, so nothing of the Edge
+// Function is bundled.
+type Payload = PushPayload;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const idOrNull = (value: unknown) =>

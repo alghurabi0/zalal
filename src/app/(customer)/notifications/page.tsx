@@ -93,7 +93,7 @@ async function NotificationsContent({ searchParams }: PageProps<"/notifications"
   return (
     <>
       <LiveNotifications userId={viewer.id} />
-      <header className="flex items-center gap-3 px-5 pt-4.5 pb-3">
+      <header className="flex flex-wrap items-center gap-3 px-5 pt-4.5 pb-3">
         <BackButton href={routes.home} />
         <h1 id="notifications-title" className="flex-1 text-22 font-black">
           {t("title")}

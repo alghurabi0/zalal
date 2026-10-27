@@ -59,7 +59,7 @@
 --    Deleted accounts and switched-off crews get nothing.
 --
 -- 4. Push: after each insert statement on notifications, the new ids whose
---    user has a subscription go to send-push, 200 per request, through
+--    user has a subscription go to send-push, 100 per request, through
 --    private.invoke_send_push (pg_net, Vault secrets project_url and
 --    send_push_secret, header x-send-push-secret). Without the secrets it
 --    sends nothing, so the migration is safe before the owner adds them
@@ -294,13 +294,18 @@ begin
     v_user_id, p_endpoint, p_p256dh, p_auth,
     nullif(btrim(left(btrim(coalesce(p_user_agent, '')), 300)), ''), clock_timestamp()
   )
+  -- Another account's browser moves only with its own keys: the same browser
+  -- logging in as someone else sends them, while someone who merely knows
+  -- the endpoint URL (not its auth secret) can't take it over (code review).
   on conflict (endpoint) do update
   set
     user_id = excluded.user_id,
     p256dh = excluded.p256dh,
     auth = excluded.auth,
     user_agent = excluded.user_agent,
-    saved_at = excluded.saved_at;
+    saved_at = excluded.saved_at
+  where push_subscriptions.user_id = excluded.user_id
+    or (push_subscriptions.p256dh = excluded.p256dh and push_subscriptions.auth = excluded.auth);
 
   -- At most 10 browsers per user: the least recently saved go.
   delete from public.push_subscriptions as s
@@ -518,7 +523,11 @@ begin
   end if;
   if old.crew_id is not null then
     perform private.notify_crew(
-      old.crew_id, 'job_changed', v_data || '{"change": "reassigned"}', new.id
+      old.crew_id, 'job_changed',
+      v_data || jsonb_build_object(
+        'change', case when new.crew_id is null then 'removed' else 'reassigned' end
+      ),
+      new.id
     );
   end if;
   if new.crew_id is not null then
@@ -701,8 +710,8 @@ begin
 end;
 $$;
 
--- After each insert statement: the new rows that can reach a browser, 200
--- per request.
+-- After each insert statement: the new rows that can reach a browser, 100
+-- per request (send-push reads them with the ids in a GET query string).
 create function private.queue_push()
 returns trigger
 language plpgsql
@@ -715,7 +724,7 @@ begin
   for v_ids in
     select array_agg(r.id order by r.id)
     from (
-      select n.id, (row_number() over (order by n.id) - 1) / 200 as chunk
+      select n.id, (row_number() over (order by n.id) - 1) / 100 as chunk
       from new_rows as n
       where n.type <> 'work_started'
         and exists (select 1 from public.push_subscriptions as s where s.user_id = n.user_id)
@@ -757,7 +766,8 @@ begin
       end::public.reminder_kind as kind,
       o.id as order_id,
       o.customer_id,
-      a.label
+      a.label,
+      c.issued_at
     from public.certificates as c
     join public.orders as o on o.id = c.order_id and o.status = 'completed'
     join public.profiles as p
@@ -772,7 +782,8 @@ begin
         where o2.address_id = o.address_id
           and o2.status = 'completed'
           and c2.id <> c.id
-          and c2.next_due_on > c.next_due_on
+          -- One reminder per address: a tie goes to one of them.
+          and (c2.next_due_on > c.next_due_on or (c2.next_due_on = c.next_due_on and c2.id > c.id))
       )
       -- Already booked.
       and not exists (
@@ -794,13 +805,16 @@ begin
     jsonb_build_object(
       'kind', r.kind,
       'due_on', r.due_on,
-      'months', s.cleaning_interval_months,
+      -- The certificate's own interval (the setting may have changed since).
+      'months', greatest(1, (
+        extract(year from age(r.due_on, (cd.issued_at at time zone 'Asia/Baghdad')::date)) * 12
+        + extract(month from age(r.due_on, (cd.issued_at at time zone 'Asia/Baghdad')::date))
+      )::integer),
       'label', cd.label
     ),
     cd.order_id
   from recorded as r
-  join candidates as cd on cd.certificate_id = r.certificate_id and cd.kind = r.kind
-  cross join public.settings as s;
+  join candidates as cd on cd.certificate_id = r.certificate_id and cd.kind = r.kind;
 
   get diagnostics v_count = row_count;
   return v_count;

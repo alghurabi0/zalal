@@ -64,7 +64,7 @@ function oneOf<T extends string>(data: Data, key: string, values: readonly T[]):
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const CANCEL_REASONS = ["plans_changed", "time_unsuitable", "other"] as const;
-const JOB_CHANGES = ["cancelled", "rescheduled", "reassigned"] as const;
+const JOB_CHANGES = ["cancelled", "rescheduled", "reassigned", "removed"] as const;
 const MEDIA_TYPES = ["photo", "video"] as const;
 const TOPICS = ["reschedule", "cancel", "price", "complaint"] as const;
 const TICKET_STATUSES = ["open", "in_progress", "closed"] as const;

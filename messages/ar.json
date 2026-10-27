@@ -751,6 +751,7 @@
     "title": "الإشعارات",
     "listLabel": "الإشعارات",
     "readAll": "قراءة الكل",
+    "readAllFailed": "ما كدرنا نعلّمها مقروءة، جرب مرة ثانية.",
     "today": "اليوم",
     "earlier": "قبل",
     "yesterday": "أمس",
@@ -857,7 +858,7 @@
       },
       "job_changed": {
         "title": "تغيّرت شغلة <num>#{number}</num>",
-        "body": "{change, select, cancelled {انلغت.} rescheduled {تغيّر موعدها وترجع للتأكيد.} other {انطت لفريق ثاني.}}"
+        "body": "{change, select, cancelled {انلغت.} rescheduled {تغيّر موعدها وترجع للتأكيد.} removed {انشالت من جدولكم.} other {انطت لفريق ثاني.}}"
       },
       "unknown": {
         "title": "عندك إشعار جديد",

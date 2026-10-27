@@ -16,7 +16,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(27);
+select plan(29);
 
 update public.settings as s set cleaning_interval_months = 6 where s.id;
 create function tests.t() returns date language sql immutable as $$ select date '2026-11-01' $$;
@@ -28,8 +28,9 @@ declare
   v_order uuid := tests.create_order(tests.create_user(p_phone), 'completed', now() - interval '180 days');
   v_id uuid;
 begin
-  insert into public.certificates (order_id, public_code, next_due_on)
-  values (v_order, private.new_certificate_code(), p_due)
+  -- Issued six months before it is due, as transition_order would.
+  insert into public.certificates (order_id, public_code, next_due_on, issued_at)
+  values (v_order, private.new_certificate_code(), p_due, (p_due - interval '6 months')::timestamptz)
   returning id into v_id;
   return v_id;
 end;
@@ -134,6 +135,30 @@ select private.send_cleaning_reminders(tests.t() + 23);
 select results_eq($$ select * from tests.kinds('+9647800000002') $$,
   $$ values ('due ' || (tests.t() + 3)), ('week ' || (tests.t() + 3)), ('week ' || (tests.t() + 30)) $$,
   'a certificate with a new date is reminded again');
+
+-- Two certificates for one address due the same day: one reminder.
+select tests.create_order(tests.create_user('+9647800000012'), 'completed', now() - interval '180 days');
+insert into public.certificates (order_id, public_code, next_due_on, issued_at)
+select o.id, private.new_certificate_code(), tests.t() + 40, (tests.t() + 40 - interval '6 months')::timestamptz
+from public.orders as o where o.customer_id = tests.user_id('+9647800000012');
+insert into public.certificates (order_id, public_code, next_due_on, issued_at)
+values (
+  tests.create_order(tests.user_id('+9647800000012'), 'completed', now() - interval '180 days'),
+  private.new_certificate_code(), tests.t() + 40, (tests.t() + 40 - interval '6 months')::timestamptz
+);
+select private.send_cleaning_reminders(tests.t() + 40);
+select is(
+  (select count(*)::int from tests.kinds('+9647800000012')), 1,
+  'two certificates for one address due the same day send one reminder'
+);
+
+-- The months come from the certificate, not today's setting.
+update public.settings as s set cleaning_interval_months = 12 where s.id;
+select is(
+  (select (n.data ->> 'months')::int from public.notifications as n
+   where n.user_id = tests.user_id('+9647800000012')),
+  6, 'a changed interval setting doesn''t change what an older certificate''s reminder says'
+);
 
 -- Access --------------------------------------------------------------------------------------
 

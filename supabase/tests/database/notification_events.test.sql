@@ -33,7 +33,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(46);
+select plan(47);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B (deleted later)
@@ -315,6 +315,10 @@ select results_eq(
 select tests.authenticate_as(tests.admin1());
 select public.assign_crew(tests.id('assign'), null);
 select tests.clear_authentication();
+select is(
+  tests.data_of('+9647703333332', 'job_changed') ->> 'change', 'removed',
+  'a crew taken off with nobody instead is told it was removed, not given to another crew'
+);
 select results_eq(
   $$ select * from tests.taken() $$, $$ values ('+9647703333332 job_changed') $$,
   'removing the crew tells it'

@@ -11,13 +11,14 @@ import { json, sameSecret } from "../_shared/edge.ts";
 // subscriptions with the service key, sends each browser an encrypted
 // payload, and deletes subscriptions the push service says are gone (404,
 // 410). The payload carries the type and its values, not words: the service
-// worker writes the text from ar.json (src/lib/notifications/render.ts).
+// worker writes the text from ar.json (src/lib/notifications/push-message.ts).
 // Plain TypeScript with no Deno APIs, so Vitest runs it too; index.ts
 // serves it.
 
 export const SECRET_HEADER = "x-send-push-secret";
 
-export const requestSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) }).strict();
+// private.queue_push sends at most 100: the ids go into a GET query string.
+export const requestSchema = z.object({ ids: z.array(z.uuid()).min(1).max(100) }).strict();
 
 /** The push services save_push_subscription accepts (the same list). */
 const PUSH_HOST =
@@ -57,7 +58,7 @@ const subscriptionSchema = z.object({
 type NotificationRow = z.infer<typeof notificationSchema>;
 type SubscriptionRow = z.infer<typeof subscriptionSchema>;
 
-/** What the service worker receives (src/lib/notifications/payload.ts reads it). */
+/** What the service worker receives (src/lib/notifications/push-message.ts reads it). */
 export type PushPayload = {
   id: string;
   type: string;

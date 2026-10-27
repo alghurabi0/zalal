@@ -307,8 +307,8 @@ describe("handleRequest", () => {
     expect((await handleRequest(post(body), env, deps().deps)).status).toBe(400);
   });
 
-  it("refuses more than 200 ids", async () => {
-    const ids = Array.from({ length: 201 }, () => randomUUID());
+  it("refuses more than 100 ids", async () => {
+    const ids = Array.from({ length: 101 }, () => randomUUID());
     expect((await handleRequest(post({ ids }), env, deps().deps)).status).toBe(400);
   });
 

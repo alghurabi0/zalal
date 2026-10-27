@@ -72,6 +72,7 @@ describe("describeNotification", () => {
     ["new_job", order, "شغلة جديدة #1024", `${when} · حي الحسين`],
     ["job_changed", { ...order, change: "cancelled" }, "تغيّرت شغلة #1024", "انلغت."],
     ["job_changed", { ...order, change: "reassigned" }, "تغيّرت شغلة #1024", "انطت لفريق ثاني."],
+    ["job_changed", { ...order, change: "removed" }, "تغيّرت شغلة #1024", "انشالت من جدولكم."],
     ["support_message", { excerpt: "تم تأكيد الموعد" }, "رد جديد من الدعم", "تم تأكيد الموعد"],
     ["support_message", { media_type: "photo" }, "رد جديد من الدعم", "أرسل لك صورة"],
     [

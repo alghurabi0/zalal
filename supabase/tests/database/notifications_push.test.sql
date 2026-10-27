@@ -2,7 +2,7 @@
 -- small:
 -- - After each insert statement on notifications, the ids of the new rows
 --   whose user has at least one push subscription go to the Edge Function
---   send-push, at most 200 per request: private.invoke_send_push(ids) posts
+--   send-push, at most 100 per request: private.invoke_send_push(ids) posts
 --   {"ids": [...]} through pg_net with the x-send-push-secret header, reading
 --   project_url and send_push_secret from Vault. Without either secret it
 --   sends nothing, so local runs and CI never call out. work_started rows are
@@ -82,7 +82,7 @@ select is(jsonb_array_length(tests.last_ids()), 2, 'with only the rows that can 
 
 insert into public.notifications (user_id, type)
 select tests.a(), 'support_message' from generate_series(1, 450);
-select is(tests.requests(), 5, 'more than 200 rows go in requests of at most 200');
+select is(tests.requests(), 7, 'more than 100 rows go in requests of at most 100');
 
 select ok(
   not has_function_privilege('authenticated', 'private.invoke_send_push(uuid[])', 'execute')
