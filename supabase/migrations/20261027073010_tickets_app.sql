@@ -296,8 +296,8 @@ begin
   update public.tickets as t set status = p_status where t.id = p_ticket_id;
 
   perform private.log_admin_action(
-    'ticket.status', 'ticket', p_ticket_id::text,
-    jsonb_build_object('status', jsonb_build_object('from', v_old, 'to', p_status))
+    'ticket.status', 'tickets', p_ticket_id::text,
+    jsonb_build_object('from', v_old, 'to', p_status)
   );
 end;
 $$;
@@ -331,8 +331,7 @@ begin
   returning id into v_id;
 
   perform private.log_admin_action(
-    'ticket.note', 'ticket', p_ticket_id::text,
-    jsonb_build_object('note', jsonb_build_object('to', v_note))
+    'ticket.note', 'tickets', p_ticket_id::text, jsonb_build_object('note', v_note)
   );
   return v_id;
 end;

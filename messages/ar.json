@@ -1091,7 +1091,10 @@
       "audit": "سجل التغييرات",
       "logout": "تسجيل الخروج",
       "chat": "المحادثات",
-      "chatUnread": "{count, plural, one {محادثة غير مقروءة} two {محادثتين غير مقروءة} few {# محادثات غير مقروءة} other {# محادثة غير مقروءة}}"
+      "tickets": "البلاغات",
+      "ratings": "التقييمات",
+      "chatUnread": "{count, plural, one {محادثة غير مقروءة} two {محادثتين غير مقروءة} few {# محادثات غير مقروءة} other {# محادثة غير مقروءة}}",
+      "ticketsOpen": "{count, plural, one {بلاغ مفتوح} two {بلاغين مفتوحة} few {# بلاغات مفتوحة} other {# بلاغ مفتوح}}"
     },
     "live": {
       "soundOn": "صوت التنبيه شغال",
@@ -1136,7 +1139,7 @@
       "comingSoon": "تنضاف ويه الاشتراكات",
       "ticketsOpen": "البلاغات المفتوحة ({count})",
       "ticketsEmpty": "ماكو بلاغات مفتوحة",
-      "ticketsEmptyBody": "التقييم بـ 3 نجوم أو أقل يفتح بلاغ ويطلع هنا. إدارة البلاغات تجي ويه قسم البلاغات.",
+      "ticketsEmptyBody": "بلاغات الزبائن والتقييمات بـ 3 نجوم أو أقل تطلع هنا.",
       "ticketRow": "<num>{ticket}</num> · طلب <num>#{order}</num>",
       "ticketStars": "{n} من 5",
       "ticketsCaption": "أحدث البلاغات المفتوحة",
@@ -1144,7 +1147,9 @@
       "chatsEmpty": "ماكو رسائل تنتظر رد",
       "chatsEmptyBody": "رسائل الزبائن الجديدة تطلع هنا.",
       "chatsAll": "كل المحادثات",
-      "chatsCaption": "المحادثات اللي بيها رسائل ما انقرت، الأحدث أولاً"
+      "chatsCaption": "المحادثات اللي بيها رسائل ما انقرت، الأحدث أولاً",
+      "ticketRowNoOrder": "<num>{ticket}</num>",
+      "ticketsAll": "كل البلاغات"
     },
     "table": {
       "number": "الطلب",
@@ -1424,7 +1429,9 @@
       "chat": {
         "title": "المحادثة",
         "text": "الرد التلقائي برا أوقات الدوام",
-        "textHint": "ينرسل مرة وحدة للزبون اللي يراسلنا برا أوقات الدوام. خليه فارغ حتى توقف الرد التلقائي."
+        "textHint": "ينرسل مرة وحدة للزبون اللي يراسلنا برا أوقات الدوام. خليه فارغ حتى توقف الرد التلقائي.",
+        "ticketHours": "وقت الرد على البلاغات (ساعات)",
+        "ticketHoursHint": "شاشة البلاغ تكتب: «{line}»."
       },
       "booking": {
         "title": "الحجز",
@@ -1585,7 +1592,8 @@
         "settings": "الإعدادات",
         "service_areas": "منطقة الخدمة",
         "crews": "الفرق",
-        "profiles": "المشرفين"
+        "profiles": "المشرفين",
+        "tickets": "البلاغات"
       },
       "actions": {
         "order": {
@@ -1619,6 +1627,10 @@
         "admin": {
           "add": "أضاف مشرف",
           "remove": "شال مشرف"
+        },
+        "ticket": {
+          "status": "غيّر حالة بلاغ",
+          "note": "أضاف ملاحظة لبلاغ"
         }
       },
       "fields": {
@@ -1649,7 +1661,9 @@
         "certificate_text": "وصف الخدمة بالشهادة",
         "support_response_text": "الرد التلقائي بالمحادثة",
         "min_app_version": "أقل نسخة",
-        "maintenance_mode": "وضع الصيانة"
+        "maintenance_mode": "وضع الصيانة",
+        "ticket_response_hours": "وقت الرد على البلاغات (ساعات)",
+        "note": "الملاحظة"
       },
       "yes": "إي",
       "no": "لا",
@@ -1667,7 +1681,12 @@
       "emptyTitle": "ماكو تغييرات بعد",
       "emptyBody": "أول ما مشرف يغيّر شي، يطلع هنا.",
       "emptyFilteredTitle": "ماكو تغييرات بهذا الفلتر",
-      "clearFilters": "شيل الفلتر"
+      "clearFilters": "شيل الفلتر",
+      "ticketStatus": {
+        "open": "مفتوح",
+        "in_progress": "قيد المعالجة",
+        "closed": "مغلق"
+      }
     },
     "chat": {
       "title": "المحادثات",
@@ -1722,6 +1741,103 @@
         "cancelled": "تم إلغاء الطلب. إذا تحتاج شي ثاني احنا موجودين.",
         "thanks": "شكراً لتواصلك ويانا."
       }
+    },
+    "tickets": {
+      "title": "البلاغات",
+      "caption": "البلاغات، الأحدث أولاً",
+      "status": "الحالة",
+      "statuses": {
+        "active": "المفتوحة وقيد المعالجة",
+        "all": "الكل",
+        "open": "مفتوح",
+        "in_progress": "قيد المعالجة",
+        "closed": "مغلق"
+      },
+      "source": "المصدر",
+      "sources": {
+        "all": "الكل",
+        "app": "بلاغ من الزبون",
+        "rating": "تقييم منخفض"
+      },
+      "search": "ابحث برقم البلاغ أو الاسم أو الرقم",
+      "apply": "اعرض",
+      "clear": "مسح الفلتر",
+      "columns": {
+        "number": "البلاغ",
+        "when": "التاريخ",
+        "customer": "الزبون",
+        "subject": "الموضوع",
+        "order": "الطلب",
+        "status": "الحالة"
+      },
+      "fromRating": "تقييم {stars} من 5",
+      "orderNumber": "#{number}",
+      "none": "—",
+      "noName": "بدون اسم",
+      "empty": "ماكو بلاغات مفتوحة",
+      "emptyBody": "بلاغات الزبائن والتقييمات بـ 3 نجوم أو أقل تطلع هنا.",
+      "emptyFiltered": "ماكو بلاغات بهذا الفلتر",
+      "emptyFilteredBody": "غيّر الفلتر أو امسحه حتى تشوف كل البلاغات.",
+      "more": "عرض المزيد",
+      "drawer": {
+        "title": "بلاغ <num>{ticket}</num>",
+        "notFound": "ما لكينا هذا البلاغ",
+        "notFoundBody": "يمكن الرابط غلط. ارجع لقائمة البلاغات.",
+        "customer": "الزبون",
+        "order": "الطلب",
+        "orderLink": "طلب <num>#{number}</num>",
+        "noOrder": "بدون طلب",
+        "subject": "الموضوع",
+        "opened": "انفتح {date}",
+        "updated": "آخر تحديث {date}",
+        "description": "شرح الزبون",
+        "files": "الملفات",
+        "file": "{kind, select, video {فيديو {n}} other {صورة {n}}}",
+        "fileMissing": "الملف مو موجود",
+        "rating": "التقييم",
+        "stars": "{n} من 5",
+        "status": "الحالة",
+        "statusLabel": "غيّر حالة البلاغ",
+        "chat": "افتح المحادثة",
+        "noThread": "الزبون ما عنده محادثة بعد.",
+        "notes": "ملاحظات داخلية",
+        "notesHint": "للمشرفين بس، الزبون ما يشوفها.",
+        "noNotes": "ماكو ملاحظات بعد.",
+        "noteLabel": "ملاحظة جديدة",
+        "addNote": "أضف الملاحظة",
+        "noteBy": "{name} · {at}",
+        "anAdmin": "مشرف"
+      }
+    },
+    "ratings": {
+      "title": "التقييمات",
+      "summary": "ملخص التقييمات",
+      "average": "المعدل",
+      "averageValue": "<num>{value}</num> من 5",
+      "total": "{count, plural, =0 {ماكو تقييمات} one {تقييم واحد} two {تقييمين} few {# تقييمات} other {# تقييم}}",
+      "noAverage": "—",
+      "filter": "النجوم",
+      "all": "الكل",
+      "starsOption": "{n} ★ ({count})",
+      "caption": "تقييمات الزبائن، الأحدث أولاً",
+      "columns": {
+        "when": "التاريخ",
+        "order": "الطلب",
+        "customer": "الزبون",
+        "stars": "النجوم",
+        "tags": "شنو عجبه",
+        "comment": "التعليق",
+        "ticket": "البلاغ"
+      },
+      "stars": "{n} من 5",
+      "orderNumber": "#{number}",
+      "none": "—",
+      "noName": "بدون اسم",
+      "empty": "ماكو تقييمات بعد",
+      "emptyBody": "تقييمات الزبائن بعد كل طلب مكتمل تطلع هنا.",
+      "emptyFiltered": "ماكو تقييمات بهذا العدد من النجوم",
+      "emptyFilteredBody": "اختار عدد ثاني أو اعرض الكل.",
+      "more": "عرض المزيد"
     }
   }
 }

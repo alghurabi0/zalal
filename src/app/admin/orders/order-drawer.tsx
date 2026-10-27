@@ -1,4 +1,5 @@
 import { ExternalLink, SearchX } from "lucide-react";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
@@ -181,13 +182,16 @@ async function CertificateAndRating({ order }: { order: AdminOrderDetails }) {
               <p className="text-15 whitespace-pre-line text-body-2">{rating.comment}</p>
             )}
             {rating.ticket && (
-              <p className="text-14 font-bold text-danger">
+              <Link
+                href={routes.adminTicket(rating.ticket.id)}
+                className="inline-flex min-h-11 items-center self-start text-14 font-bold text-danger underline-offset-4 hover:underline"
+              >
                 {t.rich("ticket", {
                   number: ticketNumber(rating.ticket.number),
                   status: rating.ticket.status,
                   num: (chunks) => <span dir="ltr">{chunks}</span>,
                 })}
-              </p>
+              </Link>
             )}
           </>
         ) : (

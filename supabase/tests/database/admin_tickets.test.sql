@@ -106,10 +106,10 @@ select is(
 );
 select results_eq(
   $$ select admin_id, action, entity, entity_id, diff from public.admin_audit_log
-     where entity = 'ticket' $$,
+     where entity = 'tickets' $$,
   $$ values (
-       tests.admin(), 'ticket.status', 'ticket', tests.id('ticket')::text,
-       '{"status": {"from": "open", "to": "in_progress"}}'::jsonb
+       tests.admin(), 'ticket.status', 'tickets', tests.id('ticket')::text,
+       '{"from": "open", "to": "in_progress"}'::jsonb
      ) $$,
   'logged as ticket.status with the old and new status'
 );
@@ -118,7 +118,7 @@ select lives_ok(
   'setting the same status again'
 );
 select is(
-  (select count(*)::int from public.admin_audit_log where entity = 'ticket'),
+  (select count(*)::int from public.admin_audit_log where entity = 'tickets'),
   1,
   'logs nothing'
 );
@@ -161,7 +161,7 @@ select results_eq(
 );
 select results_eq(
   $$ select action, diff from public.admin_audit_log where action = 'ticket.note' $$,
-  $$ values ('ticket.note', '{"note": {"to": "اتصلنا بيه، نرجع الفريق باجر"}}'::jsonb) $$,
+  $$ values ('ticket.note', '{"note": "اتصلنا بيه، نرجع الفريق باجر"}'::jsonb) $$,
   'logged as ticket.note'
 );
 select throws_ok(

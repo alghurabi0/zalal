@@ -15,6 +15,7 @@ import { normalizeIraqiPhone } from "@/lib/phone";
 import {
   CERTIFICATE_TEXT_MAX,
   SUPPORT_REPLY_MAX,
+  TICKET_RESPONSE_RANGE,
   LEGAL_MAX,
   SETTING_RANGES,
   type SettingsSectionInput,
@@ -339,14 +340,27 @@ function CrewSection({ settings }: { settings: AdminSettings }) {
 }
 
 function ChatSection({ settings }: { settings: AdminSettings }) {
-  const t = useTranslations("Admin.settings.chat");
+  const t = useTranslations("Admin.settings");
+  const tIssue = useTranslations("Issue");
   const [text, setText] = useState(settings.support_response_text);
+  const [hoursText, setHoursText] = useState(String(settings.ticket_response_hours));
+  const [min, max] = TICKET_RESPONSE_RANGE;
+  const typed = /^\d{1,2}$/.test(hoursText.trim()) ? Number(hoursText.trim()) : Number.NaN;
+  const hours = typed >= min && typed <= max ? typed : null;
+  const range = t("rangeHint", { min, max });
   return (
     <Section
-      title={t("title")}
-      input={{ section: "chat", values: { support_response_text: text } }}
+      title={t("chat.title")}
+      input={
+        hours === null
+          ? null
+          : {
+              section: "chat",
+              values: { support_response_text: text, ticket_response_hours: hours },
+            }
+      }
     >
-      <Field label={t("text")} variant="compact" hint={t("textHint")}>
+      <Field label={t("chat.text")} variant="compact" hint={t("chat.textHint")}>
         {(control) => (
           <Textarea
             {...control}
@@ -355,6 +369,30 @@ function ChatSection({ settings }: { settings: AdminSettings }) {
             name="support_response_text"
             value={text}
             onChange={(event) => setText(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field
+        label={t("chat.ticketHours")}
+        variant="compact"
+        hint={t("chat.ticketHoursHint", {
+          line: tIssue("response", { hours: hours ?? settings.ticket_response_hours }),
+        })}
+        error={hours === null ? range : undefined}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            variant="compact"
+            dir="ltr"
+            className="w-32 text-start"
+            name="ticket_response_hours"
+            value={hoursText}
+            onChange={(event) => setHoursText(event.target.value)}
           />
         )}
       </Field>

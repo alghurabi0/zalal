@@ -27,6 +27,8 @@ export const AUDIT_ACTIONS = [
   "crew.phone",
   "admin.add",
   "admin.remove",
+  "ticket.status",
+  "ticket.note",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
