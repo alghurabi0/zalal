@@ -746,6 +746,143 @@
     "notFound": "ما لكينا هذا البلاغ",
     "notFoundBody": "يمكن انمسح أو الرابط غلط."
   },
+  "Notifications": {
+    "metaTitle": "الإشعارات",
+    "title": "الإشعارات",
+    "listLabel": "الإشعارات",
+    "readAll": "قراءة الكل",
+    "readAllFailed": "ما كدرنا نعلّمها مقروءة، جرب مرة ثانية.",
+    "today": "اليوم",
+    "earlier": "قبل",
+    "yesterday": "أمس",
+    "unread": "غير مقروء",
+    "empty": "ماكو إشعارات",
+    "emptyBody": "هنا توصلك أخبار طلباتك ورسايل الدعم.",
+    "emptyAction": "احجز تنظيف",
+    "more": "عرض المزيد",
+    "bell": "الإشعارات",
+    "bellUnread": "الإشعارات، عندك إشعارات جديدة",
+    "when": "{weekday} {day} · {from}–{to} {period, select, morning {الصبح} noon {الظهر} afternoon {العصر} other {المسا}}",
+    "items": {
+      "order_confirmed": {
+        "title": "تأكد حجزك",
+        "body": "طلب <num>#{number}</num> · {when}"
+      },
+      "order_rescheduled": {
+        "title": "تغيّر موعد طلبك <num>#{number}</num>",
+        "body": "الموعد الجديد: {when}"
+      },
+      "order_cancelled": {
+        "title": "انلغى طلبك <num>#{number}</num>",
+        "body": "إذا عندك سؤال راسلنا بالمحادثة."
+      },
+      "crew_on_the_way": {
+        "title": "الفريق طلع لبيتك",
+        "body": "طلب <num>#{number}</num> · تابعهم على الخريطة."
+      },
+      "crew_arrived": {
+        "title": "الفريق وصل",
+        "body": "طلب <num>#{number}</num> · الفريق يمك هسه."
+      },
+      "work_started": {
+        "title": "بدأ الشغل",
+        "body": "طلب <num>#{number}</num> · تكدر تشوف الصور أول بأول."
+      },
+      "order_completed": {
+        "title": "شهادة التعقيم جاهزة",
+        "body": "طلب <num>#{number}</num> · شوف الشهادة وقيّم الشغل."
+      },
+      "order_no_show": {
+        "title": "ما لكينا أحد بالبيت",
+        "body": "طلب <num>#{number}</num> · راسلنا حتى نرتب موعد ثاني."
+      },
+      "support_message": {
+        "title": "رد جديد من الدعم",
+        "body": "{excerpt}"
+      },
+      "support_file": {
+        "title": "رد جديد من الدعم",
+        "body": "أرسل لك {media, select, video {فيديو} other {صورة}}"
+      },
+      "ticket_status": {
+        "title": "{status, select, in_progress {بلاغك <num>{ticket}</num> صار قيد المعالجة} closed {انغلق بلاغك <num>{ticket}</num>} other {رجع انفتح بلاغك <num>{ticket}</num>}}",
+        "body": "الردود توصلك بالمحادثة."
+      },
+      "reminder_week": {
+        "title": "تذكير بموعد التنظيف",
+        "body": "موعد التنظيف الجاي لخزان {label, select, family {بيت الأهل} work {الشغل} other {البيت}} يوم {date}."
+      },
+      "reminder_due": {
+        "title": "تذكير بموعد التنظيف",
+        "body": "مرت {months, plural, one {شهر} two {شهرين} few {# أشهر} other {# شهر}} على آخر تنظيف لخزان {label, select, family {بيت الأهل} work {الشغل} other {البيت}}."
+      },
+      "new_booking": {
+        "title": "حجز جديد <num>#{number}</num>",
+        "body": "{when} · {district}"
+      },
+      "customer_rescheduled": {
+        "title": "الزبون غيّر موعد طلب <num>#{number}</num>",
+        "body": "الموعد الجديد: {when} · يحتاج تأكيد"
+      },
+      "customer_cancelled": {
+        "title": "الزبون ألغى طلب <num>#{number}</num>",
+        "body": "السبب: {reason, select, plans_changed {تغيرت ظروفي} time_unsuitable {الموعد ما يناسبني} other {شي ثاني}}"
+      },
+      "customer_message": {
+        "title": "رسالة جديدة من زبون",
+        "body": "{excerpt}"
+      },
+      "customer_file": {
+        "title": "رسالة جديدة من زبون",
+        "body": "أرسل {media, select, video {فيديو} other {صورة}}"
+      },
+      "customer_topic": {
+        "title": "رسالة جديدة من زبون",
+        "body": "{topic, select, reschedule {يريد يغيّر موعد طلب} cancel {يريد يلغي طلب} price {عنده استفسار عن سعر} other {عنده شكوى}}"
+      },
+      "new_ticket_app": {
+        "title": "بلاغ جديد <num>{ticket}</num>",
+        "body": "{category, select, leak {تسريب بعد التنظيف} smell {ريحة أو لون بالماي} late {تأخر الفريق} staff {تعامل الفريق} payment {مشكلة بالدفع} other {شي ثاني}} · طلب <num>#{number}</num>"
+      },
+      "new_ticket_app_no_order": {
+        "title": "بلاغ جديد <num>{ticket}</num>",
+        "body": "{category, select, leak {تسريب بعد التنظيف} smell {ريحة أو لون بالماي} late {تأخر الفريق} staff {تعامل الفريق} payment {مشكلة بالدفع} other {شي ثاني}} · بدون طلب"
+      },
+      "new_ticket_rating": {
+        "title": "بلاغ جديد <num>{ticket}</num>",
+        "body": "تقييم {stars} من 5 · طلب <num>#{number}</num>"
+      },
+      "new_job": {
+        "title": "شغلة جديدة <num>#{number}</num>",
+        "body": "{when} · {district}"
+      },
+      "job_changed": {
+        "title": "تغيّرت شغلة <num>#{number}</num>",
+        "body": "{change, select, cancelled {انلغت.} rescheduled {تغيّر موعدها وترجع للتأكيد.} removed {انشالت من جدولكم.} other {انطت لفريق ثاني.}}"
+      },
+      "unknown": {
+        "title": "عندك إشعار جديد",
+        "body": "افتح التطبيق حتى تشوف التفاصيل."
+      }
+    },
+    "push": {
+      "title": "خلّي نبلغك بكل خطوة",
+      "body": "نبلغك من يتأكد حجزك، ومن يطلع الفريق لبيتك، ومن تجهز شهادتك.",
+      "enable": "فعّل الإشعارات",
+      "later": "بعدين",
+      "enabled": "الإشعارات شغالة على هذا الجهاز",
+      "denied": "الإشعارات مسكّرة من إعدادات المتصفح. تكدر تفتحها من هناك.",
+      "failed": "ما كدرنا نفعّل الإشعارات، جرب مرة ثانية.",
+      "iosTitle": "أضف التطبيق للشاشة الرئيسية",
+      "iosBody": "على الآيفون توصلك الإشعارات بس من التطبيق المضاف للشاشة الرئيسية:",
+      "iosShare": "اضغط زر المشاركة <icon></icon> بسفاري",
+      "iosAdd": "اختار «إضافة إلى الشاشة الرئيسية»",
+      "iosOpen": "افتح زلال من الشاشة الرئيسية وفعّل الإشعارات",
+      "staffEnable": "فعّل التنبيهات",
+      "staffOn": "التنبيهات شغالة",
+      "staffDenied": "التنبيهات مسكّرة بالمتصفح"
+    }
+  },
   "CertificateDoc": {
     "metaTitle": "شهادة تنظيف وتعقيم",
     "title": "شهادة تنظيف وتعقيم خزان ماء",

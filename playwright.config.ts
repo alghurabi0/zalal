@@ -1,6 +1,7 @@
 import { chromium, defineConfig, devices } from "@playwright/test";
 
 import { OTP_OUTBOX } from "./tests/e2e/helpers/outbox";
+import { E2E_VAPID_PUBLIC_KEY } from "./tests/e2e/helpers/push";
 
 const PORT = 3100;
 
@@ -44,7 +45,11 @@ export default defineConfig({
     // where the tests can read them (src/lib/otp/senders.ts).
     // Certificate PDFs (src/lib/certificates/pdf.ts) need a Chromium off
     // Vercel; the server borrows the one the tests run in.
+    // A VAPID public key, so the push-permission card shows: the tests stub
+    // the browser's subscribe (headless Chromium can't reach a push service)
+    // and nothing is ever sent. Only the public half; no private key exists.
     env: {
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: E2E_VAPID_PUBLIC_KEY,
       OTP_DEV_OUTBOX: OTP_OUTBOX,
       CERTIFICATE_CHROMIUM_PATH: executablePath ?? chromium.executablePath(),
     },

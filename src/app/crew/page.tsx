@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { type ReactNode, Suspense } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+import { StaffPushButton } from "@/components/notifications/staff-push-button";
 import { LiveJobs } from "@/components/crew/live-jobs";
 import { RefreshButton } from "@/components/crew/refresh-button";
 import { Screen } from "@/components/layout/screen";
@@ -79,6 +80,7 @@ async function Header({ name, userId }: { name: string | null; userId: string })
       <div className="flex flex-1 flex-col">
         <h1 className="text-24 font-black">{t("title")}</h1>
         {name && <p className="text-14 text-muted">{t("hello", { name })}</p>}
+        <StaffPushButton tone="light" className="-ms-3 self-start" />
       </div>
       <LogoutButton warning={<QueuedLogoutWarning userId={userId} />}>
         <Button variant="secondary" size="sm">
