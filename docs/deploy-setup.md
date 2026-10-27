@@ -40,6 +40,7 @@ Two things to know:
    | `OTPIQ_WHATSAPP_ACCOUNT_ID`, `_PHONE_ID`, `_TEMPLATE` | optional | optional | step 5; all three or none |
    | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | browser key | same key | step 6; without it Location shows a drawn map |
    | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Map ID | same ID | step 6; without it Tracking and the admin live map show a drawn map |
+   | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | dev public key | prod public key | `docs/supabase-setup.md` step 9; without it the app never offers push (notifications stay in-app) |
 
    Leave **Settings → Environment Variables → Automatically expose System Environment Variables** on. The app reads `NEXT_PUBLIC_VERCEL_ENV` from it to tag Sentry events as `production` or `preview`.
 4. **Settings → Functions → Function Region**: `vercel.json` already pins `fra1` (Frankfurt, next to Supabase). Check it shows Frankfurt.
@@ -133,6 +134,7 @@ Location (spec §5.4) shows a Google map with a search box. Tracking (§5.13) an
 - [ ] PostHog EU project; key in Vercel Production; client IP discarded; replay off
 - [ ] OTPIQ dev key in Vercel Preview, live key in Production; IP limit off; credit added
 - [ ] Google Maps key restricted to the app's domains and the two APIs; in Vercel Preview and Production
+- [ ] VAPID public keys in Vercel (dev's in Preview, prod's in Production), matching each project's Edge Function secrets
 - [ ] `VERCEL_DEPLOY_HOOK_URL` in the GitHub `production` environment
 - [ ] Ruleset on `main` requiring both CI checks
 - [ ] First Deploy prod run; production URL opens Welcome

@@ -169,6 +169,22 @@ Two nightly jobs delete photos and videos that were uploaded but never booked or
 
 To change the secret, update both places (steps 2 and 3) together. The CI tokens need no new permission.
 
+## 9. Web Push (both projects, once)
+
+New notifications go out as Web Push through the Edge Function `send-push` (spec §9.2). CI deploys the function and the migration `notifications`, but nothing is pushed until the project has its keys; the in-app list works without them. Do this per project after the code reaches it, with a different key pair and secret for each project, and never paste a private key or secret into a Claude chat.
+
+1. Make a VAPID key pair on your computer: `npx web-push@3.6.7 generate-vapid-keys`. It prints a public and a private key.
+2. Make a random secret: `openssl rand -base64 32`.
+3. **Edge Functions → Secrets**: add
+   - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` from step 1
+   - `VAPID_SUBJECT`: `mailto:` and an address you read (push services write to it if something is wrong), e.g. `mailto:owner@example.com`
+   - `SEND_PUSH_SECRET` from step 2
+4. **Database → Vault → Add new secret**: name `send_push_secret`, the same value as `SEND_PUSH_SECRET`. (`project_url` is already there from step 8.)
+5. In Vercel, set `NEXT_PUBLIC_VAPID_PUBLIC_KEY` to the **public** key of the matching project: dev's for Preview, prod's for Production (`docs/deploy-setup.md` step 1), then redeploy.
+6. Check it: on the deployed app, book a test order on an Android phone (or add the app to an iPhone's home screen first) and tap "فعّل الإشعارات" on Booking success; confirming the order in the dashboard should arrive as a push. The function's logs show counts only (`{"job":"send-push","notifications":1,"sent":1,…}`); a 401 means `SEND_PUSH_SECRET` and the Vault value differ, a 503 that a VAPID secret is missing.
+
+Changing the key pair later makes every saved browser invalid: each one renews itself the next time its user opens the app. To change the secret, update steps 3 and 4 together.
+
 ## Checklist
 
 - [ ] Two orgs: Zalal Dev (Free), Zalal (Pro)
@@ -180,4 +196,5 @@ To change the secret, update both places (steps 2 and 3) together. The CI tokens
 - [ ] `production` environment (you as reviewer, `main` only) holding the prod secrets; dev secrets as repository secrets
 - [ ] Vercel, Sentry, PostHog and the `main` ruleset: `docs/deploy-setup.md`
 - [ ] Media cleanup secrets in both projects (step 8), after the code reaches each one
+- [ ] Web Push keys and secret in both projects, and each public key in Vercel (step 9)
 - [ ] (Optional) Supabase domains allowed in this environment's network settings; plugin logged in to Zalal Dev only
