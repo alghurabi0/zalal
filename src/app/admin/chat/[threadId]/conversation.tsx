@@ -7,7 +7,7 @@ import { useCallback } from "react";
 import { Composer } from "@/components/chat/composer";
 import { MessageList } from "@/components/chat/message-list";
 import { useChat } from "@/components/chat/use-chat";
-import type { ChatMessage } from "@/lib/chat/messages";
+import type { ChatMessage, ChatTicket } from "@/lib/chat/messages";
 import { routes } from "@/lib/routes";
 
 import { markAdminChatRead, sendAdminChatMessage } from "../actions";
@@ -34,7 +34,7 @@ export function AdminConversation({
   messages: ChatMessage[];
   hasOlder: boolean;
   orders: Record<string, { number: number }>;
-  tickets: Record<string, number>;
+  tickets: Record<string, ChatTicket>;
   readAt: number;
 }) {
   const t = useTranslations("Admin.chat");

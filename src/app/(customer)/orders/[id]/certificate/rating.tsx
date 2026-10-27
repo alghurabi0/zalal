@@ -1,6 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import { RATING_TAGS, type RatingTag, ticketNumber } from "@/lib/certificates/format";
 import type { CertificateRating } from "@/lib/certificates/queries";
+import { routes } from "@/lib/routes";
 import { RATING_COMMENT_MAX } from "@/lib/schemas/rating";
 
 import { rateOrder, type RateOrderError } from "./actions";
@@ -23,7 +25,8 @@ const STARS = [1, 2, 3, 4, 5] as const;
  * Report's rating card and footer (spec §5.15): stars, the company tags and
  * an optional comment (spec change: not in the canvas); skippable, and
  * read-only once sent. 3 stars or fewer opens a ticket (rate_order), whose
- * number shows here. مشاركة shares the public link (N15).
+ * number shows here. مشاركة shares the public link (N15). "بلّغنا" opens the
+ * Issue report about this order.
  */
 export function Rating({
   orderId,
@@ -38,6 +41,7 @@ export function Rating({
   certificate: string;
 }) {
   const t = useTranslations("Report.rating");
+  const tReport = useTranslations("Report");
   const router = useRouter();
   const [stars, setStars] = useState(rating?.stars ?? 0);
   const [tags, setTags] = useState<RatingTag[]>(rating?.tags ?? []);
@@ -180,6 +184,12 @@ export function Rating({
             </p>
           )}
         </form>
+        <Link
+          href={routes.issueAbout(orderId)}
+          className="mt-1 flex min-h-11 items-center justify-center text-14 font-bold text-teal hover:text-navy"
+        >
+          {tReport("issue")}
+        </Link>
       </div>
 
       <footer className="sticky bottom-0 z-10 flex gap-2.5 border-t border-border bg-surface px-5 pt-3 pb-safe-5.5">

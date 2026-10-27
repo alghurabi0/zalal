@@ -11,6 +11,12 @@ export type ChatKind = Database["public"]["Enums"]["chat_message_kind"];
 export type ChatTopic = Database["public"]["Enums"]["chat_topic"];
 export type ChatSide = "customer" | "admin";
 
+/** A ticket a system message names: its number, and whether the customer reported it. */
+export type ChatTicket = {
+  number: number;
+  source: Database["public"]["Enums"]["ticket_source"];
+};
+
 /** The quick topics, in the canvas's order. */
 export const CHAT_TOPICS = [
   "reschedule",

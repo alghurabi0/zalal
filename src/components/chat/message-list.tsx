@@ -12,6 +12,7 @@ import { ticketNumber } from "@/lib/certificates/format";
 import {
   type ChatMessage,
   type ChatSide,
+  type ChatTicket,
   delivery,
   type DayGroup,
   groupByDay,
@@ -30,8 +31,8 @@ import { formatDay, formatTime } from "@/lib/dates";
 export type ChatLabels = {
   /** Order numbers by id, for tags and system messages. */
   orders: Record<string, { number: number }>;
-  /** Ticket numbers by id. */
-  tickets: Record<string, number>;
+  /** Ticket numbers and sources by id, for ticket messages. */
+  tickets: Record<string, ChatTicket>;
 };
 
 export function MessageList({
@@ -172,11 +173,15 @@ function Bubble({
   if (message.kind === "no_show" && number !== undefined) {
     lead = t.rich("system.no_show", { number, num });
   } else if (message.kind === "ticket" && message.ticketId) {
-    const ticket = ticketNumber(labels.tickets[message.ticketId] ?? 0);
+    const label = labels.tickets[message.ticketId];
+    const ticket = ticketNumber(label?.number ?? 0);
+    // An Issue report is the customer's own ("وصلنا بلاغك"); a low rating's
+    // ticket is one support opened ("فتحنا بلاغ").
+    const app = label?.source === "app";
     lead =
       number !== undefined
-        ? t.rich("system.ticket", { ticket, number, num })
-        : t.rich("system.ticketNoOrder", { ticket, num });
+        ? t.rich(app ? "system.ticketApp" : "system.ticket", { ticket, number, num })
+        : t.rich(app ? "system.ticketAppNoOrder" : "system.ticketNoOrder", { ticket, num });
   } else if (message.topic === "reschedule" || message.topic === "cancel") {
     lead = number !== undefined ? t.rich(`topicText.${message.topic}`, { number, num }) : null;
   } else if (message.topic) {

@@ -8,7 +8,7 @@ import { changeState, type OrderStatus } from "@/lib/orders/status";
 import { createClient } from "@/lib/supabase/server";
 
 import { fetchMessages } from "./load";
-import type { ChatMessage } from "./messages";
+import type { ChatMessage, ChatTicket } from "./messages";
 
 // What Chat (spec §5.16) and the A4 conversation read on the server, as the
 // logged-in user (RLS decides what they see).
@@ -63,8 +63,8 @@ export type ThreadContext = {
   hasOlder: boolean;
   /** The tagged orders and, for the picker, the customer's pending and confirmed ones. */
   orders: Record<string, ChatOrder>;
-  /** Ticket numbers by id, for ticket messages. */
-  tickets: Record<string, number>;
+  /** Ticket numbers and sources by id, for ticket messages. */
+  tickets: Record<string, ChatTicket>;
 };
 
 /**
@@ -126,14 +126,16 @@ export async function chatOrders(
 async function ticketNumbers(
   supabase: Client,
   messages: ChatMessage[],
-): Promise<Record<string, number>> {
+): Promise<Record<string, ChatTicket>> {
   const ids = [
     ...new Set(messages.flatMap((message) => (message.ticketId ? [message.ticketId] : []))),
   ];
   if (ids.length === 0) return {};
-  const { data, error } = await supabase.from("tickets").select("id, number").in("id", ids);
+  const { data, error } = await supabase.from("tickets").select("id, number, source").in("id", ids);
   if (error) throw new Error(`Chat tickets failed: ${error.message}`);
-  return Object.fromEntries(data.map((ticket) => [ticket.id, ticket.number]));
+  return Object.fromEntries(
+    data.map((ticket) => [ticket.id, { number: ticket.number, source: ticket.source }]),
+  );
 }
 
 /**

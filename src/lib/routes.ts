@@ -45,6 +45,13 @@ export const routes = {
   /** Chat with the next message tagged with an order (مساعدة, Tracking, Job progress). */
   chatAbout: (orderId: string) => `/chat?order=${encodeURIComponent(orderId)}`,
   profile: "/profile",
+  /** Issue report (§5.17); `?order=` picks the related order. */
+  issue: "/issue",
+  issueAbout: (orderId: string) => `/issue?order=${encodeURIComponent(orderId)}`,
+  /** My reports (N11). */
+  reports: "/reports",
+  /** One of my reports (N11 detail). */
+  report: (id: string) => `/reports/${id}`,
   /** POST only: ends the session, then Welcome. */
   logout: "/logout",
   terms: "/terms",
@@ -79,6 +86,11 @@ export const routes = {
   adminChat: "/admin/chat",
   /** One conversation in the inbox, with the customer panel. */
   adminChatThread: (threadId: string) => `/admin/chat/${threadId}`,
+  /** Tickets (A5), filtered by its query string; `?ticket=` opens the drawer. */
+  adminTickets: "/admin/tickets",
+  adminTicket: (id: string) => `/admin/tickets?ticket=${encodeURIComponent(id)}`,
+  /** Ratings (A12); `?stars=` filters by stars. */
+  adminRatings: "/admin/ratings",
   /** Live map (A3): crews on the way. */
   adminLive: "/admin/live",
 } as const;
@@ -96,6 +108,8 @@ export const loginRequiredPrefixes = [
   "/orders",
   "/book",
   "/chat",
+  "/issue",
+  "/reports",
   "/crew",
   "/admin",
 ] as const;
