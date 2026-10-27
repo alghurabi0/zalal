@@ -1,6 +1,10 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import { json, sameSecret, serviceKeyFrom } from "../_shared/edge.ts";
+
+export { serviceKeyFrom };
+
 // The nightly cleanup of uploads nothing uses (spec §7 Storage): order-media
 // files no order uses, chat-media files no message sent (migration chat) and
 // ticket-media files no ticket attached (migration tickets_app). pg_cron
@@ -111,22 +115,6 @@ export type CleanupEnv = {
   serviceKey: string | undefined;
 };
 
-/**
- * Reads the service key the platform gives Edge Functions: the new secret
- * keys (a JSON map, key "default"), or the legacy service_role key.
- */
-export function serviceKeyFrom(secretKeys: string | undefined, legacyKey: string | undefined) {
-  if (secretKeys) {
-    try {
-      const parsed = z.record(z.string(), z.string()).safeParse(JSON.parse(secretKeys));
-      if (parsed.success && parsed.data.default) return parsed.data.default;
-    } catch {
-      // Not JSON: fall back to the legacy key.
-    }
-  }
-  return legacyKey || undefined;
-}
-
 type Deps = {
   makeClient: (url: string, key: string) => SupabaseClient;
   log: (line: string) => void;
@@ -139,25 +127,6 @@ const defaultDeps: Deps = {
     }),
   log: (line) => console.log(line),
 };
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-
-/** Compares two strings in time that doesn't depend on where they differ. */
-async function sameSecret(given: string, expected: string) {
-  const encoder = new TextEncoder();
-  const [a, b] = await Promise.all(
-    [given, expected].map(
-      async (value) => new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))),
-    ),
-  );
-  let diff = 0;
-  for (let i = 0; i < a!.length; i++) diff |= a![i]! ^ b![i]!;
-  return diff === 0;
-}
 
 export async function handleRequest(
   req: Request,

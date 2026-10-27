@@ -420,6 +420,10 @@ deno_version = 2
 verify_jwt = false
 import_map = "./functions/media-cleanup/deno.json"
 
+[functions.send-push]
+verify_jwt = false
+import_map = "./functions/send-push/deno.json"
+
 [analytics]
 # Local log collection isn't needed for development or tests.
 enabled = false
