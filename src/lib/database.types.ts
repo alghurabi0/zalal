@@ -286,6 +286,36 @@ export type Database = {
           },
         ];
       };
+      cleaning_reminders: {
+        Row: {
+          certificate_id: string;
+          created_at: string;
+          due_on: string;
+          kind: Database["public"]["Enums"]["reminder_kind"];
+        };
+        ComputedFields: never;
+        Insert: {
+          certificate_id: string;
+          created_at?: string;
+          due_on: string;
+          kind: Database["public"]["Enums"]["reminder_kind"];
+        };
+        Update: {
+          certificate_id?: string;
+          created_at?: string;
+          due_on?: string;
+          kind?: Database["public"]["Enums"]["reminder_kind"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_reminders_certificate_id_fkey";
+            columns: ["certificate_id"];
+            isOneToOne: false;
+            referencedRelation: "certificates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       crew_live_location: {
         Row: {
           accuracy_m: number;
@@ -410,6 +440,62 @@ export type Database = {
             columns: ["order_id"];
             isOneToOne: true;
             referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          created_at: string;
+          data: NonNullable<Json>;
+          id: string;
+          order_id: string | null;
+          read_at: string | null;
+          ticket_id: string | null;
+          type: Database["public"]["Enums"]["notification_type"];
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          data?: NonNullable<Json>;
+          id?: string;
+          order_id?: string | null;
+          read_at?: string | null;
+          ticket_id?: string | null;
+          type: Database["public"]["Enums"]["notification_type"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          data?: NonNullable<Json>;
+          id?: string;
+          order_id?: string | null;
+          read_at?: string | null;
+          ticket_id?: string | null;
+          type?: Database["public"]["Enums"]["notification_type"];
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_ticket_id_fkey";
+            columns: ["ticket_id"];
+            isOneToOne: false;
+            referencedRelation: "tickets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -803,6 +889,48 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          auth: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          p256dh: string;
+          saved_at: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          auth: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          p256dh: string;
+          saved_at?: string;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: {
+          auth?: string;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          p256dh?: string;
+          saved_at?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       ratings: {
         Row: {
@@ -1362,8 +1490,11 @@ export type Database = {
         }[];
       };
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
+      delete_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
       in_service_area: { Args: { p_lat: number; p_lng: number }; Returns: boolean };
+      mark_all_notifications_read: { Args: Record<PropertyKey, never>; Returns: number };
       mark_chat_read: { Args: { p_thread_id: string }; Returns: number };
+      mark_notification_read: { Args: { p_notification_id: string }; Returns: undefined };
       otp_locked_until: { Args: { p_phone: string }; Returns: string };
       public_certificate: {
         Args: { p_code: string };
@@ -1403,6 +1534,10 @@ export type Database = {
           p_phone: string;
         };
         Returns: Record<string, unknown>;
+      };
+      save_push_subscription: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent?: string };
+        Returns: undefined;
       };
       send_chat_message: {
         Args: {
@@ -1475,6 +1610,25 @@ export type Database = {
       chat_message_kind: "message" | "auto_reply" | "no_show" | "ticket";
       chat_topic: "reschedule" | "cancel" | "price" | "complaint";
       media_type: "photo" | "video";
+      notification_type:
+        | "order_confirmed"
+        | "order_rescheduled"
+        | "order_cancelled"
+        | "crew_on_the_way"
+        | "crew_arrived"
+        | "work_started"
+        | "order_completed"
+        | "order_no_show"
+        | "support_message"
+        | "ticket_status"
+        | "cleaning_reminder"
+        | "new_booking"
+        | "customer_rescheduled"
+        | "customer_cancelled"
+        | "customer_message"
+        | "new_ticket"
+        | "new_job"
+        | "job_changed";
       order_media_kind: "customer" | "before" | "after" | "clip";
       order_status:
         | "pending_confirmation"
@@ -1488,6 +1642,7 @@ export type Database = {
       otp_channel: "whatsapp" | "sms";
       payment_method: "cash";
       rating_tag: "on_time" | "clean_work" | "respectful" | "clear_photos";
+      reminder_kind: "week" | "due";
       tank_size: "s" | "m" | "l";
       tank_type: "roof" | "ground";
       ticket_category: "leak" | "smell" | "late" | "staff" | "payment" | "other";
@@ -1611,6 +1766,26 @@ export const Constants = {
       chat_message_kind: ["message", "auto_reply", "no_show", "ticket"],
       chat_topic: ["reschedule", "cancel", "price", "complaint"],
       media_type: ["photo", "video"],
+      notification_type: [
+        "order_confirmed",
+        "order_rescheduled",
+        "order_cancelled",
+        "crew_on_the_way",
+        "crew_arrived",
+        "work_started",
+        "order_completed",
+        "order_no_show",
+        "support_message",
+        "ticket_status",
+        "cleaning_reminder",
+        "new_booking",
+        "customer_rescheduled",
+        "customer_cancelled",
+        "customer_message",
+        "new_ticket",
+        "new_job",
+        "job_changed",
+      ],
       order_media_kind: ["customer", "before", "after", "clip"],
       order_status: [
         "pending_confirmation",
@@ -1625,6 +1800,7 @@ export const Constants = {
       otp_channel: ["whatsapp", "sms"],
       payment_method: ["cash"],
       rating_tag: ["on_time", "clean_work", "respectful", "clear_photos"],
+      reminder_kind: ["week", "due"],
       tank_size: ["s", "m", "l"],
       tank_type: ["roof", "ground"],
       ticket_category: ["leak", "smell", "late", "staff", "payment", "other"],
