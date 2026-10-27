@@ -48,7 +48,10 @@
 --    is read by its uploader until attached, then by whoever reads its
 --    ticket; the uploader deletes it until attached. "Attached" is checked
 --    without RLS (private.ticket_media_attached), the lesson of the chat
---    RLS audit. Admins and crews don't upload.
+--    RLS audit. Admins and crews don't upload. RLS audit of this migration:
+--    create_ticket locks each file while attaching it, so a delete running
+--    meanwhile waits and then sees it attached, and no upload may reuse the
+--    name of an attached file.
 --
 -- 9. Media cleanup: unattached_media('ticket') lists ticket files more than
 --    72 h old that no ticket attached; the nightly job media-cleanup-ticket
@@ -216,8 +219,12 @@ begin
     if jsonb_typeof(v_file) <> 'object' then
       raise exception using errcode = '22023', message = 'invalid_media';
     end if;
-    select ob.metadata into v_metadata
-    from storage.objects as ob
+    -- An update, not a select: a delete of the same file running meanwhile
+    -- then waits for this transaction and checks its policy again, which
+    -- now sees the file attached (RLS audit: a plain read let the customer
+    -- delete the file while it was being attached).
+    update storage.objects as ob
+    set metadata = ob.metadata
     where ob.bucket_id = 'ticket-media'
       and ob.name = v_file ->> 'path'
       and ob.name like v_user_id || '/%'
@@ -225,7 +232,8 @@ begin
       -- Within 48 hours of the upload: the cleanup deletes unattached files
       -- after 72, so it never deletes one that can still be attached.
       and ob.created_at > now() - interval '48 hours'
-      and not exists (select 1 from public.ticket_media as m where m.path = ob.name);
+      and not exists (select 1 from public.ticket_media as m where m.path = ob.name)
+    returning ob.metadata into v_metadata;
     if not found then
       raise exception using errcode = 'ZL009', message = 'upload_not_found';
     end if;
@@ -363,10 +371,12 @@ grant execute on function public.admin_rating_summary() to authenticated;
 -- storage policies need it without RLS, so a caller who can't read the
 -- ticket still can't delete its file and upload something else under its
 -- name (the chat-media lesson, migration chat).
+-- Volatile, so a delete that waited on create_ticket re-checks with a fresh
+-- snapshot and sees the file it attached.
 create function private.ticket_media_attached(p_name text)
 returns boolean
 language sql
-stable
+volatile
 security definer
 set search_path = ''
 as $$
@@ -382,6 +392,8 @@ with check (
   and cardinality(storage.foldername(name)) = 1
   and (storage.foldername(name))[1] = (select auth.uid())::text
   and (select private.current_user_role()) = 'customer'
+  -- Never under the name of an attached file that has gone missing (RLS audit).
+  and not private.ticket_media_attached(name)
 );
 
 create policy "Ticket files are read by their uploader and with their ticket"
