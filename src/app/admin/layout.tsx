@@ -2,6 +2,8 @@ import { Suspense } from "react";
 
 import { AdminLive } from "@/components/admin/admin-live";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { PushSync } from "@/components/notifications/push-sync";
+import { StaffPushButton } from "@/components/notifications/staff-push-button";
 import { LiveTickets } from "@/components/tickets/live-tickets";
 import { Skeleton } from "@/components/ui/skeleton";
 import { unreadThreads } from "@/lib/admin/chat-queries";
@@ -40,6 +42,8 @@ async function Chrome() {
       openTickets={openTickets}
     >
       <AdminLive chatUnread={unread} />
+      <StaffPushButton />
+      <PushSync />
       {/* A new ticket or a status change refreshes every admin page (A1, A5, the nav count). */}
       <LiveTickets />
     </AdminNav>

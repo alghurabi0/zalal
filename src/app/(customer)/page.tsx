@@ -7,9 +7,12 @@ import { Suspense } from "react";
 import { Screen } from "@/components/layout/screen";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { CustomerTabBar } from "@/components/chat/customer-tab-bar";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { PushSync } from "@/components/notifications/push-sync";
 import { chosenAddress, listAddresses } from "@/lib/addresses";
 import { getViewer, surfaceFor } from "@/lib/auth/viewer";
 import { baghdadHour } from "@/lib/dates";
+import { hasUnreadNotifications } from "@/lib/notifications/queries";
 import { routes } from "@/lib/routes";
 
 import { AddressPicker } from "./addresses/address-picker";
@@ -18,7 +21,8 @@ import { HomeCards, HomeCardsSkeleton } from "./home-cards";
 /**
  * Home (Home.dc.html, spec §5.5): the header with the address picker (N2) or,
  * for guests, "سجّل دخول"; the greeting; the cards (home-cards.tsx); the tab
- * bar. The bell, quick actions and tips strip come with their phases.
+ * bar. The bell (with its unread dot) opens Notifications; quick actions and
+ * the tips strip come with their phases.
  */
 export default function HomePage() {
   return (
@@ -48,8 +52,9 @@ async function HomeHeader() {
 
   return (
     <header className="flex flex-col gap-6 bg-navy px-5 pt-5 pb-13.5 text-white">
-      <div className="flex min-h-11 items-center">
+      <div className="flex min-h-11 items-center justify-between gap-3">
         {viewer ? <AddressButton /> : <GuestLogin label={t("login")} />}
+        {viewer && <HomeBell userId={viewer.id} />}
       </div>
       <div className="flex flex-col">
         <p className="text-16 text-on-dark-muted">
@@ -58,6 +63,15 @@ async function HomeHeader() {
         <h1 className="text-28 leading-snug font-black">{t("headline")}</h1>
       </div>
     </header>
+  );
+}
+
+async function HomeBell({ userId }: { userId: string }) {
+  return (
+    <>
+      <PushSync />
+      <NotificationBell userId={userId} unread={await hasUnreadNotifications()} />
+    </>
   );
 }
 

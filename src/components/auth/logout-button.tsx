@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { clearMediaQueue } from "@/lib/crew/use-media-queue";
 import { resetAnalytics } from "@/lib/monitoring/analytics";
+import { forgetPush } from "@/lib/push/client";
 import { routes } from "@/lib/routes";
 
 /**
  * Logout with a confirmation (spec §5.8). Forgets the analytics user and
  * deletes the crew's queued photos and clips first (on every surface, so a
  * phone that changed hands keeps nothing), because crew phones are shared,
- * then posts to /logout, which ends the session and loads Welcome as a full
+ * and forgets this browser's push subscription, then posts to /logout, which ends the session and loads Welcome as a full
  * page. `warning` is shown above the buttons (the crew's unsent files).
  */
 export function LogoutButton({ children, warning }: { children: ReactNode; warning?: ReactNode }) {
@@ -23,7 +24,12 @@ export function LogoutButton({ children, warning }: { children: ReactNode; warni
 
   const confirm = async () => {
     setPending(true);
-    await Promise.all([resetAnalytics(), clearMediaQueue().catch(() => undefined)]);
+    await Promise.all([
+      resetAnalytics(),
+      clearMediaQueue().catch(() => undefined),
+      // A shared phone must not get this account's pushes after it.
+      forgetPush(),
+    ]);
     formRef.current?.submit();
   };
 

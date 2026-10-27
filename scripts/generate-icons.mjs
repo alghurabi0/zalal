@@ -9,6 +9,9 @@
 //          public/icons/icon-192.png    rounded tile, purpose "any"
 //          public/icons/icon-512.png    rounded tile, purpose "any"
 //          public/icons/icon-maskable-512.png  full bleed, mark in the safe zone
+//          public/icons/badge-96.png    the mark alone, one color on transparent:
+//                                       Android's status-bar glyph for push
+//                                       notifications (only its alpha counts)
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -73,3 +76,21 @@ write(
 );
 
 write("src/app/apple-icon.png", await png(iconSvg(180, { radius: 0, markRatio: TILE_MARK })));
+
+// The badge: Android draws only the alpha channel, so the waves are solid
+// (no fading) and the color doesn't matter.
+const BADGE = 96;
+const badgeWidth = BADGE * 0.86;
+const badgeHeight = (badgeWidth * markHeight) / markWidth;
+const badge = logo
+  .replace(/stroke-opacity="[^"]*"/g, "")
+  .replace("<svg ", `<svg x="${(BADGE - badgeWidth) / 2}" y="${(BADGE - badgeHeight) / 2}" `)
+  .replace(/viewBox=/, `width="${badgeWidth}" height="${badgeHeight}" viewBox=`);
+write(
+  "public/icons/badge-96.png",
+  await png(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${BADGE}" height="${BADGE}" viewBox="0 0 ${BADGE} ${BADGE}">` +
+      badge.replace(' xmlns="http://www.w3.org/2000/svg"', "") +
+      `</svg>\n`,
+  ),
+);

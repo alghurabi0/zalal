@@ -13,11 +13,12 @@ import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 
 import { ForgetBooking } from "./forget-booking";
+import { PushCard } from "@/components/notifications/push-card";
 
 /**
  * Booking success (N5): "وصلنا طلبك #1024 · بانتظار تأكيد الشركة", the day
- * and slot, and buttons to Order details (N4) and Home. The push-permission
- * card comes with Web Push in Phase 5.
+ * and slot, the soft push-permission card (spec §9.2) and buttons to Order
+ * details (N4) and Home.
  */
 export default function BookingDonePage(props: PageProps<"/book/done/[id]">) {
   return (
@@ -87,6 +88,7 @@ async function Done({ params }: PageProps<"/book/done/[id]">) {
         }
         action={
           <>
+            <PushCard />
             <Button href={routes.order(order.id)} size="footer" className="w-full">
               {t("details")}
             </Button>

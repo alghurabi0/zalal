@@ -52,6 +52,10 @@ export const routes = {
   reports: "/reports",
   /** One of my reports (N11 detail). */
   report: (id: string) => `/reports/${id}`,
+  /** Notifications (§5.7). */
+  notifications: "/notifications",
+  /** Marks a notification read, then goes where it points (list items and push taps). */
+  openNotification: (id: string) => `/notifications/${id}`,
   /** POST only: ends the session, then Welcome. */
   logout: "/logout",
   terms: "/terms",
@@ -110,6 +114,7 @@ export const loginRequiredPrefixes = [
   "/chat",
   "/issue",
   "/reports",
+  "/notifications",
   "/crew",
   "/admin",
 ] as const;

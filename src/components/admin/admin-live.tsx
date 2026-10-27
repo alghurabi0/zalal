@@ -67,11 +67,11 @@ function chime(context: AudioContext) {
 }
 
 /**
- * Keeps every admin page live and rings for new bookings and customer
- * messages (spec §6, §8.2 A1, A4): any order change refetches the page's
- * server data; a new order or a new unread chat message plays a chime
- * (while sound is on) and shows a link to it. Push alerts come in
- * Phase 5. Browsers allow sound only after a click on the page, so sound
+ * Keeps every admin page live and rings for new bookings, customer
+ * messages and tickets (spec §6, §8.2 A1, A4, A5, §9.2): any order change
+ * refetches the page's server data; a new order or a new unread chat message
+ * plays a chime (while sound is on) and shows a link to it; a new ticket
+ * chimes. Push alerts come from send-push (StaffPushButton turns them on). Browsers allow sound only after a click on the page, so sound
  * starts off and the admin turns it on; the choice is remembered on this
  * browser.
  */
@@ -172,6 +172,11 @@ export function AdminLive({ chatUnread: initialUnread }: { chatUnread: UnreadThr
             if (soundRef.current && audio.current?.state === "running") chime(audio.current);
           },
         )
+        // A new ticket (an Issue report or a low rating) rings too; the
+        // pages refresh through LiveTickets.
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "tickets" }, () => {
+          if (soundRef.current && audio.current?.state === "running") chime(audio.current);
+        })
         .subscribe();
     })();
 

@@ -3,6 +3,8 @@ import { type ReactNode, Suspense } from "react";
 import { getViewer } from "@/lib/auth/viewer";
 import { createClient } from "@/lib/supabase/server";
 
+import { PushSync } from "@/components/notifications/push-sync";
+
 import { LocationShare } from "./location-share";
 
 /**
@@ -17,6 +19,7 @@ export default function CrewLayout({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <Sharing />
       </Suspense>
+      <PushSync />
       {children}
     </>
   );

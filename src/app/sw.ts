@@ -12,6 +12,12 @@
 //   crew phone never shows another account's data or a stale order status.
 // - A page that can't load shows the offline page (/~offline) instead of the
 //   browser's error screen.
+//
+// Web Push (spec §9.2): the Edge Function send-push sends a notification's
+// type and values; `push` writes the words from ar.json (pushMessage) and
+// shows it. A tap opens /notifications/<id>, which marks it read and goes to
+// its target, in an open window of the app when there is one.
+import { pushMessage } from "@/lib/notifications/push-message";
 import {
   CacheFirst,
   ExpirationPlugin,
@@ -76,3 +82,49 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+self.addEventListener("push", (event) => {
+  let payload: unknown = null;
+  try {
+    payload = event.data?.json();
+  } catch {
+    // Shown as a generic notification below.
+  }
+  const message = pushMessage(payload);
+  // Every push must show a notification (browsers revoke push otherwise).
+  event.waitUntil(
+    self.registration.showNotification(message.title, {
+      body: message.body,
+      tag: message.tag,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/badge-96.png",
+      lang: "ar",
+      dir: "rtl",
+      data: { url: message.url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const data: unknown = event.notification.data;
+  const path =
+    typeof data === "object" && data !== null && "url" in data && typeof data.url === "string"
+      ? data.url
+      : "/";
+  // Only paths on this site.
+  const url = new URL(path, self.location.origin);
+  if (url.origin !== self.location.origin) return;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window" });
+      const open = windows.find((client) => new URL(client.url).origin === url.origin);
+      if (open) {
+        await open.focus();
+        await open.navigate(url.href);
+        return;
+      }
+      await self.clients.openWindow(url.href);
+    })(),
+  );
+});

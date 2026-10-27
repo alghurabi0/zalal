@@ -16,6 +16,10 @@ const publicEnvSchema = z.object({
   // A Map ID from the same Google Cloud project. Tracking and the admin live
   // map need one for their markers; without it they show the drawn map.
   NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: optional(z.string().min(1)),
+  // The VAPID public key for Web Push (spec §9.2), base64url (65 bytes). The
+  // private half is an Edge Function secret. Optional: without it (local,
+  // CI) the app never asks for push permission; notifications stay in-app.
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: optional(z.string().regex(/^B[A-Za-z0-9_-]{86}$/)),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -29,6 +33,7 @@ export function publicEnv(): PublicEnv {
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   });
   return cached;
 }
