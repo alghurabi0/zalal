@@ -7,8 +7,8 @@
 -- source 'rating' (a rating of 3 stars or fewer, rate_order) needs an
 -- order. Status open → in_progress → closed. The customer reads their own
 -- tickets, admins read all, crews none. Nobody writes the table directly:
--- rate_order is the only writer for now; Phase 5 adds the Issue report and
--- the admin status changes as RPCs.
+-- rate_order and create_ticket write it, and admins change the status with
+-- admin_set_ticket_status (create_ticket.test.sql, admin_tickets.test.sql).
 begin;
 \ir _helpers.psql
 
@@ -108,7 +108,7 @@ select throws_ok(
 select tests.authenticate_as(tests.user_id('+9647504444444'));
 select throws_ok(
   $$ update public.tickets set status = 'closed' $$,
-  '42501', null, 'admins change tickets through RPCs only (Phase 5)'
+  '42501', null, 'admins change tickets through RPCs only'
 );
 select throws_ok(
   $$ delete from public.tickets $$,
