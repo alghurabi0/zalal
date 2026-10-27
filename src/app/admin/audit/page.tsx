@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatusBadge } from "@/components/orders/status-badge";
+import { TicketStatusBadge } from "@/components/tickets/ticket-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -15,6 +16,8 @@ import { Select } from "@/components/ui/input";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from "@/lib/admin/audit";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
+import { ticketNumber } from "@/lib/certificates/format";
+import { TICKET_STATUSES } from "@/lib/tickets/format";
 import {
   AUDIT_ENTITIES,
   auditAdmins,
@@ -263,6 +266,17 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
         <bdi dir="ltr">{entry.entityId.slice(0, 8)}</bdi>
       );
     }
+    case "tickets": {
+      const number = names.tickets.get(entry.entityId);
+      return (
+        <Link
+          href={routes.adminTicket(entry.entityId)}
+          className="inline-flex min-h-11 items-center font-extrabold text-teal underline-offset-2 hover:underline"
+        >
+          <span dir="ltr">{number ? ticketNumber(number) : entry.entityId.slice(0, 8)}</span>
+        </Link>
+      );
+    }
     case "settings":
       return <>{t("entities.settings")}</>;
     default:
@@ -300,6 +314,8 @@ const KNOWN_FIELDS = [
   "support_response_text",
   "min_app_version",
   "maintenance_mode",
+  "ticket_response_hours",
+  "note",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -363,6 +379,12 @@ async function Value({
   if (field === null && action === "order.transition" && typeof value === "string") {
     if ((ORDER_STATUSES as readonly string[]).includes(value)) {
       return <StatusBadge status={value as (typeof ORDER_STATUSES)[number]} />;
+    }
+  }
+  if (field === null && action === "ticket.status" && typeof value === "string") {
+    if ((TICKET_STATUSES as readonly string[]).includes(value)) {
+      const status = value as (typeof TICKET_STATUSES)[number];
+      return <TicketStatusBadge status={status} label={t(`ticketStatus.${status}`)} />;
     }
   }
   if (field === null && action === "order.assign_crew") {

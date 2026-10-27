@@ -44,6 +44,16 @@ const optionalText = (max: number) =>
     .catch(undefined)
     .transform((value) => (value ? value : undefined));
 
+/** A list's `n`: how many rows to show, `page` more at a time, at most `max`. */
+export function pageSizeSchema(page: number, max: number) {
+  return z.coerce
+    .number()
+    .int()
+    .catch(page)
+    .default(page)
+    .transform((n) => Math.min(max, Math.max(page, n)));
+}
+
 export const adminOrdersQuerySchema = z.object({
   status: z.enum(STATUS_FILTERS).catch("active").default("active"),
   date: z.iso.date().optional().catch(undefined),
@@ -53,12 +63,7 @@ export const adminOrdersQuerySchema = z.object({
     .optional()
     .catch(undefined),
   slot: z.coerce.number().int().positive().optional().catch(undefined),
-  n: z.coerce
-    .number()
-    .int()
-    .catch(ADMIN_ORDERS_PAGE)
-    .default(ADMIN_ORDERS_PAGE)
-    .transform((n) => Math.min(ADMIN_ORDERS_MAX, Math.max(ADMIN_ORDERS_PAGE, n))),
+  n: pageSizeSchema(ADMIN_ORDERS_PAGE, ADMIN_ORDERS_MAX),
   order: z.uuid().optional().catch(undefined),
 });
 

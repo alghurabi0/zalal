@@ -16,6 +16,8 @@ const dayMonthYear = new Intl.DateTimeFormat(LOCALE, {
 
 const monthYear = new Intl.DateTimeFormat(LOCALE, { timeZone, month: "long", year: "numeric" });
 
+const dayMonth = new Intl.DateTimeFormat(LOCALE, { timeZone, day: "numeric", month: "long" });
+
 const hourInBaghdad = new Intl.DateTimeFormat("en-GB", {
   timeZone,
   hour: "numeric",
@@ -35,6 +37,11 @@ export function formatMonthYear(value: Date | string): string {
 /** A calendar day in Baghdad ("2027-04-26", Postgres `date`) as "26 نيسان 2027". */
 export function formatDay(day: string): string {
   return formatDate(`${day}T12:00:00+03:00`);
+}
+
+/** A calendar day in Baghdad ("2027-04-26") as "26 نيسان". */
+export function formatDayShort(day: string): string {
+  return dayMonth.format(new Date(`${day}T12:00:00+03:00`));
 }
 
 /** A calendar day in Baghdad as "نيسان 2027". */

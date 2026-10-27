@@ -1,4 +1,4 @@
-import { ChevronRight, LogOut, type LucideIcon, MapPin } from "lucide-react";
+import { ChevronRight, LogOut, type LucideIcon, MapPin, MessageSquareWarning } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { type ComponentProps, Suspense } from "react";
@@ -20,8 +20,8 @@ import { AddressPicker } from "../addresses/address-picker";
 
 /**
  * Profile (Profile.dc.html, spec §5.8), Phase 1 shell: name and phone, My
- * addresses (N2), My tanks (N3) and logout. The subscription card, other
- * rows and Edit profile come in Phase 6.
+ * addresses (N2), My tanks (N3), My reports (N11, Phase 5) and logout. The
+ * subscription card, other rows and Edit profile come in Phase 6.
  */
 export default function ProfilePage() {
   return (
@@ -39,11 +39,13 @@ async function ProfileContent() {
   const t = await getTranslations("Profile");
   const viewer = await requireViewer(routes.profile);
   const supabase = await createClient();
-  const [addresses, tanks] = await Promise.all([
+  const [addresses, tanks, openTickets] = await Promise.all([
     listAddresses(),
     supabase.from("tanks").select("id", { count: "exact", head: true }),
+    supabase.from("tickets").select("id", { count: "exact", head: true }).neq("status", "closed"),
   ]);
   if (tanks.error) throw new Error(`Tanks count failed: ${tanks.error.message}`);
+  if (openTickets.error) throw new Error(`Tickets count failed: ${openTickets.error.message}`);
   const tankCount = tanks.count ?? 0;
   const name = viewer.fullName ?? "";
 
@@ -84,6 +86,19 @@ async function ProfileContent() {
               icon={RoofTankIcon}
               label={t("tanks")}
               value={t("tankCount", { n: tankCount, count: String(tankCount) })}
+            />
+          </li>
+          <li>
+            <Row
+              as="link"
+              href={routes.reports}
+              icon={MessageSquareWarning}
+              label={t("reports")}
+              value={
+                openTickets.count
+                  ? t("openReports", { n: openTickets.count, count: String(openTickets.count) })
+                  : ""
+              }
             />
           </li>
         </ul>
@@ -149,7 +164,7 @@ function ProfileSkeleton() {
           <Skeleton className="h-5 w-40" />
         </div>
       </div>
-      <Skeleton className="h-28 w-full rounded-card" />
+      <Skeleton className="h-42 w-full rounded-card" />
       <Skeleton className="h-14 w-full rounded-card" />
     </SkeletonGroup>
   );

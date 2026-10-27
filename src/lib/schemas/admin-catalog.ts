@@ -146,8 +146,11 @@ export const certificateSettingsSchema = z.object({
 
 /** settings.support_response_text: Chat's off-hours automatic reply (spec §5.16); empty turns it off. */
 export const SUPPORT_REPLY_MAX = 300;
+/** settings.ticket_response_hours: the Issue report's promised answer time (spec §5.17). */
+export const TICKET_RESPONSE_RANGE = [1, 72] as const;
 export const chatSettingsSchema = z.object({
   support_response_text: z.string().trim().max(SUPPORT_REPLY_MAX),
+  ticket_response_hours: inRange(TICKET_RESPONSE_RANGE),
 });
 
 /** settings.terms_md / privacy_md */

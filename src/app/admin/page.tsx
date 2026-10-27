@@ -26,9 +26,8 @@ const CHATS_SHOWN = 5;
 /**
  * Overview (A1): today's orders by status and the orders waiting for
  * confirmation, kept live by the shell (AdminLive, which follows orders),
- * and the open tickets (for now only those low ratings open, each linking to
- * its order), read when the page loads: tickets aren't in Realtime until A5
- * (Phase 5). Unread chats (A4): their count and the newest few, each
+ * and the open tickets (Issue reports and low ratings, each opening the A5
+ * drawer; the shell refreshes the page on ticket changes). Unread chats (A4): their count and the newest few, each
  * opening its conversation. Subscription requests arrive with Phase 6.
  */
 export default async function OverviewPage() {
@@ -46,6 +45,7 @@ async function Overview() {
   await requireViewer(routes.admin, "admin");
   const t = await getTranslations("Admin.overview");
   const tChat = await getTranslations("Admin.chat");
+  const tIssue = await getTranslations("Issue");
   // The server's clock, in Baghdad.
   const now = new Date();
   const today = baghdadToday(now);
@@ -181,9 +181,14 @@ async function Overview() {
       </section>
 
       <section aria-labelledby="tickets" className="flex flex-col gap-3">
-        <h2 id="tickets" className="text-18 font-extrabold">
-          {t("ticketsOpen", { count: tickets.total })}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="tickets" className="text-18 font-extrabold">
+            {t("ticketsOpen", { count: tickets.total })}
+          </h2>
+          <Button href={routes.adminTickets} variant="link" size="sm">
+            {t("ticketsAll")}
+          </Button>
+        </div>
         {tickets.tickets.length === 0 ? (
           <Card className="flex items-center gap-3 p-4">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-well text-muted">
@@ -202,27 +207,32 @@ async function Overview() {
                   key={ticket.id}
                   className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3 last:border-0"
                 >
-                  {ticket.order ? (
-                    <Link
-                      href={routes.adminOrder(ticket.order.id)}
-                      className="text-15 font-bold text-teal underline-offset-4 hover:underline"
-                    >
-                      {t.rich("ticketRow", {
-                        ticket: ticketNumber(ticket.number),
-                        order: ticket.order.number,
-                        num: (chunks) => <span dir="ltr">{chunks}</span>,
-                      })}
-                    </Link>
-                  ) : (
-                    <span dir="ltr" className="text-15 font-bold">
-                      {ticketNumber(ticket.number)}
-                    </span>
-                  )}
+                  <Link
+                    href={routes.adminTicket(ticket.id)}
+                    className="text-15 font-bold text-teal underline-offset-4 hover:underline"
+                  >
+                    {ticket.order
+                      ? t.rich("ticketRow", {
+                          ticket: ticketNumber(ticket.number),
+                          order: ticket.order.number,
+                          num: (chunks) => <span dir="ltr">{chunks}</span>,
+                        })
+                      : t.rich("ticketRowNoOrder", {
+                          ticket: ticketNumber(ticket.number),
+                          num: (chunks) => <span dir="ltr">{chunks}</span>,
+                        })}
+                  </Link>
                   <span className="flex items-center gap-3 text-13 text-muted">
-                    {ticket.stars !== null && (
+                    {ticket.stars !== null ? (
                       <span className="font-bold text-danger">
                         {t("ticketStars", { n: ticket.stars })}
                       </span>
+                    ) : (
+                      ticket.category && (
+                        <span className="font-bold text-body-2">
+                          {tIssue(`categories.${ticket.category}`)}
+                        </span>
+                      )
                     )}
                     {formatDayTime(ticket.created_at)}
                   </span>

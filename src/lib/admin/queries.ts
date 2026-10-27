@@ -193,7 +193,7 @@ export type AdminRating = {
   comment: string | null;
   created_at: string;
   /** The ticket a rating of 3 stars or fewer opened. */
-  ticket: { number: number; status: Enums["ticket_status"] } | null;
+  ticket: { id: string; number: number; status: Enums["ticket_status"] } | null;
 };
 
 type DetailsRaw = Omit<RawRow, "order_items"> & {
@@ -234,7 +234,7 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetails | nul
          created_at, actor:profiles(full_name)),
        order_media(id, kind, media_type, path, created_at),
        certificates(id, public_code, pdf_path),
-       ratings(stars, tags, comment, created_at, tickets(number, status))`,
+       ratings(stars, tags, comment, created_at, tickets(id, number, status))`,
     )
     .eq("id", id)
     .maybeSingle()
@@ -288,22 +288,20 @@ export type OpenTicket = {
   id: string;
   number: number;
   source: Enums["ticket_source"];
+  category: Enums["ticket_category"] | null;
   created_at: string;
   order: { id: string; number: number } | null;
   stars: number | null;
 };
 
-/**
- * A1's open tickets: the count and the newest few. Until A5 (Phase 5) they
- * all come from low ratings and open the order's drawer.
- */
+/** A1's open tickets: the count and the newest few, each opening the A5 drawer. */
 export async function openTickets(
   limit: number,
 ): Promise<{ total: number; tickets: OpenTicket[] }> {
   const supabase = await createClient();
   const { data, error, count } = await supabase
     .from("tickets")
-    .select("id, number, source, created_at, orders(id, number), ratings(stars)", {
+    .select("id, number, source, category, created_at, orders(id, number), ratings(stars)", {
       count: "exact",
     })
     .eq("status", "open")
@@ -314,6 +312,7 @@ export async function openTickets(
         id: string;
         number: number;
         source: Enums["ticket_source"];
+        category: Enums["ticket_category"] | null;
         created_at: string;
         orders: { id: string; number: number } | null;
         ratings: { stars: number } | null;

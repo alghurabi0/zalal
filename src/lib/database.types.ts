@@ -891,6 +891,7 @@ export type Database = {
           sterilant_text: string;
           support_response_text: string;
           terms_md: string;
+          ticket_response_hours: number;
           updated_at: string;
           working_days: number[];
           working_hours_end: string;
@@ -912,6 +913,7 @@ export type Database = {
           sterilant_text?: string;
           support_response_text?: string;
           terms_md?: string;
+          ticket_response_hours?: number;
           updated_at?: string;
           working_days?: number[];
           working_hours_end?: string;
@@ -932,6 +934,7 @@ export type Database = {
           sterilant_text?: string;
           support_response_text?: string;
           terms_md?: string;
+          ticket_response_hours?: number;
           updated_at?: string;
           working_days?: number[];
           working_hours_end?: string;
@@ -1058,9 +1061,92 @@ export type Database = {
           },
         ];
       };
+      ticket_media: {
+        Row: {
+          bytes: number;
+          created_at: string;
+          duration_s: number | null;
+          id: string;
+          media_type: Database["public"]["Enums"]["media_type"];
+          path: string;
+          ticket_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          bytes: number;
+          created_at?: string;
+          duration_s?: number | null;
+          id?: string;
+          media_type: Database["public"]["Enums"]["media_type"];
+          path: string;
+          ticket_id: string;
+          user_id: string;
+        };
+        Update: {
+          bytes?: number;
+          created_at?: string;
+          duration_s?: number | null;
+          id?: string;
+          media_type?: Database["public"]["Enums"]["media_type"];
+          path?: string;
+          ticket_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ticket_media_ticket_id_user_id_fkey";
+            columns: ["ticket_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "tickets";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      ticket_notes: {
+        Row: {
+          author_id: string;
+          created_at: string;
+          id: number;
+          note: string;
+          ticket_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          author_id: string;
+          created_at?: string;
+          id?: never;
+          note: string;
+          ticket_id: string;
+        };
+        Update: {
+          author_id?: string;
+          created_at?: string;
+          id?: never;
+          note?: string;
+          ticket_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ticket_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ticket_notes_ticket_id_fkey";
+            columns: ["ticket_id"];
+            isOneToOne: false;
+            referencedRelation: "tickets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tickets: {
         Row: {
           category: Database["public"]["Enums"]["ticket_category"] | null;
+          client_id: string | null;
           created_at: string;
           description: string | null;
           id: string;
@@ -1074,6 +1160,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           category?: Database["public"]["Enums"]["ticket_category"] | null;
+          client_id?: string | null;
           created_at?: string;
           description?: string | null;
           id?: string;
@@ -1086,6 +1173,7 @@ export type Database = {
         };
         Update: {
           category?: Database["public"]["Enums"]["ticket_category"] | null;
+          client_id?: string | null;
           created_at?: string;
           description?: string | null;
           id?: string;
@@ -1119,6 +1207,7 @@ export type Database = {
     };
     Functions: {
       admin_add_admin: { Args: { p_name: string; p_phone: string }; Returns: boolean };
+      admin_add_ticket_note: { Args: { p_note: string; p_ticket_id: string }; Returns: number };
       admin_addresses_outside_area: { Args: Record<PropertyKey, never>; Returns: number };
       admin_block_date: { Args: { p_date: string; p_reason: string }; Returns: undefined };
       admin_chat_inbox: {
@@ -1149,6 +1238,13 @@ export type Database = {
         };
         Returns: number;
       };
+      admin_rating_summary: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          ratings: number;
+          stars: number;
+        }[];
+      };
       admin_remove_admin: { Args: { p_user_id: string }; Returns: undefined };
       admin_save_service_area: {
         Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
@@ -1177,6 +1273,10 @@ export type Database = {
         }[];
       };
       admin_set_crew_phone: { Args: { p_crew_id: string; p_phone: string }; Returns: undefined };
+      admin_set_ticket_status: {
+        Args: { p_status: Database["public"]["Enums"]["ticket_status"]; p_ticket_id: string };
+        Returns: undefined;
+      };
       admin_slot_board: {
         Args: { p_from: string; p_to: string };
         Returns: {
@@ -1240,6 +1340,19 @@ export type Database = {
           p_slot_id: number;
         };
         Returns: Record<string, unknown>;
+      };
+      create_ticket: {
+        Args: {
+          p_category: Database["public"]["Enums"]["ticket_category"];
+          p_client_id: string;
+          p_description: string;
+          p_media?: Json;
+          p_order_id?: string;
+        };
+        Returns: {
+          ticket_id: string;
+          ticket_number: number;
+        }[];
       };
       crew_job_contact: {
         Args: { p_order_id: string };

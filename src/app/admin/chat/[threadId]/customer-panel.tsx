@@ -82,16 +82,12 @@ export async function CustomerPanel({ userId }: { userId: string }) {
                 : t.rich("ticket", { ticket: ticketNumber(ticket.number), num });
               return (
                 <li key={ticket.id} className="flex items-center justify-between gap-2 text-14">
-                  {ticket.order ? (
-                    <Link
-                      href={routes.adminOrder(ticket.order.id)}
-                      className="font-bold text-teal underline-offset-4 hover:underline"
-                    >
-                      {label}
-                    </Link>
-                  ) : (
-                    <span className="font-bold">{label}</span>
-                  )}
+                  <Link
+                    href={routes.adminTicket(ticket.id)}
+                    className="font-bold text-teal underline-offset-4 hover:underline"
+                  >
+                    {label}
+                  </Link>
                   <span className="text-12 text-muted">{t(`ticketStatus.${ticket.status}`)}</span>
                 </li>
               );

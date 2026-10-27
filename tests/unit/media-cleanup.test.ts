@@ -109,6 +109,17 @@ describe("cleanUp", () => {
     expect(fake.rpcCalls[0]?.args).toMatchObject({ p_folder: "chat" });
   });
 
+  it("deletes unattached ticket files from ticket-media", async () => {
+    const fake = fakeClient(names(2, "u"), { bucket: "ticket-media" });
+    expect(await cleanUp(fake.client, "ticket", small)).toEqual({
+      folder: "ticket",
+      deleted: 2,
+      failed: 0,
+      more: false,
+    });
+    expect(fake.rpcCalls[0]?.args).toMatchObject({ p_folder: "ticket" });
+  });
+
   it("does nothing when nothing is unattached", async () => {
     const fake = fakeClient([]);
     expect(await cleanUp(fake.client, "crew", small)).toEqual({

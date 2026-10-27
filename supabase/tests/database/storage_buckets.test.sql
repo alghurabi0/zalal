@@ -67,9 +67,12 @@ select policies_are(
     'Certificate PDFs are read with their certificate',
     'Customers and admins upload chat files to their own folder',
     'Chat files are read by their uploader and with their message',
-    'Uploaders delete chat files until they are sent'
+    'Uploaders delete chat files until they are sent',
+    'Customers upload ticket files to their own folder',
+    'Ticket files are read by their uploader and with their ticket',
+    'Customers delete ticket files until they are attached'
   ]::name[],
-  'storage.objects has only the order-media, certificates and chat-media policies'
+  'storage.objects has only the order-media, certificates, chat-media and ticket-media policies'
 );
 
 -- One file in every bucket, written the way the server would write it.

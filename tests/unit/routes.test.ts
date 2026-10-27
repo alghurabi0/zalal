@@ -44,10 +44,16 @@ describe("withNext", () => {
 });
 
 describe("requiresLogin", () => {
-  it.each(["/profile", "/tanks", "/addresses/new", "/onboarding/name", "/crew", "/admin/x"])(
-    "%s needs a login",
-    (path) => expect(requiresLogin(path)).toBe(true),
-  );
+  it.each([
+    "/profile",
+    "/tanks",
+    "/addresses/new",
+    "/onboarding/name",
+    "/crew",
+    "/admin/x",
+    "/issue",
+    "/reports/abc",
+  ])("%s needs a login", (path) => expect(requiresLogin(path)).toBe(true));
 
   it.each(["/", "/welcome", "/login", "/login/verify", "/terms", "/kit", "/profiles", "/tanksx"])(
     "%s is open to guests",

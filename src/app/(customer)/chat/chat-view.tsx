@@ -14,6 +14,7 @@ import type { DayOption } from "@/lib/booking/availability";
 import {
   CHAT_TOPICS,
   type ChatMessage,
+  type ChatTicket,
   type ChatTopic,
   topicNeedsOrder,
 } from "@/lib/chat/messages";
@@ -50,7 +51,7 @@ export function ChatView({
   messages: ChatMessage[];
   hasOlder: boolean;
   orders: Record<string, ChatOrder>;
-  tickets: Record<string, number>;
+  tickets: Record<string, ChatTicket>;
   readAt: number;
   /** N7's days and slots, when a message offers to reschedule. */
   days: DayOption[];

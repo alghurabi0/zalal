@@ -8,9 +8,11 @@ import {
   LayoutDashboard,
   LogOut,
   MapPinned,
+  MessageSquareWarning,
   MessagesSquare,
   Settings,
   ShieldCheck,
+  Star,
   Tag,
   Users,
 } from "lucide-react";
@@ -29,6 +31,8 @@ const items = [
   { href: routes.admin, key: "overview", icon: LayoutDashboard },
   { href: routes.adminOrders, key: "orders", icon: ClipboardList },
   { href: routes.adminChat, key: "chat", icon: MessagesSquare },
+  { href: routes.adminTickets, key: "tickets", icon: MessageSquareWarning },
+  { href: routes.adminRatings, key: "ratings", icon: Star },
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
   { href: routes.adminLive, key: "live", icon: MapPinned },
   { href: routes.adminPrices, key: "prices", icon: Tag },
@@ -58,11 +62,14 @@ function activeHref(pathname: string): string | undefined {
 export function AdminNav({
   name,
   chatUnread,
+  openTickets,
   children,
 }: {
   name: string | null;
   /** Threads with customer messages no admin has read, when the page loaded. */
   chatUnread: string[];
+  /** Open tickets (A5); the shell refreshes on ticket changes (LiveTickets). */
+  openTickets: number;
   children?: ReactNode;
 }) {
   const t = useTranslations("Admin.nav");
@@ -89,7 +96,7 @@ export function AdminNav({
       </div>
       <nav
         aria-label={t("label")}
-        className="-mx-4 basis-full overflow-x-auto px-4 lg:mx-0 lg:basis-auto lg:px-0"
+        className="-mx-4 min-w-0 basis-full overflow-x-auto px-4 lg:mx-0 lg:min-h-0 lg:flex-1 lg:basis-auto lg:overflow-x-visible lg:overflow-y-auto lg:px-0"
       >
         <ul className="flex gap-1 lg:flex-col">
           {items.map((item) => {
@@ -101,12 +108,18 @@ export function AdminNav({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-11 items-center gap-2.5 rounded-chip px-3 text-15 font-bold whitespace-nowrap focus-visible:outline-aqua",
+                    "relative flex min-h-11 items-center gap-2.5 rounded-chip px-3 text-15 font-bold whitespace-nowrap focus-visible:outline-aqua",
                     active ? "bg-navy-2 text-aqua" : "text-on-dark-body hover:bg-navy-2",
                   )}
                 >
                   <Icon aria-hidden className="size-5 shrink-0" />
                   {t(item.key)}
+                  {item.key === "tickets" && openTickets > 0 && (
+                    <span className="ms-auto flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-aqua px-1.5 text-12 font-extrabold text-navy">
+                      {openTickets}
+                      <span className="sr-only"> {t("ticketsOpen", { count: openTickets })}</span>
+                    </span>
+                  )}
                   {item.key === "chat" && unread > 0 && (
                     <span className="ms-auto flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-aqua px-1.5 text-12 font-extrabold text-navy">
                       {unread}

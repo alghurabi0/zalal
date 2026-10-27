@@ -74,6 +74,7 @@ export const AUDIT_ENTITIES = [
   "service_areas",
   "crews",
   "profiles",
+  "tickets",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -150,23 +151,30 @@ function crewIdsIn(entry: AuditEntry): string[] {
 }
 
 /** Order numbers and crew names the page's rows point at, for links and labels. */
-export async function auditNames(
-  entries: AuditEntry[],
-): Promise<{ orders: Map<string, number>; crews: Map<string, string> }> {
+export async function auditNames(entries: AuditEntry[]): Promise<{
+  orders: Map<string, number>;
+  crews: Map<string, string>;
+  tickets: Map<string, number>;
+}> {
   const supabase = await createClient();
-  const orderIds = [
-    ...new Set(entries.filter((e) => e.entity === "orders").map((e) => e.entityId)),
+  const idsOf = (entity: string) => [
+    ...new Set(entries.filter((e) => e.entity === entity).map((e) => e.entityId)),
   ];
+  const orderIds = idsOf("orders");
+  const ticketIds = idsOf("tickets");
   const crewIds = [...new Set(entries.flatMap(crewIdsIn))];
   const none = Promise.resolve({ data: [], error: null });
-  const [orders, crews] = await Promise.all([
+  const [orders, crews, tickets] = await Promise.all([
     orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
     crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
+    ticketIds.length ? supabase.from("tickets").select("id, number").in("id", ticketIds) : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
   if (crews.error) throw new Error(`Audit crews read failed: ${crews.error.message}`);
+  if (tickets.error) throw new Error(`Audit tickets read failed: ${tickets.error.message}`);
   return {
     orders: new Map(orders.data.map((o) => [o.id, o.number])),
     crews: new Map(crews.data.map((c) => [c.id, c.name])),
+    tickets: new Map(tickets.data.map((ticket) => [ticket.id, ticket.number])),
   };
 }
