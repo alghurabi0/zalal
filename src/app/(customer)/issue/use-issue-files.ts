@@ -34,7 +34,10 @@ type Job = { file: File; contentType: string; upload?: Upload };
 export function useIssueFiles(userId: string) {
   const [files, setFiles] = useState<IssueFile[]>([]);
   const jobs = useRef(new Map<string, Job>());
+  /** Files taken (on screen or being checked), for adds that run at once. */
   const count = useRef(0);
+  /** Files removed while still being checked: they must not start. */
+  const removed = useRef(new Set<string>());
 
   const patch = useCallback((id: string, changes: Partial<IssueFile>) => {
     setFiles((current) => current.map((file) => (file.id === id ? { ...file, ...changes } : file)));
@@ -100,6 +103,8 @@ export function useIssueFiles(userId: string) {
             },
           ]);
           const prepared = kind === "video" ? await checkVideo(file) : await shrinkPhoto(file);
+          // Removed while it was being checked: remove() already freed its place.
+          if (removed.current.delete(id)) return;
           if ("problem" in prepared) {
             problems.push(prepared.problem);
             count.current -= 1;
@@ -135,6 +140,7 @@ export function useIssueFiles(userId: string) {
   const remove = useCallback((file: IssueFile) => {
     const job = jobs.current.get(file.id);
     jobs.current.delete(file.id);
+    if (file.status === "preparing") removed.current.add(file.id);
     count.current = Math.max(0, count.current - 1);
     if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
     setFiles((current) => current.filter((item) => item.id !== file.id));

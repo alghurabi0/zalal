@@ -15,7 +15,7 @@ import type { AddProblem } from "@/lib/booking/uploads";
 import { ticketNumber } from "@/lib/certificates/format";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { IssueError } from "@/lib/tickets/errors";
+import type { CreateTicketResult, IssueError } from "@/lib/tickets/errors";
 import {
   TICKET_CATEGORIES,
   TICKET_DESCRIPTION_MAX,
@@ -70,28 +70,46 @@ export function IssueForm({
 
   const send = () => {
     const trimmed = description.trim();
-    if (!category) return setError("category");
-    if (trimmed.length < TICKET_DESCRIPTION_MIN) return setError("tooShort");
-    if (trimmed.length > TICKET_DESCRIPTION_MAX) return setError("tooLong");
-    if (files.some((file) => file.status === "failed")) return setError("filesFailed");
+    const problem: FormError | null = !category
+      ? "category"
+      : trimmed.length < TICKET_DESCRIPTION_MIN
+        ? "tooShort"
+        : trimmed.length > TICKET_DESCRIPTION_MAX
+          ? "tooLong"
+          : files.some((file) => file.status === "failed")
+            ? "filesFailed"
+            : null;
+    // A problem (also one found after waiting for uploads) stops the wait,
+    // so the button works again.
+    if (problem || !category) {
+      setWaiting(false);
+      setError(problem);
+      return;
+    }
+    setError(null);
     if (files.some(busy)) {
-      setError(null);
       setWaiting(true);
       return;
     }
     setWaiting(false);
-    setError(null);
     startTransition(async () => {
-      const result = await createTicket({
-        clientId,
-        category,
-        description: trimmed,
-        orderId: orderId || undefined,
-        media: files.map((file) => ({
-          path: file.path,
-          durationS: file.durationS ?? undefined,
-        })),
-      });
+      let result: CreateTicketResult;
+      try {
+        result = await createTicket({
+          clientId,
+          category,
+          description: trimmed,
+          orderId: orderId || undefined,
+          media: files.map((file) => ({
+            path: file.path,
+            durationS: file.durationS ?? undefined,
+          })),
+        });
+      } catch {
+        // Offline or the answer was lost: the form stays, and sending again
+        // with the same client id returns the ticket if it was made.
+        result = { status: "error", error: "failed" };
+      }
       if (result.status === "error") {
         setError(result.error);
         return;

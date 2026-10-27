@@ -96,7 +96,7 @@ export function AdminNav({
       </div>
       <nav
         aria-label={t("label")}
-        className="-mx-4 basis-full overflow-x-auto px-4 lg:mx-0 lg:min-h-0 lg:flex-1 lg:basis-auto lg:overflow-x-visible lg:overflow-y-auto lg:px-0"
+        className="-mx-4 min-w-0 basis-full overflow-x-auto px-4 lg:mx-0 lg:min-h-0 lg:flex-1 lg:basis-auto lg:overflow-x-visible lg:overflow-y-auto lg:px-0"
       >
         <ul className="flex gap-1 lg:flex-col">
           {items.map((item) => {
@@ -108,7 +108,7 @@ export function AdminNav({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-11 items-center gap-2.5 rounded-chip px-3 text-15 font-bold whitespace-nowrap focus-visible:outline-aqua",
+                    "relative flex min-h-11 items-center gap-2.5 rounded-chip px-3 text-15 font-bold whitespace-nowrap focus-visible:outline-aqua",
                     active ? "bg-navy-2 text-aqua" : "text-on-dark-body hover:bg-navy-2",
                   )}
                 >

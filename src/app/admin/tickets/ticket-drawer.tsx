@@ -72,12 +72,8 @@ export async function TicketDrawer({
         <p className="text-14 text-muted">{t("drawer.noThread")}</p>
       )}
       <Card className="p-4">
-        <TicketActions
-          // Fresh forms after every change.
-          key={`${ticket.status}-${ticket.notes.length}`}
-          ticketId={ticket.id}
-          status={ticket.status}
-        />
+        {/* No key: a refresh (another admin's change) keeps a note being typed. */}
+        <TicketActions ticketId={ticket.id} status={ticket.status} />
       </Card>
       <Notes ticket={ticket} />
     </Drawer>

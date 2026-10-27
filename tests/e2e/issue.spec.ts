@@ -148,7 +148,20 @@ test("My reports is empty with a way to report, and the Issue report works witho
   await form.getByRole("button", { name: Issue.submit }).click();
   await expect(form.getByRole("heading", { name: Issue.sent })).toBeVisible();
 
-  await page.goto("/reports");
+  // Without a reload (Next keeps visited pages alive): Home, Profile, My
+  // reports, then a second report starts from an empty form.
+  await form.getByRole("link", { name: Issue.home }).click();
+  await page.waitForURL((url) => url.pathname === "/");
+  await visible(page).getByRole("link", { name: messages.UI.tabs.profile }).click();
+  await page.waitForURL("**/profile");
+  await visible(page)
+    .getByRole("link", { name: new RegExp(Profile.reports) })
+    .click();
+  await page.waitForURL("**/reports");
   await expect(visible(page).getByText(Issue.categories.payment)).toBeVisible();
   await expect(visible(page).getByText(Reports.noOrder)).toBeVisible();
+  await visible(page).getByRole("link", { name: Reports.new }).first().click();
+  await page.waitForURL("**/issue");
+  await expect(visible(page).getByRole("button", { name: Issue.submit })).toBeVisible();
+  await expect(visible(page).getByLabel(Issue.description)).toHaveValue("");
 });

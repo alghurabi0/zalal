@@ -801,7 +801,7 @@
     "logoutConfirm": "إي، اطلع",
     "logoutCancel": "لا",
     "reports": "بلاغاتي",
-    "openReports": "{n, plural, one {بلاغ مفتوح} two {بلاغين مفتوحة} few {{count} بلاغات مفتوحة} other {{count} بلاغ مفتوح}}"
+    "openReports": "{n, plural, one {بلاغ جاري} two {بلاغين جاريين} few {{count} بلاغات جارية} other {{count} بلاغ جاري}}"
   },
   "Crew": {
     "title": "شغلنا",

@@ -228,7 +228,7 @@ test("3 stars or fewer opens a ticket; a rating is sent once and then read-only"
     .throwOnError();
   expect(highRating).toEqual({ stars: 5, ticket_id: null });
 
-  // Admins see the ticket on A1 and the rating in the order drawer.
+  // Admins see the ticket on A1 (opening A5) and the rating in the order drawer.
   const adminContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const adminPage = await adminContext.newPage();
   await logInAsAdmin(adminPage);
@@ -239,6 +239,10 @@ test("3 stars or fewer opens a ticket; a rating is sent once and then read-only"
     });
   await expect(row).toBeVisible();
   await row.click();
+  const ticketDrawer = adminPage.getByRole("dialog");
+  await expect(ticketDrawer).toContainText(ticket);
+  await expect(ticketDrawer).toContainText("تأخروا ساعة");
+  await ticketDrawer.getByRole("link", { name: new RegExp(`#${low.number}`) }).click();
   const drawer = adminPage.getByRole("dialog");
   await expect(drawer).toContainText(Admin.drawer.certificate);
   await expect(drawer).toContainText("تأخروا ساعة");

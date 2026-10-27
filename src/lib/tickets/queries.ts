@@ -41,7 +41,8 @@ export async function issueOrders(now: Date, client?: Client): Promise<IssueOrde
     .select("id, number, service_date, order_items(tank_type)")
     .gte("slot_start_at", from.toISOString())
     .order("slot_start_at", { ascending: false })
-    .limit(30);
+    // Every order in the window; the cap only guards the select's size.
+    .limit(200);
   if (error) throw new Error(`Issue orders failed: ${error.message}`);
   return data.map((order) => ({
     id: order.id,

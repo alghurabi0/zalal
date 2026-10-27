@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { routes } from "@/lib/routes";
+
+import { ADMIN_ORDERS_MAX, ADMIN_ORDERS_PAGE, pageSizeSchema } from "./orders-query";
 import { TICKET_STATUSES } from "@/lib/tickets/format";
 
 // A5's and A12's filters and the open drawer, kept in the URL so a filtered
@@ -14,15 +16,9 @@ export type TicketStatusFilter = (typeof TICKET_STATUS_FILTERS)[number];
 export const TICKET_SOURCE_FILTERS = ["all", "app", "rating"] as const;
 export type TicketSourceFilter = (typeof TICKET_SOURCE_FILTERS)[number];
 
-export const ADMIN_LIST_PAGE = 50;
-export const ADMIN_LIST_MAX = 1000;
-
-const pageSize = z.coerce
-  .number()
-  .int()
-  .catch(ADMIN_LIST_PAGE)
-  .default(ADMIN_LIST_PAGE)
-  .transform((n) => Math.min(ADMIN_LIST_MAX, Math.max(ADMIN_LIST_PAGE, n)));
+/** The same paging as A2's list. */
+export const ADMIN_LIST_PAGE = ADMIN_ORDERS_PAGE;
+const pageSize = pageSizeSchema(ADMIN_ORDERS_PAGE, ADMIN_ORDERS_MAX);
 
 const firstValues = (params: Record<string, string | string[] | undefined>) =>
   Object.fromEntries(

@@ -43,10 +43,12 @@ async function IssueContent({ searchParams }: PageProps<"/issue">) {
   const supabase = await createClient();
   // The server's clock: "اليوم" and the 90-day window are Baghdad days.
   const now = new Date();
-  const [orders, hours] = await Promise.all([
+  const [orders, hours, sent] = await Promise.all([
     issueOrders(now, supabase),
     ticketResponseHours(supabase),
+    supabase.from("tickets").select("id", { count: "exact", head: true }),
   ]);
+  if (sent.error) throw new Error(`Tickets count failed: ${sent.error.message}`);
   const t = await getTranslations("Issue");
   const tankNames = await getTranslations("Tanks.types");
 
@@ -73,8 +75,9 @@ async function IssueContent({ searchParams }: PageProps<"/issue">) {
 
   return (
     <IssueForm
-      // A fresh form per visit: Next keeps visited pages alive.
-      key={`${viewer.id}:${tagged ?? ""}`}
+      // Next keeps visited pages alive: a new ticket changes the key, so the
+      // next report starts from an empty form with a new client id.
+      key={`${viewer.id}:${tagged ?? ""}:${sent.count ?? 0}`}
       userId={viewer.id}
       orders={options}
       initialOrderId={initialOrderId}
