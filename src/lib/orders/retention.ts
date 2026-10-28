@@ -10,8 +10,9 @@ export const VIDEO_RETENTION_DAYS = 90;
 const CLOSED: readonly OrderStatus[] = ["completed", "cancelled", "no_show"];
 
 /**
- * Whether the order's booking videos are past retention: closed, counted
- * from the event into its current status, as the purge counts it.
+ * Whether the order's booking videos are gone: closed, counted from the
+ * event into its current status as the purge counts it, more than 90 days
+ * plus one, since the purge runs once a night.
  */
 export function videosExpired(
   status: OrderStatus,
@@ -24,6 +25,6 @@ export function videosExpired(
   );
   return (
     Number.isFinite(closedAt) &&
-    now.getTime() - closedAt > VIDEO_RETENTION_DAYS * 24 * 60 * 60 * 1000
+    now.getTime() - closedAt > (VIDEO_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000
   );
 }

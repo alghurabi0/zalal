@@ -2,6 +2,7 @@
 
 import { NextIntlClientProvider } from "next-intl";
 
+import { useRetryWhenOnline } from "@/components/layout/screen-error";
 import { ErrorState } from "@/components/ui/error-state";
 import { locale, timeZone } from "@/i18n/config";
 import { cairo } from "@/lib/fonts";
@@ -15,6 +16,7 @@ import "./globals.css";
 // brings its own <html>, font, styles and translations.
 export default function GlobalError({ error, retry }: { error: unknown; retry: () => void }) {
   useReportError(error);
+  useRetryWhenOnline(retry);
 
   return (
     <html lang={locale} dir="rtl" className={cairo.variable}>

@@ -275,7 +275,9 @@ test("links to the certificate, and who may open it", async ({ page, browser }) 
   const guestPage = await guest.newPage();
   const refused = async () => {
     await guestPage.goto(`/certificates/${certificate.id}/print`);
-    await expect(guestPage.getByText("404", { exact: true })).toBeVisible();
+    await expect(
+      guestPage.getByRole("heading", { level: 1, name: messages.NotFound.title }),
+    ).toBeVisible();
     await expect(guestPage.locator("[data-certificate]")).toHaveCount(0);
     await expect(guestPage.locator("body")).not.toContainText("زبونة الشهادة");
   };

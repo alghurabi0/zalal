@@ -37,6 +37,12 @@
 -- deleted account lose their free text (the audit log otherwise never
 -- changes).
 
+-- delete_account() finds the admins' notifications of a thread's messages
+-- by thread id.
+create index notifications_customer_message_thread_idx
+on public.notifications ((data ->> 'thread_id'))
+where type = 'customer_message';
+
 -- 1. Media retention ---------------------------------------------------------------------------
 
 create function private.purge_expired_media()
@@ -80,7 +86,7 @@ as $$
     select jsonb_object_agg(e.key, case when e.key in ('note', 'reason') then 'null'::jsonb else e.value end)
     from jsonb_each(l.diff) as e
   )
-  where (l.diff ? 'note' or l.diff ? 'reason')
+  where (l.diff ->> 'note' is not null or l.diff ->> 'reason' is not null)
     and (
       (l.entity = 'orders' and l.entity_id in (
         select o.id::text from public.orders as o where o.customer_id = p_user_id
@@ -231,6 +237,16 @@ $$;
 -- only order and subscription rows can be matched; their threads too, so
 -- message notifications are matched by a thread that no longer exists.
 select private.scrub_audit_text(p.id) from public.profiles as p where p.deleted_at is not null;
+-- Tickets are deleted only by delete_account(), so a ticket row in the audit
+-- log whose ticket is gone belongs to a deleted account.
+update public.admin_audit_log as l
+set diff = (
+  select jsonb_object_agg(e.key, case when e.key in ('note', 'reason') then 'null'::jsonb else e.value end)
+  from jsonb_each(l.diff) as e
+)
+where l.entity = 'tickets'
+  and (l.diff ->> 'note' is not null or l.diff ->> 'reason' is not null)
+  and not exists (select 1 from public.tickets as t where t.id::text = l.entity_id);
 delete from public.notifications as n
 where n.type = 'customer_message'
   and not exists (select 1 from public.chat_threads as t where t.id::text = n.data ->> 'thread_id');
