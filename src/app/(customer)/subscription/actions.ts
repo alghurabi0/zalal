@@ -15,8 +15,7 @@ import {
 } from "@/lib/subscriptions/errors";
 
 export type RequestSubscriptionResult =
-  | { status: "requested" }
-  | { status: "error"; error: RequestSubscriptionError };
+  { status: "requested" } | { status: "error"; error: RequestSubscriptionError };
 
 /**
  * N8's "اطلب الاشتراك" (spec N8, §9.2): request_subscription() as the
@@ -37,7 +36,8 @@ export async function requestSubscription(
   if (error) {
     const code = requestSubscriptionErrorFor(error.code);
     // Only the SQLSTATE: the message can quote the input.
-    if (code === "failed") Sentry.captureMessage(`request_subscription failed (${error.code})`, "error");
+    if (code === "failed")
+      Sentry.captureMessage(`request_subscription failed (${error.code})`, "error");
     return { status: "error", error: code };
   }
   return { status: "requested" };

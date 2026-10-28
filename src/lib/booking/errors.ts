@@ -32,8 +32,9 @@ const SUBSCRIPTION_REASONS = [
 
 export type SubscriptionBookingError = (typeof SUBSCRIPTION_REASONS)[number];
 
-export const isSubscriptionError = (error: BookingError | null): error is SubscriptionBookingError =>
-  SUBSCRIPTION_REASONS.some((reason) => reason === error);
+export const isSubscriptionError = (
+  error: BookingError | null,
+): error is SubscriptionBookingError => SUBSCRIPTION_REASONS.some((reason) => reason === error);
 
 const byCode: Record<string, BookingError> = {
   ZL001: "outside_area",
