@@ -45,6 +45,12 @@
 -- - check_address_service_area skips soft-deleted rows, so the rounded pin
 --   of a deleted address never fails the area check. Customers can't write
 --   deleted_at or update a deleted row, so this opens nothing.
+-- - Nothing new for a deleted account (RLS audit): insert triggers on
+--   tickets, chat, push subscriptions, ratings, addresses and tanks lock the
+--   owner's live profile, so a write racing the deletion (another tab)
+--   waits for it and is then refused (42501); and an order of a deleted
+--   account never moves back to an open status (P0002 order_not_found, an
+--   admin override in transition_order).
 -- - The orders and subscriptions read policies now also need the customer
 --   role, so a deleted account's access token (it lives up to an hour after
 --   its sessions are gone) reads nothing. Certificates, order lines, events
@@ -286,6 +292,104 @@ begin
   delete from public.push_subscriptions as s where s.user_id = (select auth.uid());
 end;
 $$;
+
+-- 7. Nothing new for a deleted account (RLS audit) ----------------------------------------------
+
+-- A write racing the deletion (create_ticket, save_push_subscription,
+-- send_chat_message, rate_order or an address from another tab) checks the
+-- role before delete_account() commits, then inserts once it has. These
+-- insert triggers lock the owner's live profile: the lock waits behind
+-- delete_account's, and once it commits, READ COMMITTED re-checks the row
+-- and finds it deleted, so the insert is refused (42501).
+create function private.refuse_deleted_owner()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_owner uuid := (to_jsonb(new) ->> tg_argv[0])::uuid;
+begin
+  perform 1
+  from public.profiles as p
+  where p.id = v_owner and p.deleted_at is null
+  for key share;
+  if not found then
+    raise exception using errcode = '42501', message = 'not_allowed';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger tickets_refuse_deleted_owner
+before insert on public.tickets
+for each row execute function private.refuse_deleted_owner('user_id');
+create trigger chat_threads_refuse_deleted_owner
+before insert on public.chat_threads
+for each row execute function private.refuse_deleted_owner('user_id');
+create trigger chat_messages_refuse_deleted_owner
+before insert on public.chat_messages
+for each row execute function private.refuse_deleted_owner('customer_id');
+create trigger push_subscriptions_refuse_deleted_owner
+before insert or update of user_id on public.push_subscriptions
+for each row execute function private.refuse_deleted_owner('user_id');
+create trigger addresses_refuse_deleted_owner
+before insert on public.addresses
+for each row execute function private.refuse_deleted_owner('user_id');
+create trigger tanks_refuse_deleted_owner
+before insert on public.tanks
+for each row execute function private.refuse_deleted_owner('user_id');
+
+-- Ratings name the order, not the customer.
+create function private.refuse_deleted_order_owner()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform 1
+  from public.orders as o
+  join public.profiles as p on p.id = o.customer_id
+  where o.id = new.order_id and p.deleted_at is null
+  for key share of p;
+  if not found then
+    raise exception using errcode = '42501', message = 'not_allowed';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger ratings_refuse_deleted_owner
+before insert on public.ratings
+for each row execute function private.refuse_deleted_order_owner();
+
+-- An order of a deleted account never opens again (an admin override out of
+-- cancelled or no-show in transition_order): its address copy is anonymized
+-- and its customer gone, so a crew would have nowhere to go.
+create function private.refuse_reopening_deleted_order()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.status in ('pending_confirmation', 'confirmed', 'on_the_way', 'arrived', 'in_progress')
+    and not exists (
+      select 1 from public.profiles as p where p.id = new.customer_id and p.deleted_at is null
+    )
+  then
+    raise exception using errcode = 'P0002', message = 'order_not_found';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger orders_refuse_reopening_deleted
+before update of status on public.orders
+for each row
+when (old.status is distinct from new.status)
+execute function private.refuse_reopening_deleted_order();
 
 -- Grants ---------------------------------------------------------------------------------------
 
