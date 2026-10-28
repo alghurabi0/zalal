@@ -155,8 +155,9 @@ select throws_ok(
   $$ select public.admin_delete_category(999999) $$,
   'P0002', 'category_not_found', 'a missing category is refused'
 );
+select public.admin_save_category(null, 'رابعة') as fourth \gset
 select is(
-  (select icon from public.article_categories where id = public.admin_save_category(null, 'رابعة')),
+  (select icon from public.article_categories where id = :fourth),
   'lightbulb'::public.category_icon,
   'a category added without an icon gets the default one'
 );
