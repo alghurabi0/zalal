@@ -15,8 +15,12 @@
 --    deletion"):
 --    - delete_account() blanks the `note` and `reason` values in
 --      admin_audit_log rows about the account's orders, tickets and
---      subscriptions (private.scrub_audit_text), and this migration does the
---      same once for accounts deleted before it;
+--      subscriptions (private.scrub_audit_text, after locking those rows),
+--      and this migration does the same once for accounts deleted before it.
+--      Staff phones in crew and admin rows stay (staff records);
+--    - delete_account() also deletes the admins' customer_message
+--      notifications of the thread, which keep an excerpt of the message
+--      (RLS audit of this migration; once for earlier deletions too);
 --    - unattached_media('certificate') lists certificate PDFs no certificate
 --      records and over 24 hours old, so a PDF whose delete failed after
 --      delete_account() (or a failed record) goes in the nightly cleanup
@@ -123,8 +127,22 @@ begin
 
   -- Free text staff wrote about the account in the audit log (a reason, a
   -- note) often holds a name, a number or directions: blanked, before the
-  -- tickets go. The rest of each row stays.
+  -- tickets go. The rest of each row stays. The rows it is about are locked
+  -- first, so an override reason or a note an admin is writing at this
+  -- moment commits before the scrub reads (RLS audit of this migration).
+  perform 1 from public.orders as o where o.customer_id = v_user_id for update;
+  perform 1 from public.tickets as t where t.user_id = v_user_id for update;
+  perform 1 from public.subscriptions as s where s.user_id = v_user_id for update;
   perform private.scrub_audit_text(v_user_id);
+
+  -- Each admin's notification of a customer message keeps an excerpt of it
+  -- (migration notifications): it goes with the thread (RLS audit of this
+  -- migration).
+  delete from public.notifications as n
+  where n.type = 'customer_message'
+    and n.data ->> 'thread_id' in (
+      select t.id::text from public.chat_threads as t where t.user_id = v_user_id
+    );
 
   -- Subscriptions end before the addresses move, so the pin guard lets go.
   update public.subscriptions as s
@@ -210,8 +228,12 @@ end;
 $$;
 
 -- Accounts deleted before this migration. Their tickets are gone already, so
--- only order and subscription rows can be matched.
+-- only order and subscription rows can be matched; their threads too, so
+-- message notifications are matched by a thread that no longer exists.
 select private.scrub_audit_text(p.id) from public.profiles as p where p.deleted_at is not null;
+delete from public.notifications as n
+where n.type = 'customer_message'
+  and not exists (select 1 from public.chat_threads as t where t.id::text = n.data ->> 'thread_id');
 
 create or replace function public.unattached_media(
   p_folder text,
@@ -274,8 +296,11 @@ begin
     select ob.name, ob.created_at
     from storage.objects as ob
     where ob.bucket_id = 'certificates'
-      -- The server records a PDF within seconds of uploading it.
+      -- The server records a PDF within seconds of uploading it. An upsert
+      -- of the same version keeps created_at but moves updated_at (RLS audit
+      -- of this migration), so both must be old.
       and ob.created_at < now() - interval '24 hours'
+      and coalesce(ob.updated_at, ob.created_at) < now() - interval '24 hours'
       and (p_after_created_at is null or (ob.created_at, ob.name) > (p_after_created_at, p_after_name))
       and not exists (select 1 from public.certificates as c where c.pdf_path = ob.name)
     order by ob.created_at, ob.name

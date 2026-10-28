@@ -2,7 +2,8 @@
 -- "Personal data left after a deletion"; Phase 6, task 4).
 -- unattached_media('certificate') lists PDFs in the certificates bucket that
 -- no certificates.pdf_path names and that are more than 24 hours old (the
--- server uploads a PDF and records it within seconds), oldest first: a PDF
+-- server uploads a PDF and records it within seconds; an upsert moves
+-- updated_at, which must be as old), oldest first: a PDF
 -- whose delete failed after delete_account(), or one left by a failed
 -- record. Only the service role reads it. The cron job
 -- media-cleanup-certificate asks the Edge Function to delete them nightly at
@@ -10,7 +11,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(10);
+select plan(11);
 
 select tests.create_user('+9647801111111');
 select tests.create_user('+9647504444444', 'admin');
@@ -39,12 +40,14 @@ update public.certificates set pdf_path = tests.id('cert') || '/1.pdf' where id 
 select tests.pdf(tests.id('cert') || '/0.pdf', '40 days');      -- stale, not recorded
 select tests.pdf(gen_random_uuid() || '/9.pdf', '2 days');      -- left after a deletion
 select tests.pdf(gen_random_uuid() || '/8.pdf', '23 hours');    -- too new
+select tests.pdf(gen_random_uuid() || '/7.pdf', '3 days');      -- upserted again just now
+update storage.objects set updated_at = now() where bucket_id = 'certificates' and name like '%/7.pdf';
 
 select tests.authenticate_as_service_role();
 select results_eq(
   $$ select name from public.unattached_media('certificate') $$,
   $$ select name from storage.objects
-     where bucket_id = 'certificates' and created_at < now() - interval '24 hours'
+     where bucket_id = 'certificates' and updated_at < now() - interval '24 hours'
        and name <> tests.id('cert') || '/1.pdf'
      order by created_at, name $$,
   'unrecorded PDFs over 24 h old, oldest first; not the recorded one or newer ones'
@@ -53,6 +56,10 @@ select is(
   (select count(*)::integer from public.unattached_media('certificate')),
   2,
   'two of them'
+);
+select is_empty(
+  $$ select name from public.unattached_media('certificate') where name like '%/7.pdf' $$,
+  'a PDF uploaded again within 24 h (upsert) is not listed'
 );
 select tests.clear_authentication();
 
