@@ -7,13 +7,14 @@
 -- or category.update with only what changed.
 -- admin_delete_category(id): refused while any article (draft or published)
 -- uses it (ZL030 category_in_use). Logs category.delete.
--- admin_reorder_categories(ids): the full list of category ids in the new
--- order (anything else is 22023 invalid_order). Logs category.reorder with
--- the old and new order when it changed.
+-- admin_reorder_categories(ids): category ids in the new order, each once
+-- (22023 invalid_order otherwise). Categories not listed (added by another
+-- admin meanwhile) keep their order after them; ids that no longer exist are
+-- skipped. Logs category.reorder with the old and new order when it changed.
 begin;
 \ir _helpers.psql
 
-select plan(30);
+select plan(32);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -100,12 +101,12 @@ select throws_ok(
 -- Reorder ------------------------------------------------------------------------------------
 
 select throws_ok(
-  $$ select public.admin_reorder_categories(array[tests.cat('ثانية'), tests.cat('أولى')]) $$,
-  '22023', 'invalid_order', 'the order must list every category'
+  $$ select public.admin_reorder_categories(array[tests.cat('ثانية'), tests.cat('أولى'), tests.cat('أولى')]) $$,
+  '22023', 'invalid_order', 'each id at most once'
 );
 select throws_ok(
-  $$ select public.admin_reorder_categories(array[tests.cat('ثانية'), tests.cat('أولى'), tests.cat('أولى')]) $$,
-  '22023', 'invalid_order', 'each once'
+  $$ select public.admin_reorder_categories(array[]::bigint[]) $$,
+  '22023', 'invalid_order', 'and at least one'
 );
 select lives_ok(
   $$ select public.admin_reorder_categories(array[tests.cat('الثالثة'), tests.cat('أولى'), tests.cat('ثانية')]) $$,
@@ -125,6 +126,15 @@ select is(
     )
   ),
   'logged with the old and new order by name'
+);
+select lives_ok(
+  $$ select public.admin_reorder_categories(array[tests.cat('أولى'), 999999]) $$,
+  'a partial order with a deleted id'
+);
+select results_eq(
+  $$ select name from public.article_categories order by sort $$,
+  $$ values ('أولى'), ('الثالثة'), ('ثانية') $$,
+  'puts the listed ones first and keeps the rest in their order'
 );
 
 -- Delete -------------------------------------------------------------------------------------

@@ -33,8 +33,10 @@
 --      category.create / category.update.
 --    - admin_delete_category(id): refused while any article uses it (ZL030
 --      category_in_use); category.delete.
---    - admin_reorder_categories(ids): every id once, in the new order
---      (22023 invalid_order); category.reorder with the old and new order.
+--    - admin_reorder_categories(ids): the ids in their new order, each once
+--      (22023 invalid_order); a category not listed (one another admin added
+--      meanwhile) keeps its place after them, and ids deleted meanwhile are
+--      skipped. category.reorder with the old and new order.
 --
 -- 4. Storage (public-content, public): anyone with a cover's URL loads it.
 --    Through the API only admins touch it: upload to articles/<file>, read
@@ -153,15 +155,18 @@ $$;
 
 -- admin_save_article -------------------------------------------------------------------------
 
+-- Every parameter defaults to null so the API can leave out p_id (create)
+-- and p_cover_path (no cover); a missing value fails the checks below or the
+-- table's not-null constraints.
 create function public.admin_save_article(
-  p_id uuid,
-  p_slug text,
-  p_title text,
-  p_category_id bigint,
-  p_cover_path text,
-  p_body_md text,
-  p_featured boolean,
-  p_status public.article_status
+  p_id uuid default null,
+  p_slug text default null,
+  p_title text default null,
+  p_category_id bigint default null,
+  p_cover_path text default null,
+  p_body_md text default null,
+  p_featured boolean default null,
+  p_status public.article_status default null
 )
 returns table (article_id uuid, replaced_cover text)
 language plpgsql
@@ -329,7 +334,12 @@ $$;
 
 -- admin_save_category ------------------------------------------------------------------------
 
-create function public.admin_save_category(p_id bigint, p_name text, p_icon public.category_icon)
+-- p_id defaults to null (create), so the others must too.
+create function public.admin_save_category(
+  p_id bigint default null,
+  p_name text default null,
+  p_icon public.category_icon default null
+)
 returns bigint
 language plpgsql
 security definer
@@ -432,34 +442,36 @@ security definer
 set search_path = ''
 as $$
 declare
+  v_ids bigint[];
   v_from jsonb;
   v_to jsonb;
 begin
   if (select auth.uid()) is null or not (select private.is_admin()) then
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
-
-  perform 1 from public.article_categories as c order by c.id for update;
   if p_ids is null
-    or cardinality(p_ids) <> (select count(*) from public.article_categories)
-    or cardinality(p_ids) <> (select count(distinct i) from unnest(p_ids) as i)
-    or exists (
-      select 1 from unnest(p_ids) as i
-      where not exists (select 1 from public.article_categories as c where c.id = i)
-    )
+    or cardinality(p_ids) = 0
+    or cardinality(p_ids) <> (select count(distinct i) from unnest(p_ids) as i where i is not null)
   then
     raise exception using errcode = '22023', message = 'invalid_order';
   end if;
 
+  -- Two reorders take turns.
+  perform 1 from public.article_categories as c order by c.id for update;
+
+  -- Every category: the listed ones first, in the given order, then the
+  -- rest as they were.
+  select array_agg(c.id order by o.n nulls last, c.sort, c.id),
+    jsonb_agg(c.name order by o.n nulls last, c.sort, c.id)
+  into v_ids, v_to
+  from public.article_categories as c
+  left join unnest(p_ids) with ordinality as o (id, n) on o.id = c.id;
   select jsonb_agg(c.name order by c.sort, c.id) into v_from from public.article_categories as c;
-  select jsonb_agg(c.name order by o.n) into v_to
-  from unnest(p_ids) with ordinality as o (id, n)
-  join public.article_categories as c on c.id = o.id;
 
   if v_from is distinct from v_to then
     update public.article_categories as c
     set sort = o.n
-    from unnest(p_ids) with ordinality as o (id, n)
+    from unnest(v_ids) with ordinality as o (id, n)
     where c.id = o.id;
     perform private.log_admin_action(
       'category.reorder', 'article_categories', 'all',

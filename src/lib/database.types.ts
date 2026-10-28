@@ -1464,14 +1464,14 @@ export type Database = {
       admin_reorder_categories: { Args: { p_ids: number[] }; Returns: undefined };
       admin_save_article: {
         Args: {
-          p_body_md: string;
-          p_category_id: number;
-          p_cover_path: string;
-          p_featured: boolean;
-          p_id: string;
-          p_slug: string;
-          p_status: Database["public"]["Enums"]["article_status"];
-          p_title: string;
+          p_body_md?: string;
+          p_category_id?: number;
+          p_cover_path?: string;
+          p_featured?: boolean;
+          p_id?: string;
+          p_slug?: string;
+          p_status?: Database["public"]["Enums"]["article_status"];
+          p_title?: string;
         };
         Returns: {
           article_id: string;
@@ -1480,9 +1480,9 @@ export type Database = {
       };
       admin_save_category: {
         Args: {
-          p_icon: Database["public"]["Enums"]["category_icon"];
-          p_id: number;
-          p_name: string;
+          p_icon?: Database["public"]["Enums"]["category_icon"];
+          p_id?: number;
+          p_name?: string;
         };
         Returns: number;
       };
