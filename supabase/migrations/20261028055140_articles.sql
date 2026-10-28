@@ -207,6 +207,10 @@ begin
     where ob.bucket_id = 'public-content'
       and ob.name = p_cover_path
       and ob.name ~ '^articles/[^/]+$'
+      -- The caller's own finished upload (RLS audit: any admin's file, or a
+      -- row without its upload metadata, was accepted).
+      and ob.owner_id = (select auth.uid())::text
+      and ob.metadata ->> 'size' is not null
       -- The cleanup deletes unused covers after 72 hours.
       and ob.created_at > now() - interval '48 hours'
       and not private.article_cover_used(ob.name);
