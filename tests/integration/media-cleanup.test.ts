@@ -290,7 +290,10 @@ describe("media cleanup", () => {
       const { error } = await pdfs.upload(path, pdf, { contentType: "application/pdf" });
       expect(error).toBeNull();
     }
-    sql(`update storage.objects set created_at = now() - interval '25 hours'
+    // Storage's trigger would set updated_at back to now; skip it here.
+    sql(`set session_replication_role = replica;
+         update storage.objects
+         set created_at = now() - interval '25 hours', updated_at = now() - interval '25 hours'
          where bucket_id = 'certificates' and name = ${quoted([stray])}`);
 
     const result = await cleanUp(service as unknown as SupabaseClient, "certificate");
