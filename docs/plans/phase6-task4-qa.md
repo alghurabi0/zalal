@@ -2,7 +2,7 @@
 
 Plan for spec §12.3 "QA pass: empty/error/offline states, accessibility (labels, 44 px targets, contrast), Lighthouse PWA ≥ 90, media retention job". This is the last task of Phase 6 ("Done when: the launch checklist passes", §12.4). Branch `claude/phase6-task4-qa` from `origin/main` after PR 29. This file is deleted when the task ships, and its settled answers move into the spec.
 
-Open questions are at the end (§9). Each one lists a recommended default first. Nothing gets built until they are answered.
+Open questions are at the end (§9). **Settled Oct 28, 2026: every question takes its recommended default (a).**
 
 ## 1. How the audit was done
 
