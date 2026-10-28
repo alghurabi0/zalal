@@ -1033,8 +1033,7 @@
       "noneCta": "اشترك",
       "requestedBody": "طلبك قيد المراجعة، نتواصل وياك قريباً.",
       "expiredBody": "انتهى اشتراكك.",
-      "expiredCta": "جدّد الاشتراك",
-      "open": "افتح الاشتراك"
+      "expiredCta": "جدّد الاشتراك"
     }
   },
   "Profile": {
@@ -1048,8 +1047,7 @@
     "logoutConfirm": "إي، اطلع",
     "logoutCancel": "لا",
     "reports": "بلاغاتي",
-    "openReports": "{n, plural, one {بلاغ جاري} two {بلاغين جاريين} few {{count} بلاغات جارية} other {{count} بلاغ جاري}}",
-    "subscriptions": "الاشتراكات"
+    "openReports": "{n, plural, one {بلاغ جاري} two {بلاغين جاريين} few {{count} بلاغات جارية} other {{count} بلاغ جاري}}"
   },
   "Crew": {
     "title": "شغلنا",
@@ -1522,7 +1520,6 @@
         "paid": "مدفوع",
         "unpaid": "بعده ما مدفوع",
         "open": "افتح الاشتراك",
-        "ok": "الاشتراك يغطي هذا الطلب.",
         "drop": "شيل الاشتراك",
         "dropHint": "يصير الطلب كاش، والزيارة ترجع للاشتراك.",
         "use": "استخدم الاشتراك",
