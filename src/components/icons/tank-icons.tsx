@@ -31,3 +31,8 @@ export function RoofTankIcon(props: IconProps) {
 export function GroundTankIcon(props: IconProps) {
   return <TankIcon d="M3 10h18M5 10v10h14V10M9 14q1.5 -1 3 0t3 0M10 6h4v4h-4z" {...props} />;
 }
+
+/** Tank lid, the نصائح tile in Tips.dc.html. */
+export function TankLidIcon(props: IconProps) {
+  return <TankIcon d="M4 10h16M6 10V7a6 3 0 0 1 12 0v3M5 10v9h14v-9" strokeWidth={2} {...props} />;
+}

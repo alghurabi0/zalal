@@ -340,7 +340,31 @@
       "body": "سعر ثابت لكل خزان، وفحص الكلور والشهادة مجاناً.",
       "row": "{type} · {size}",
       "book": "احجز تنظيف"
+    },
+    "tips": {
+      "title": "معلومات تهمك",
+      "seeAll": "شوف الكل"
     }
+  },
+  "Tips": {
+    "metaTitle": "معلومات تهمك",
+    "title": "معلومات تهمك",
+    "categories": "الأقسام",
+    "all": "الكل",
+    "featured": "مقال اليوم",
+    "meta": "{category} · {time}",
+    "readTime": "{minutes, plural, few {# دقائق} other {# دقيقة}}",
+    "emptyTitle": "ماكو مقالات بعد",
+    "emptyBody": "قريباً ننشر نصائح عن نظافة الخزان والماي.",
+    "emptyAction": "احجز تنظيف",
+    "emptyCategory": "ماكو مقالات ثانية بهذا القسم."
+  },
+  "Article": {
+    "published": "نُشر {date}",
+    "book": "احجز تنظيف",
+    "notFoundTitle": "ما لكينا هذا المقال",
+    "notFoundBody": "يمكن انشال أو تغيّر. شوف باقي المقالات.",
+    "notFoundAction": "كل المقالات"
   },
   "Orders": {
     "title": "طلباتي",
