@@ -1,3 +1,5 @@
+import { subscriptionReasonFor } from "@/lib/subscriptions/errors";
+
 // Database errors from the A7, A8, A9, A10, A11, A13 and A14 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
@@ -60,13 +62,6 @@ const byCode: Record<string, AdminEditError> = {
   "22003": "invalid",
 };
 
-const SUBSCRIPTION_REASONS = [
-  "no_subscription",
-  "outside_subscription_period",
-  "no_visits_left",
-  "subscription_tanks_exceeded",
-] as const;
-
 export function adminEditErrorFor(
   error: { code?: string; message?: string } | null | undefined,
 ): AdminEditError {
@@ -78,10 +73,7 @@ export function adminEditErrorFor(
     return "invalid";
   }
   // ZL034 and ZL011 carry the reason in the message (A7, A2).
-  if (error.code === "ZL034") {
-    const reason = SUBSCRIPTION_REASONS.find((r) => r === error.message);
-    return reason ?? "no_subscription";
-  }
+  if (error.code === "ZL034") return subscriptionReasonFor(error.message);
   if (error.code === "ZL011" && error.message === "reason_required") return "reason_required";
   // A phone whose account was deleted (A10, A14): Auth still holds it.
   if (error.code === "P0002" && error.message === "account_not_found") return "account_deleted";

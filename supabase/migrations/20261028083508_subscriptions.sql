@@ -51,7 +51,9 @@
 --    subscription_unavailable: no_subscription, outside_subscription_period,
 --    no_visits_left, subscription_tanks_exceeded). transition_order:
 --    completing a covered order needs no cash tick; confirming one re-checks
---    its coverage; a customer can't move it outside the period.
+--    its coverage; a customer can't move it outside the period or keep it
+--    on a subscription that ended. Cancelling a subscription makes its open
+--    orders cash orders.
 --    delete_address refuses (ZL012) while the address has a request or a
 --    subscription that hasn't ended.
 --
@@ -482,8 +484,9 @@ begin
   if p_visits is null or p_visits not between 1 and 12 then
     raise exception using errcode = '22023', message = 'invalid_visits';
   end if;
+  -- The table allows 6; the order limit may be lower.
   if p_tanks is null
-    or p_tanks not between 1 and (select s.max_tanks_per_order from public.settings as s)
+    or p_tanks not between 1 and least(6, (select s.max_tanks_per_order from public.settings as s))
   then
     raise exception using errcode = '22023', message = 'invalid_tanks';
   end if;
@@ -630,6 +633,21 @@ begin
   where s.id = v_sub.id
   returning * into v_sub;
   perform private.add_subscription_note(v_sub.id, v_reason);
+
+  -- Its open orders become cash orders, so no crew finishes one for free on
+  -- a cancelled subscription (code review). Completed ones keep it: they
+  -- used their visit. Each is logged like A2's "شيل الاشتراك".
+  with dropped as (
+    update public.orders as o
+    set subscription_id = null
+    where o.subscription_id = v_sub.id
+      and o.status in ('pending_confirmation', 'confirmed', 'on_the_way', 'arrived', 'in_progress')
+    returning o.id
+  )
+  insert into public.admin_audit_log (admin_id, action, entity, entity_id, diff)
+  select (select auth.uid()), 'order.subscription', 'orders', d.id::text,
+    jsonb_build_object('from', v_sub.id, 'to', null)
+  from dropped as d;
 
   perform private.log_admin_action(
     case when v_to = 'declined' then 'subscription.decline' else 'subscription.cancel' end,
@@ -1079,7 +1097,9 @@ begin
     -- staff may move it anywhere.
     if v_role = 'customer' and v_order.subscription_id is not null and not exists (
       select 1 from public.subscriptions as s
-      where s.id = v_order.subscription_id and v_new_date between s.starts_on and s.ends_on
+      where s.id = v_order.subscription_id
+        and s.status = 'active'
+        and v_new_date between s.starts_on and s.ends_on
     ) then
       raise exception using errcode = 'ZL034', message = 'outside_subscription_period';
     end if;

@@ -23,7 +23,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(47);
+select plan(48);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647504444444', 'admin');
@@ -83,6 +83,13 @@ select throws_ok(
 select throws_ok(
   $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 7, 60000, true) $$,
   '22023', 'invalid_tanks', 'no more tanks than an order may hold'
+);
+select tests.clear_authentication();
+update public.settings as s set max_tanks_per_order = 10 where s.id;
+select tests.authenticate_as(tests.admin());
+select throws_ok(
+  $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 7, 60000, true) $$,
+  '22023', 'invalid_tanks', 'and never more than 6, whatever the order limit'
 );
 select throws_ok(
   $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 1, 0, true) $$,

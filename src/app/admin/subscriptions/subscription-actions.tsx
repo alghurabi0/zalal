@@ -37,6 +37,7 @@ export function SubscriptionActions({
   paid,
   plan,
   today,
+  defaultStart,
 }: {
   subscriptionId: string;
   state: SubscriptionState;
@@ -44,13 +45,20 @@ export function SubscriptionActions({
   plan: { visits: number; tanks: number; priceIqd: number | null };
   /** Today in Baghdad, by the server's clock. */
   today: string;
+  /** Today, or the day after the address's running subscription ends (a renewal). */
+  defaultStart: string;
 }) {
   const running = state === "active" || state === "upcoming";
   return (
     <div className="flex flex-col gap-3">
       {state === "requested" && (
         <Panel>
-          <Activate subscriptionId={subscriptionId} plan={plan} today={today} />
+          <Activate
+            subscriptionId={subscriptionId}
+            plan={plan}
+            today={today}
+            defaultStart={defaultStart}
+          />
         </Panel>
       )}
       {running && (
@@ -97,14 +105,16 @@ function Activate({
   subscriptionId,
   plan,
   today,
+  defaultStart,
 }: {
   subscriptionId: string;
   plan: { visits: number; tanks: number; priceIqd: number | null };
   today: string;
+  defaultStart: string;
 }) {
   const t = useTranslations("Admin.subscriptions.drawer");
   const edit = useAdminEdit();
-  const [startsOn, setStartsOn] = useState(today);
+  const [startsOn, setStartsOn] = useState(defaultStart);
   const [visits, setVisits] = useState(String(plan.visits));
   const [tanks, setTanks] = useState(String(plan.tanks));
   const [price, setPrice] = useState(plan.priceIqd === null ? "" : String(plan.priceIqd));

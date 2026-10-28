@@ -81,6 +81,8 @@ export async function subscriptionRequests(
 
 export type AdminSubscriptionDetails = Subscription & {
   threadId: string | null;
+  /** The last day of the address's other running subscription, which a renewal follows. */
+  runningUntil: string | null;
   notes: {
     id: number;
     note: string;
@@ -102,7 +104,7 @@ export async function getAdminSubscription(id: string): Promise<AdminSubscriptio
   if (!data) return null;
   const subscription = toSubscription(data);
 
-  const [notes, orders, thread] = await Promise.all([
+  const [notes, orders, thread, running] = await Promise.all([
     supabase
       .from("subscription_notes")
       .select(
@@ -116,14 +118,25 @@ export async function getAdminSubscription(id: string): Promise<AdminSubscriptio
       .eq("subscription_id", id)
       .order("slot_start_at", { ascending: false }),
     supabase.from("chat_threads").select("id").eq("user_id", subscription.userId).maybeSingle(),
+    supabase
+      .from("subscriptions")
+      .select("ends_on")
+      .eq("address_id", subscription.addressId)
+      .eq("status", "active")
+      .neq("id", id)
+      .order("ends_on", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   if (notes.error) throw new Error(`Subscription notes read failed: ${notes.error.message}`);
   if (orders.error) throw new Error(`Subscription orders read failed: ${orders.error.message}`);
   if (thread.error) throw new Error(`Thread read failed: ${thread.error.message}`);
+  if (running.error) throw new Error(`Running subscription read failed: ${running.error.message}`);
 
   return {
     ...subscription,
     threadId: thread.data?.id ?? null,
+    runningUntil: running.data?.ends_on ?? null,
     notes: notes.data.map((note) => ({
       id: note.id,
       note: note.note,

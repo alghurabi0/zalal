@@ -26,6 +26,7 @@ import {
 } from "@/lib/subscriptions/queries";
 import { canRequest, currentFor, hasRenewal } from "@/lib/subscriptions/state";
 
+import { BookVisitButton } from "./book-button";
 import { RequestButton } from "./request-button";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -57,7 +58,12 @@ async function SubscriptionContent({ searchParams }: PageProps<"/subscription">)
   const t = await getTranslations("Subscription");
   const viewer = await getViewer();
   if (viewer && viewer.role !== "customer") redirect(surfaceFor(viewer.role));
-  const plan = await subscriptionPlan();
+  // Started together; the customer's reads are skipped for guests.
+  const planRead = subscriptionPlan();
+  const customerReads = viewer
+    ? Promise.all([listAddresses(), listSubscriptions()])
+    : Promise.resolve(null);
+  const plan = await planRead;
   const header = <Header title={t("title")} back={viewer ? routes.profile : routes.home} />;
 
   if (!viewer) {
@@ -80,7 +86,7 @@ async function SubscriptionContent({ searchParams }: PageProps<"/subscription">)
     );
   }
 
-  const [addresses, subscriptions] = await Promise.all([listAddresses(), listSubscriptions()]);
+  const [addresses, subscriptions] = (await customerReads) ?? [[], []];
   if (addresses.length === 0) {
     return (
       <>
@@ -148,9 +154,7 @@ async function SubscriptionContent({ searchParams }: PageProps<"/subscription">)
               {renewal && <p className="font-bold">{t("renewalRequested")}</p>}
             </Card>
             {current.visitsLeft > 0 && !current.nextOrderId && (
-              <Button href={routes.book} size="footer" className="w-full">
-                {t("book")}
-              </Button>
+              <BookVisitButton addressId={address.id} label={t("book")} />
             )}
             {requestable && (
               <>

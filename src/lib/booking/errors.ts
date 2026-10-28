@@ -1,3 +1,9 @@
+import {
+  SUBSCRIPTION_REASONS,
+  type SubscriptionReason,
+  subscriptionReasonFor,
+} from "@/lib/subscriptions/errors";
+
 // create_order()'s error codes (supabase/CLAUDE.md) as the booking screens
 // handle them.
 
@@ -23,14 +29,7 @@ export type BookingError =
   | "subscription_tanks_exceeded"
   | "failed";
 
-const SUBSCRIPTION_REASONS = [
-  "no_subscription",
-  "outside_subscription_period",
-  "no_visits_left",
-  "subscription_tanks_exceeded",
-] as const;
-
-export type SubscriptionBookingError = (typeof SUBSCRIPTION_REASONS)[number];
+export type SubscriptionBookingError = SubscriptionReason;
 
 export const isSubscriptionError = (
   error: BookingError | null,
@@ -50,7 +49,7 @@ const byCode: Record<string, BookingError> = {
 /** ZL034 carries its reason in the message. */
 export function bookingErrorFor(code: string | undefined, message?: string): BookingError {
   if (code === "ZL034") {
-    return SUBSCRIPTION_REASONS.find((reason) => reason === message) ?? "no_subscription";
+    return subscriptionReasonFor(message);
   }
   return (code && byCode[code]) || "failed";
 }

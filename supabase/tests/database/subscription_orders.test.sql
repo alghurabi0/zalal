@@ -17,7 +17,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(34);
+select plan(38);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -242,6 +242,19 @@ select lives_ok(
      ) $$,
   'but within it'
 );
+select tests.clear_authentication();
+update public.subscriptions set status = 'cancelled', ended_at = now() where id = tests.id('b_sub');
+select tests.authenticate_as(tests.b());
+select throws_ok(
+  $$ select public.transition_order(
+       tests.id('b_order'), 'pending_confirmation',
+       jsonb_build_object('service_date', tests.today() + 1, 'slot_id',
+         (select id from public.slots where start_time = '07:00' and end_time = '09:00'))
+     ) $$,
+  'ZL034', 'outside_subscription_period', 'nor keep it on a subscription that has ended'
+);
+select tests.clear_authentication();
+update public.subscriptions set status = 'active', ended_at = null where id = tests.id('b_sub');
 select tests.authenticate_as(tests.user_id('+9647504444444'));
 select lives_ok(
   $$ select public.transition_order(
@@ -250,6 +263,24 @@ select lives_ok(
          (select id from public.slots where start_time = '07:00' and end_time = '09:00'))
      ) $$,
   'staff may move it anywhere'
+);
+
+-- Cancelling a subscription makes its open orders cash orders ---------------------------------------
+
+select lives_ok(
+  $$ select public.admin_end_subscription(tests.id('b_sub'), 'طلب الزبون') $$,
+  'an admin cancels B''s subscription'
+);
+select is(
+  (select subscription_id from public.orders where id = tests.id('b_order')),
+  null,
+  'its open order is a cash order now'
+);
+select is(
+  (select count(*)::int from public.admin_audit_log
+   where action = 'order.subscription' and entity_id = tests.id('b_order')::text),
+  1,
+  'and the change is logged on the order'
 );
 
 -- delete_address ------------------------------------------------------------------------------------

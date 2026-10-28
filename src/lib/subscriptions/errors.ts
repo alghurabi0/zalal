@@ -21,3 +21,18 @@ const byCode: Record<string, RequestSubscriptionError> = {
 export function requestSubscriptionErrorFor(code: string | undefined): RequestSubscriptionError {
   return (code && byCode[code]) || "failed";
 }
+
+/** ZL034's reasons (create_order, transition_order, A2), in its message. */
+export const SUBSCRIPTION_REASONS = [
+  "no_subscription",
+  "outside_subscription_period",
+  "no_visits_left",
+  "subscription_tanks_exceeded",
+] as const;
+
+export type SubscriptionReason = (typeof SUBSCRIPTION_REASONS)[number];
+
+/** ZL034's message as its reason; anything else reads as no_subscription. */
+export function subscriptionReasonFor(message: string | undefined): SubscriptionReason {
+  return SUBSCRIPTION_REASONS.find((reason) => reason === message) ?? "no_subscription";
+}

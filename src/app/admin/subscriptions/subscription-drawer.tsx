@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getAdminSubscription } from "@/lib/admin/subscription-queries";
-import { baghdadToday, formatDay, formatDayTime } from "@/lib/dates";
+import { addDays, baghdadToday, formatDay, formatDayTime } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
@@ -148,6 +148,12 @@ export async function SubscriptionDrawer({
         paid={subscription.paid}
         plan={{ visits: plan.visits, tanks: plan.tanks, priceIqd: plan.priceIqd }}
         today={baghdadToday()}
+        // A renewal starts the day after the subscription it follows.
+        defaultStart={
+          subscription.runningUntil && subscription.runningUntil >= baghdadToday()
+            ? addDays(subscription.runningUntil, 1)
+            : baghdadToday()
+        }
       />
 
       {activated && (

@@ -127,7 +127,15 @@ function useJobAction(onDone?: () => void) {
         return;
       }
       setError(result.error);
-      if (result.error === "invalid_transition" || result.error === "not_found") router.refresh();
+      // A cash refusal can mean the job's subscription coverage changed
+      // meanwhile (A2, a cancelled subscription): the page shows the tick again.
+      if (
+        result.error === "invalid_transition" ||
+        result.error === "not_found" ||
+        result.error === "cash_not_collected"
+      ) {
+        router.refresh();
+      }
     });
 
   return { error, setError, pending, submit };
