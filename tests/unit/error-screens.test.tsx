@@ -62,6 +62,26 @@ describe("error screens", () => {
     act(() => globalRoot.unmount());
   });
 
+  it("while offline it is the offline state, and it retries once the network is back", () => {
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const retry = vi.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    act(() => root.render(withIntl(<RootError error={new Error("offline")} retry={retry} />)));
+
+    expect(container.querySelector("h1")?.textContent).toBe(messages.UI.offlineTitle);
+    expect(container.querySelector("p")?.textContent).toBe(messages.UI.offlineBody);
+    expect(container.querySelector("button")?.textContent).toBe(messages.UI.retry);
+    expect(retry).not.toHaveBeenCalled();
+
+    online.mockReturnValue(true);
+    act(() => window.dispatchEvent(new Event("online")));
+    expect(container.querySelector("h1")?.textContent).toBe(messages.UI.errorTitle);
+    expect(retry).toHaveBeenCalledOnce();
+    act(() => root.unmount());
+    online.mockRestore();
+  });
+
   it("global-error.tsx brings its own Arabic, right-to-left document", () => {
     const html = renderToStaticMarkup(<GlobalError error={new Error("boom")} retry={() => {}} />);
     expect(html).toMatch(/^<html lang="ar" dir="rtl" class="font-cairo">/);
