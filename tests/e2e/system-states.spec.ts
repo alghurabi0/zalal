@@ -63,12 +63,16 @@ test("maintenance from A13 stops customers and guests, not admins", async ({ pag
   await guest.close();
 });
 
-test("A13 refuses a minimum version that isn't x.y.z", async ({ page }) => {
+test("A13 refuses a minimum version that isn't x.y.z or is above this build", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await logInAsAdmin(page);
   await page.goto("/admin/settings");
   const section = page.getByRole("form", { name: A13.app.title });
   await section.getByLabel(A13.app.minVersion).fill("1.2");
   await expect(section.getByText(A13.app.minVersionInvalid)).toBeVisible();
+  await expect(section.getByRole("button", { name: A13.save })).toBeDisabled();
+  // Above this build, it would lock A13 out too.
+  await section.getByLabel(A13.app.minVersion).fill("999.0.0");
+  await expect(section.getByText(A13.app.minVersionTooNew.split(" (")[0] ?? "")).toBeVisible();
   await expect(section.getByRole("button", { name: A13.save })).toBeDisabled();
 });

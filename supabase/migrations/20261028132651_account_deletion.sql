@@ -24,7 +24,8 @@
 --     working) without their PDF, which prints the name and phone; the paths
 --     are returned so the server deletes the files (the certificates bucket
 --     is service-role only);
---   - ratings keep their stars and tags, without the comment;
+--   - ratings keep their stars and tags, without the comment; staff notes
+--     on the customer's orders and subscriptions (free text) are deleted;
 --   - tickets (their files, notes and notifications cascade), the chat
 --     thread and every message in it (the nightly cleanup deletes the
 --     files), notifications and push subscriptions deleted;
@@ -50,7 +51,8 @@
 --   owner's live profile, so a write racing the deletion (another tab)
 --   waits for it and is then refused (42501); and an order of a deleted
 --   account never moves back to an open status (P0002 order_not_found, an
---   admin override in transition_order).
+--   admin override in transition_order); a certificate PDF rendered during
+--   the deletion can't be recorded afterwards (42501).
 -- - The orders and subscriptions read policies now also need the customer
 --   role, so a deleted account's access token (it lives up to an hour after
 --   its sessions are gone) reads nothing. Certificates, order lines, events
@@ -147,7 +149,12 @@ begin
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
 
-  -- Lock the profile, so two deletions (or a booking) can't interleave.
+  -- Lock order: the addresses first, as create_order and
+  -- request_subscription do (address, then the profile through the foreign
+  -- key), so a booking in another tab finishes first instead of deadlocking,
+  -- and the open-order check below then sees it. Then the profile, so two
+  -- deletions can't interleave.
+  perform 1 from public.addresses as a where a.user_id = v_user_id for update;
   perform 1 from public.profiles as p where p.id = v_user_id for update;
 
   if exists (
@@ -166,6 +173,15 @@ begin
   update public.subscriptions as s
   set status = 'cancelled', ended_at = now()
   where s.user_id = v_user_id and s.status = 'active';
+
+  -- Staff notes are free text that often holds the customer's name, number
+  -- or directions.
+  delete from public.subscription_notes as n
+  using public.subscriptions as s
+  where s.id = n.subscription_id and s.user_id = v_user_id;
+  delete from public.order_event_notes as n
+  using public.orders as o
+  where o.id = n.order_id and o.customer_id = v_user_id;
 
   -- Chat: messages (they reference tickets), then the thread.
   delete from public.chat_messages as m where m.customer_id = v_user_id;
@@ -390,6 +406,34 @@ before update of status on public.orders
 for each row
 when (old.status is distinct from new.status)
 execute function private.refuse_reopening_deleted_order();
+
+-- A certificate PDF rendered while the account was deleted must not be
+-- stored afterwards: it prints the name and phone (code review). The server
+-- removes its upload when this refuses.
+create function private.refuse_deleted_owner_pdf()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.pdf_path is not null and not exists (
+    select 1
+    from public.orders as o
+    join public.profiles as p on p.id = o.customer_id
+    where o.id = new.order_id and p.deleted_at is null
+  ) then
+    raise exception using errcode = '42501', message = 'not_allowed';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger certificates_refuse_deleted_owner_pdf
+before update of pdf_path on public.certificates
+for each row
+when (new.pdf_path is distinct from old.pdf_path)
+execute function private.refuse_deleted_owner_pdf();
 
 -- Grants ---------------------------------------------------------------------------------------
 

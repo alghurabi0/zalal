@@ -10,10 +10,11 @@ import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import type { AdminSettings } from "@/lib/admin/catalog-queries";
+import { APP_VERSION, compareVersions } from "@/lib/app-version";
 import type { AdminEditError } from "@/lib/admin/edit-errors";
 import { normalizeIraqiPhone } from "@/lib/phone";
-import { appSettingsSchema } from "@/lib/schemas/admin-catalog";
 import {
+  appSettingsSchema,
   CERTIFICATE_TEXT_MAX,
   SUPPORT_REPLY_MAX,
   TICKET_RESPONSE_RANGE,
@@ -22,8 +23,6 @@ import {
   type SettingsSectionInput,
   STERILANT_MAX,
 } from "@/lib/schemas/admin-catalog";
-
-import { APP_VERSION } from "@/lib/app-version";
 
 import { saveSettings } from "./actions";
 
@@ -571,7 +570,11 @@ function AppSection({ settings }: { settings: AdminSettings }) {
   const [maintenance, setMaintenance] = useState(settings.maintenance_mode);
   const [version, setVersion] = useState(settings.min_app_version);
   const values = { maintenance_mode: maintenance, min_app_version: version.trim() };
-  const valid = appSettingsSchema.safeParse(values).success;
+  const wellFormed = appSettingsSchema.safeParse(values).success;
+  // Above this build, every surface (this one too) would ask for an update
+  // that doesn't exist yet: deploy the bumped version first.
+  const tooNew = wellFormed && compareVersions(values.min_app_version, APP_VERSION) > 0;
+  const valid = wellFormed && !tooNew;
   return (
     <Section title={t("title")} input={valid ? { section: "app", values } : null}>
       <Toggle
@@ -583,7 +586,13 @@ function AppSection({ settings }: { settings: AdminSettings }) {
       <Field
         label={t("minVersion")}
         hint={t("minVersionHint", { version: APP_VERSION })}
-        error={valid ? undefined : t("minVersionInvalid")}
+        error={
+          !wellFormed
+            ? t("minVersionInvalid")
+            : tooNew
+              ? t("minVersionTooNew", { version: APP_VERSION })
+              : undefined
+        }
         variant="compact"
       >
         {(control) => (

@@ -3,6 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 
 import { type AdminEditResult, editFailure } from "@/lib/admin/edit-errors";
+import { APP_VERSION, compareVersions } from "@/lib/app-version";
 import { requireViewer } from "@/lib/auth/viewer";
 import type { Json } from "@/lib/database.types";
 import { routes } from "@/lib/routes";
@@ -19,6 +20,14 @@ export async function saveSettings(input: SettingsSectionInput): Promise<AdminEd
   await requireViewer(routes.adminSettings, "admin");
   const parsed = settingsSectionSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: "invalid" };
+  // A minimum above this build would ask every surface, A13 included, for an
+  // update that isn't deployed yet.
+  if (
+    parsed.data.section === "app" &&
+    compareVersions(parsed.data.values.min_app_version, APP_VERSION) > 0
+  ) {
+    return { status: "error", error: "invalid" };
+  }
   const patch: { [key: string]: Json } = parsed.data.values;
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_update_settings", { p_patch: patch });

@@ -19,7 +19,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(45);
+select plan(48);
 
 select tests.create_user('+9647801111111');            -- customer A (deleted)
 select tests.create_user('+9647802222222');            -- customer B
@@ -54,6 +54,11 @@ values (tests.a(), tests.id('a_done'), 'leak', 'Water is leaking again', 'app');
 insert into tests.ids select 'a_ticket', id from public.tickets where user_id = tests.a();
 insert into public.ticket_notes (ticket_id, author_id, note)
 values (tests.id('a_ticket'), tests.user_id('+9647504444444'), 'Called them');
+insert into public.order_events (order_id, from_status, to_status, actor_role)
+values (tests.id('a_done'), 'in_progress', 'completed', 'admin');
+insert into public.order_event_notes (event_id, order_id, note)
+select e.id, e.order_id, 'Customer Ali asked to call 0770 first'
+from public.order_events as e where e.order_id = tests.id('a_done') limit 1;
 insert into public.ratings (order_id, stars, comment, ticket_id)
 values (tests.id('a_done'), 2, 'Late and messy', tests.id('a_ticket'));
 
@@ -68,6 +73,8 @@ insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
 values (tests.a(), 'https://fcm.googleapis.com/fcm/send/a', 'B' || repeat('a', 86), repeat('b', 22));
 
 insert into tests.ids values ('a_active', tests.create_subscription(tests.a(), 'active', p_address_id => tests.id('a_home')));
+insert into public.subscription_notes (subscription_id, author_id, note)
+values (tests.id('a_active'), tests.user_id('+9647504444444'), 'House behind the mosque');
 insert into tests.ids values ('a_requested', tests.create_subscription(tests.a(), 'requested', p_address_id => tests.id('a_work')));
 
 insert into auth.sessions (id, user_id) values (gen_random_uuid(), tests.a());
@@ -187,6 +194,19 @@ select is((select count(*)::int from public.chat_messages where customer_id = te
 select is((select count(*)::int from public.chat_threads where user_id = tests.a()), 0, 'the chat thread is deleted');
 select is((select count(*)::int from public.notifications where user_id = tests.a()), 0, 'notifications are deleted');
 select is((select count(*)::int from public.push_subscriptions where user_id = tests.a()), 0, 'push subscriptions are deleted');
+
+select is(
+  (select count(*)::int from public.order_event_notes where order_id = tests.id('a_done')),
+  0, 'staff notes on the orders are deleted'
+);
+select is(
+  (select count(*)::int from public.subscription_notes where subscription_id = tests.id('a_active')),
+  0, 'staff notes on the subscriptions are deleted'
+);
+select throws_ok(
+  $$ update public.certificates set pdf_path = id || '/2.pdf' where order_id = tests.id('a_done') $$,
+  '42501', 'not_allowed', 'a PDF made during the deletion can''t be recorded'
+);
 
 -- Subscriptions.
 select ok(

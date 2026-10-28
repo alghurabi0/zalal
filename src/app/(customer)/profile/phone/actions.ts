@@ -15,7 +15,6 @@ import type { CodeFailure } from "@/lib/otp";
 import type { ResendState, SendCodeState, VerifyState } from "@/lib/otp/form-states";
 import { otpChannelSchema } from "@/lib/otp/schemas";
 import { sendError } from "@/lib/otp/send-error";
-import { normalizeIraqiMobile } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 
 // Phone change (N10, spec §9.1; settled Oct 28, 2026). Two codes: one to the
@@ -80,9 +79,8 @@ export async function sendNewPhoneCode(
     if (available.reason === "invalid_input") return { error: { kind: "invalid_phone" } };
     return { error: { kind: available.reason } };
   }
-  const phone = normalizeIraqiMobile(String(form.get("phone")));
-  if (!phone) return { error: { kind: "invalid_phone" } };
-  const outcome = await send(change, phone, channel.data);
+  // The number as newPhoneAvailable parsed it (E.164), so the code goes to the one it checked.
+  const outcome = await send(change, available.phone, channel.data);
   if (!outcome.ok) return outcome.state;
   redirect(routes.changePhoneVerify);
 }

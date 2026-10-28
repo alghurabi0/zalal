@@ -35,18 +35,19 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
+    // Tests that flip a setting every page sees (maintenance mode) run as
+    // this project's teardown: after everything else, so no other test
+    // meets the maintenance screen, and even when another test failed.
     {
       name: "mobile-chromium",
       use: mobile,
       testIgnore: GLOBAL_SETTINGS_SPECS,
+      teardown: "global-settings",
     },
-    // Tests that flip a setting every page sees (maintenance mode): run
-    // after everything else, so no other test meets the maintenance screen.
     {
       name: "global-settings",
       use: mobile,
       testMatch: GLOBAL_SETTINGS_SPECS,
-      dependencies: ["mobile-chromium"],
     },
   ],
   webServer: {

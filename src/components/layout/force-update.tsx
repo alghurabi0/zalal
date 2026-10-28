@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { APP_VERSION, compareVersions } from "@/lib/app-version";
+import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/browser";
 
 import { SystemState } from "./system-state";
@@ -17,8 +18,15 @@ type Required = { phone: string | null };
  * tab keeps running the build it loaded, so the check runs here: when this
  * build's version is below settings.min_app_version (A13), a full-screen
  * "حدّث التطبيق" covers the app. It checks on load and whenever the app
- * comes back to the foreground. A failed read shows nothing.
+ * comes back to the foreground. A failed read shows nothing. Never on the
+ * dashboard (A13 is where a wrong minimum gets fixed) or the certificate
+ * print page (headless Chromium prints it).
  */
+/** Read at check time: usePathname() in the root layout would block prerendering. */
+function exempt(pathname: string): boolean {
+  return pathname.startsWith(routes.admin) || pathname.startsWith("/certificates/");
+}
+
 export function ForceUpdate() {
   const t = useTranslations("System");
   const [required, setRequired] = useState<Required | null>(null);
@@ -27,6 +35,10 @@ export function ForceUpdate() {
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
+      if (exempt(window.location.pathname)) {
+        setRequired(null);
+        return;
+      }
       const { data } = await createClient()
         .from("settings")
         .select("min_app_version, company_phone")
@@ -51,13 +63,22 @@ export function ForceUpdate() {
 
   if (!required) return null;
 
-  // The service worker skips waiting (src/app/sw.ts), so fetching the new
-  // one and reloading loads the new build.
+  // The service worker skips waiting and claims the page (src/app/sw.ts):
+  // fetch the new one, wait (up to 10 s) until it takes over, then reload, so
+  // the old worker can't answer the reload with the old build.
   const update = async () => {
     setUpdating(true);
     try {
-      const registration = await navigator.serviceWorker?.getRegistration();
-      await registration?.update();
+      const container = navigator.serviceWorker;
+      const registration = await container?.getRegistration();
+      if (container && registration) {
+        const takenOver = new Promise<void>((resolve) => {
+          container.addEventListener("controllerchange", () => resolve(), { once: true });
+          setTimeout(resolve, 10_000);
+        });
+        await registration.update();
+        if (registration.installing || registration.waiting) await takenOver;
+      }
     } catch {
       // Reloading still loads the new pages from the network.
     }

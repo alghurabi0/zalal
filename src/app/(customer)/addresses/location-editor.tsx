@@ -142,9 +142,11 @@ function Editor({
       ? t("errors.outsideArea")
       : state.error === "label_taken"
         ? t("errors.labelTaken")
-        : state.error === "failed"
-          ? t("errors.failed")
-          : null;
+        : state.error === "subscribed"
+          ? t("errors.subscribed")
+          : state.error === "failed"
+            ? t("errors.failed")
+            : null;
 
   return (
     <div className="mx-auto flex h-dvh w-full max-w-phone flex-col overflow-hidden bg-map-bg">

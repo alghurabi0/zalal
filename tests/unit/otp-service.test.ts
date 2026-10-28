@@ -379,6 +379,7 @@ describe("phone change", () => {
   it("says whether a new number is free", async () => {
     expect(await service(fakeAdmin({}).admin).newPhoneAvailable("u1", "07709876543")).toEqual({
       ok: true,
+      phone: "+9647709876543",
     });
     const taken = fakeAdmin({
       profile: { id: "u2", role: "customer", full_name: "B", deleted_at: null },

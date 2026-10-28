@@ -266,7 +266,10 @@ export function createOtpService(deps: OtpDeps) {
   async function newPhoneAvailable(
     userId: string,
     input: unknown,
-  ): Promise<{ ok: true } | { ok: false; reason: "invalid_input" | "phone_taken" | "same_phone" }> {
+  ): Promise<
+    | { ok: true; phone: string }
+    | { ok: false; reason: "invalid_input" | "phone_taken" | "same_phone" }
+  > {
     const parsed = phoneInputSchema.safeParse(input);
     if (!parsed.success) return { ok: false, reason: "invalid_input" };
     const { data, error } = await admin
@@ -275,7 +278,7 @@ export function createOtpService(deps: OtpDeps) {
       .eq("phone", parsed.data)
       .maybeSingle();
     if (error) fail("profile read", error);
-    if (data === null) return { ok: true };
+    if (data === null) return { ok: true, phone: parsed.data };
     return { ok: false, reason: data.id === userId ? "same_phone" : "phone_taken" };
   }
 

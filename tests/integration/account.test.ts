@@ -96,7 +96,10 @@ describe("phone change", () => {
       }),
     ).toEqual({ ok: true });
 
-    expect(await otp.newPhoneAvailable(userId, local(nextPhone))).toEqual({ ok: true });
+    expect(await otp.newPhoneAvailable(userId, local(nextPhone))).toEqual({
+      ok: true,
+      phone: nextPhone,
+    });
     await otp.requestOtp({ phone: local(nextPhone), channel: "whatsapp" });
     expect(
       await otp.changePhone(userId, {

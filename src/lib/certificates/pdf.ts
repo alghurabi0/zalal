@@ -162,7 +162,12 @@ export async function ensureCertificatePdf(
     .eq("issued_at", certificate.issued_at)
     .select("pdf_path")
     .maybeSingle();
-  if (recordError) throw new Error(`PDF record failed: ${recordError.message}`);
+  if (recordError) {
+    // Refused (the account was deleted while printing, migration
+    // account_deletion) or failed: the file must not stay behind.
+    await bucket.remove([path]);
+    throw new Error(`PDF record failed: ${recordError.message}`);
+  }
   if (!recorded) {
     // Issued again while printing: this version is stale already, and the
     // new issue's run may have cleaned the folder before it landed.
