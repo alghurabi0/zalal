@@ -2,7 +2,13 @@
 
 Spec §12.3: "Subscription: N8 request, A7 management, checkout toggle, visit decrement". Decision G (§1): the customer requests it in the app; admins activate it and track visits by hand. No online payment (§1 out of scope): the subscription is paid outside the app and ticked "paid" in A7.
 
-Status: **draft, waiting for the owner's answers to the open questions (end of file).** Nothing is built yet. Each question has a recommended default, listed first; the plan below assumes those defaults.
+Status: **approved Oct 28, 2026.** The owner took the recommended default for every question in section 7 except Q3: **a subscription belongs to one address** (not to the customer). That changes:
+
+- `subscriptions.address_id` (foreign key (`address_id`, `user_id`) → `addresses`), chosen when requesting; the address must be live and inside the service area (`ZL001`). One request, and one active subscription at a time, **per address**; a customer can hold one per address.
+- Checkout offers the toggle only when the booking's address has the subscription; `create_order` uses that address's subscription.
+- `delete_address` refuses (`ZL012` `address_in_use`) while the address has a request or an active subscription that hasn't ended.
+- N8 picks the address (Home's chosen one first, chips when there are more); Profile shows one card per address with a live subscription (the "none" card when there is none); A7, A2, A4 and the notifications name the address.
+- Local price (Q1): 60,000 IQD in `seed.sql`; hosted projects start with no price until the owner sets it in A13.
 
 ## 1. Findings
 
@@ -34,6 +40,7 @@ One migration, `subscriptions` (made with `supabase migration new subscriptions`
 | --- | --- | --- |
 | `id` | uuid PK | |
 | `user_id` | uuid → profiles | the customer |
+| `address_id` | uuid | the subscribed address; foreign key (`address_id`, `user_id`) → `addresses` |
 | `status` | `subscription_status` | |
 | `requested_at` | timestamptz | `now()` |
 | `price_iqd` | integer, null until activated | > 0; the plan price when activated, editable in the "فعّل" form |
@@ -46,7 +53,7 @@ One migration, `subscriptions` (made with `supabase migration new subscriptions`
 | `expiry_notified_on` | date | server-only: the "expiring in 30 days" push went for this `ends_on` |
 | `created_at`, `updated_at` | timestamptz | `set_updated_at` trigger |
 
-Constraints: an active row has every plan column and its dates (check); one live subscription per customer: a unique partial index on `user_id` where status = `requested`, and at most one active row whose period hasn't ended is enforced in the RPCs under a row lock on the customer's profile (a partial unique index can't see "not ended").
+Constraints: an active row has every plan column and its dates (check); one live subscription per address: a unique partial index on `address_id` where status = `requested`, and at most one active row whose period hasn't ended is enforced in the RPCs under a row lock on the customer's profile (a partial unique index can't see "not ended").
 
 **Departures from §7 (each explained in the migration and in §7):**
 
@@ -90,7 +97,7 @@ No INSERT, UPDATE or DELETE grants on either table: only the RPCs below write th
 
 ### 3.1 Customer
 
-- `request_subscription()` → the subscription id. Customers only (`42501` otherwise). Refused while the plan has no price (`ZL037` `subscription_not_offered`) or while the customer has a request, or an active subscription that ends more than 30 days from today (`ZL035` `subscription_exists`). Snapshots nothing: the price and plan are set at activation. Notifies admins (`subscription_requested`). Retry-safe: a second call while requested returns the same row rather than `ZL035`.
+- `request_subscription(address_id)` → the subscription id. The address must be the caller's, live and inside the service area (`ZL001`). Customers only (`42501` otherwise). Refused while the plan has no price (`ZL037` `subscription_not_offered`) or while the customer has a request, or an active subscription that ends more than 30 days from today (`ZL035` `subscription_exists`). Snapshots nothing: the price and plan are set at activation. Notifies admins (`subscription_requested`). Retry-safe: a second call while requested returns the same row rather than `ZL035`.
 - `create_order(…, p_use_subscription boolean default false)`: a new parameter at the end (the old signature is dropped; the app is updated in the same PR). When true, it locks the customer's subscription row and checks, in this order, with `ZL034` `subscription_unavailable` and the reason as message: `no_subscription` (no active one), `outside_subscription_period` (the slot date isn't within `starts_on`–`ends_on`), `no_visits_left` (total − used − held ≤ 0), `subscription_tanks_exceeded` (the order's tank count > `tanks_covered`, Q2). The `expected_total` check stays as it is (the total is still the lines' sum, see 3.4).
 - `transition_order`, customer reschedule of a covered order: the new date must stay inside the period (`ZL034` `outside_subscription_period`); staff may move it anywhere.
 
@@ -209,9 +216,7 @@ Written first (db-change skill): the pgTAP files fail before the migration exist
 - CLAUDE.md: the `createSubscription()` e2e helper.
 - Delete this plan in the PR, as with task 1.
 
-## 7. Open questions
-
-Each has a recommended default first. The plan above assumes the defaults.
+## 7. Questions (settled Oct 28, 2026: the defaults, except Q3 = per address)
 
 1. **Plan numbers.** What are the price, the visits per year and the tanks covered? Default: 2 visits / 12 months / 1 tank (§10.2), the price set by you in A13 (until then "اطلب الاشتراك" is hidden and N8 says "قريباً"). For local, CI and `seed.sql` I'd use **60,000 IQD** unless you give the real number.
 2. **Multi-tank orders.** Does one visit cover an order with more tanks than the subscription covers? Default: **no; the toggle is offered only when the order's tank count ≤ tanks covered** (one visit = one order of up to that many tanks; the customer books other tanks as a separate paid order). Alternative: the covered tanks are free and the rest are paid in cash at list prices on the same order (more work in Checkout, C4 and the totals, and a rule for which tanks are covered).
