@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { APP_VERSION, compareVersions } from "@/lib/app-version";
 import { routes } from "@/lib/routes";
-import { createClient } from "@/lib/supabase/browser";
 
 import { SystemState } from "./system-state";
 
@@ -39,6 +38,9 @@ export function ForceUpdate() {
         setRequired(null);
         return;
       }
+      // Loaded here, not imported: supabase-js would otherwise be in the
+      // first load of every page, guests' included (Phase 6, task 4).
+      const { createClient } = await import("@/lib/supabase/browser");
       const { data } = await createClient()
         .from("settings")
         .select("min_app_version, company_phone")
