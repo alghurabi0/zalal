@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 
 import { MarkdownText, safeHref } from "@/components/articles/markdown";
 import { articleHighlights, plainText } from "@/lib/articles/highlights";
+import { adminEditErrorFor } from "@/lib/admin/edit-errors";
 import { readMinutes } from "@/lib/articles/read-time";
+import { saveArticleSchema, saveCategorySchema, slugSchema } from "@/lib/schemas/article";
 
 function render(markdown: string) {
   const template = document.createElement("template");
@@ -158,5 +160,63 @@ describe("MarkdownText", () => {
     expect(doc.textContent).toContain("مشفر");
     // A dropped autolink keeps its words as text, never as a link.
     expect((doc.firstChild as HTMLElement).innerHTML).not.toMatch(/href="(javascript|data)/i);
+  });
+});
+
+describe("article schemas", () => {
+  const base = {
+    id: null,
+    slug: "tank-lid",
+    title: "غطاء الخزان مهم",
+    categoryId: 1,
+    coverPath: null,
+    body: "",
+    featured: false,
+    status: "draft" as const,
+  };
+
+  it("takes a Latin slug, lowercased and trimmed", () => {
+    expect(slugSchema.parse("  Tank-Lid ")).toBe("tank-lid");
+    for (const bad of ["ab", "tank lid", "tank--lid", "-tank", "خزان", "a".repeat(81)]) {
+      expect(slugSchema.safeParse(bad).success, bad).toBe(false);
+    }
+  });
+
+  it("saves an empty draft but publishes only with a body", () => {
+    expect(saveArticleSchema.safeParse(base).success).toBe(true);
+    expect(saveArticleSchema.safeParse({ ...base, status: "published" }).success).toBe(false);
+    expect(saveArticleSchema.safeParse({ ...base, status: "published", body: "نص" }).success).toBe(
+      true,
+    );
+  });
+
+  it("takes covers only from articles/", () => {
+    expect(saveArticleSchema.safeParse({ ...base, coverPath: "articles/x.webp" }).success).toBe(
+      true,
+    );
+    for (const bad of ["x.webp", "articles/a/x.webp", "brand/x.webp"]) {
+      expect(saveArticleSchema.safeParse({ ...base, coverPath: bad }).success, bad).toBe(false);
+    }
+  });
+
+  it("trims and checks category names", () => {
+    expect(saveCategorySchema.parse({ id: null, name: "  صحة  ", icon: "droplet" }).name).toBe(
+      "صحة",
+    );
+    expect(saveCategorySchema.safeParse({ id: null, name: "ص", icon: "droplet" }).success).toBe(
+      false,
+    );
+    expect(saveCategorySchema.safeParse({ id: null, name: "صحة", icon: "star" }).success).toBe(
+      false,
+    );
+  });
+
+  it("maps the A11 error codes", () => {
+    expect(adminEditErrorFor({ code: "ZL009" })).toBe("upload_not_found");
+    expect(adminEditErrorFor({ code: "ZL030" })).toBe("category_in_use");
+    expect(adminEditErrorFor({ code: "ZL031" })).toBe("slug_taken");
+    expect(adminEditErrorFor({ code: "ZL032" })).toBe("slug_locked");
+    expect(adminEditErrorFor({ code: "ZL033" })).toBe("category_name_taken");
+    expect(adminEditErrorFor({ code: "22023", message: "invalid_order" })).toBe("invalid");
   });
 });

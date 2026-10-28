@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/input";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from "@/lib/admin/audit";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
+import { CATEGORY_ICONS, type CategoryIcon } from "@/lib/articles/category-icons";
 import { ticketNumber } from "@/lib/certificates/format";
 import { TICKET_STATUSES } from "@/lib/tickets/format";
 import {
@@ -277,11 +278,44 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
         </Link>
       );
     }
+    case "articles": {
+      // A deleted article keeps the title it was logged with.
+      const title = names.articles.get(entry.entityId) ?? diffString(entry.diff, "title");
+      if (!names.articles.has(entry.entityId)) return <>{title ?? entry.entityId.slice(0, 8)}</>;
+      return (
+        <Link
+          href={routes.adminArticle(entry.entityId)}
+          className="inline-flex min-h-11 items-center font-extrabold text-teal underline-offset-2 hover:underline"
+        >
+          {title}
+        </Link>
+      );
+    }
+    case "article_categories":
+      if (entry.action === "category.reorder") return <>{t("entities.article_categories")}</>;
+      return (
+        <>
+          {names.categories.get(Number(entry.entityId)) ??
+            diffString(entry.diff, "name") ??
+            entry.entityId}
+        </>
+      );
     case "settings":
       return <>{t("entities.settings")}</>;
     default:
       return <bdi dir="ltr">{entry.entityId}</bdi>;
   }
+}
+
+function isCategoryIcon(value: string): value is CategoryIcon {
+  return (CATEGORY_ICONS as readonly string[]).includes(value);
+}
+
+/** A plain string value the row was logged with ("title" of a new article). */
+function diffString(diff: Json, field: string): string | null {
+  if (typeof diff !== "object" || diff === null || Array.isArray(diff)) return null;
+  const value = diff[field];
+  return typeof value === "string" ? value : null;
 }
 
 /** Fields with a label (Admin.audit.fields), settings columns included. */
@@ -316,6 +350,15 @@ const KNOWN_FIELDS = [
   "maintenance_mode",
   "ticket_response_hours",
   "note",
+  "slug",
+  "title",
+  "category_id",
+  "cover",
+  "body_length",
+  "featured",
+  "status",
+  "icon",
+  "order",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -376,6 +419,7 @@ async function Value({
   names: Names;
 }): Promise<ReactNode> {
   const t = await getTranslations("Admin.audit");
+  const tContent = await getTranslations("Admin.content");
   if (field === null && action === "order.transition" && typeof value === "string") {
     if ((ORDER_STATUSES as readonly string[]).includes(value)) {
       return <StatusBadge status={value as (typeof ORDER_STATUSES)[number]} />;
@@ -395,6 +439,22 @@ async function Value({
   }
   if (value === null) return <>{t("none")}</>;
   if (typeof value === "boolean") return <>{value ? t("yes") : t("no")}</>;
+  if (action?.startsWith("article.")) {
+    if (field === "category_id" && typeof value === "number") {
+      return <>{names.categories.get(value) ?? value}</>;
+    }
+    if (field === "status" && (value === "draft" || value === "published")) {
+      return <>{t(`articleStatus.${value}`)}</>;
+    }
+    if (field === "cover") return <>{t("coverSet")}</>;
+    if (field === "slug" && typeof value === "string") return <bdi dir="ltr">{value}</bdi>;
+  }
+  if (action?.startsWith("category.")) {
+    if (field === "icon" && typeof value === "string" && isCategoryIcon(value)) {
+      return <>{tContent(`icons.${value}`)}</>;
+    }
+    if (field === "order" && Array.isArray(value)) return <>{value.join("، ")}</>;
+  }
   if (field === "role" && (value === "customer" || value === "crew" || value === "admin")) {
     return <>{t(`roles.${value}`)}</>;
   }

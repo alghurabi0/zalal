@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import type { CategoryIcon } from "@/components/articles/category-icon";
+import type { CategoryIcon } from "@/lib/articles/category-icons";
 import { createClient } from "@/lib/supabase/server";
 
 // Reads for Tips, Article (N9) and Home's tips strip (spec §5.5, §5.6, N9).

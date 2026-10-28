@@ -2,19 +2,7 @@ import { CircleHelp, Droplet, Lightbulb, type LucideProps, ShieldCheck, Sun } fr
 import type { ComponentType } from "react";
 
 import { TankLidIcon } from "@/components/icons/tank-icons";
-import type { Database } from "@/lib/database.types";
-
-export type CategoryIcon = Database["public"]["Enums"]["category_icon"];
-
-/** The category icons A11 offers, in its picker's order. */
-export const CATEGORY_ICONS = [
-  "droplet",
-  "sun",
-  "lid",
-  "lightbulb",
-  "help",
-  "shield",
-] as const satisfies readonly CategoryIcon[];
+import type { CategoryIcon } from "@/lib/articles/category-icons";
 
 /**
  * A category's glyph (Tips.dc.html: a drop for صحة, a sun for الصيف, a tank

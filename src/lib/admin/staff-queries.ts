@@ -75,6 +75,8 @@ export const AUDIT_ENTITIES = [
   "crews",
   "profiles",
   "tickets",
+  "articles",
+  "article_categories",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -150,11 +152,33 @@ function crewIdsIn(entry: AuditEntry): string[] {
   return [diff.from, diff.to].filter((id): id is string => typeof id === "string");
 }
 
-/** Order numbers and crew names the page's rows point at, for links and labels. */
+/** Category ids a log row names: the category, or an article's old and new one. */
+function categoryIdsIn(entry: AuditEntry): number[] {
+  if (entry.entity === "article_categories") {
+    const id = Number(entry.entityId);
+    return Number.isInteger(id) ? [id] : [];
+  }
+  const diff = entry.diff;
+  if (entry.entity !== "articles" || typeof diff !== "object" || diff === null) return [];
+  if (Array.isArray(diff)) return [];
+  const category = diff.category_id;
+  const values =
+    typeof category === "object" && category !== null && !Array.isArray(category)
+      ? [category.from, category.to]
+      : [category];
+  return values.filter((id): id is number => typeof id === "number");
+}
+
+/**
+ * Order numbers, crew names, article titles and category names the page's
+ * rows point at, for links and labels.
+ */
 export async function auditNames(entries: AuditEntry[]): Promise<{
   orders: Map<string, number>;
   crews: Map<string, string>;
   tickets: Map<string, number>;
+  articles: Map<string, string>;
+  categories: Map<number, string>;
 }> {
   const supabase = await createClient();
   const idsOf = (entity: string) => [
@@ -163,18 +187,30 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   const orderIds = idsOf("orders");
   const ticketIds = idsOf("tickets");
   const crewIds = [...new Set(entries.flatMap(crewIdsIn))];
+  const articleIds = idsOf("articles");
+  const categoryIds = [...new Set(entries.flatMap(categoryIdsIn))];
   const none = Promise.resolve({ data: [], error: null });
-  const [orders, crews, tickets] = await Promise.all([
+  const [orders, crews, tickets, articles, categories] = await Promise.all([
     orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
     crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
     ticketIds.length ? supabase.from("tickets").select("id, number").in("id", ticketIds) : none,
+    articleIds.length ? supabase.from("articles").select("id, title").in("id", articleIds) : none,
+    categoryIds.length
+      ? supabase.from("article_categories").select("id, name").in("id", categoryIds)
+      : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
   if (crews.error) throw new Error(`Audit crews read failed: ${crews.error.message}`);
   if (tickets.error) throw new Error(`Audit tickets read failed: ${tickets.error.message}`);
+  if (articles.error) throw new Error(`Audit articles read failed: ${articles.error.message}`);
+  if (categories.error) {
+    throw new Error(`Audit categories read failed: ${categories.error.message}`);
+  }
   return {
     orders: new Map(orders.data.map((o) => [o.id, o.number])),
     crews: new Map(crews.data.map((c) => [c.id, c.name])),
     tickets: new Map(tickets.data.map((ticket) => [ticket.id, ticket.number])),
+    articles: new Map(articles.data.map((article) => [article.id, article.title])),
+    categories: new Map(categories.data.map((category) => [category.id, category.name])),
   };
 }
