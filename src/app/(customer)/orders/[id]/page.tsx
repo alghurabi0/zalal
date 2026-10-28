@@ -17,6 +17,7 @@ import { cn } from "@/lib/cn";
 import { formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { getOrder, type OrderDetails } from "@/lib/orders/queries";
+import { VIDEO_RETENTION_DAYS, videosExpired } from "@/lib/orders/retention";
 import { actionHref, canFollowJob, changeState, primaryAction } from "@/lib/orders/status";
 import { buildTimeline, type TimelineEntry } from "@/lib/orders/timeline";
 import { routes } from "@/lib/routes";
@@ -71,6 +72,9 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
     );
   }
 
+  // After the read: the page is already dynamic, so reading the clock is fine.
+  const videosGone = videosExpired(order.status, order.events, new Date());
+
   return (
     <>
       <LiveOrders customerId={viewer.id} />
@@ -90,7 +94,7 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
             <p className="text-15 whitespace-pre-line text-body-2">{order.customer_note}</p>
           </Section>
         )}
-        {order.media.length > 0 && <Files order={order} />}
+        {(order.media.length > 0 || videosGone) && <Files order={order} videosGone={videosGone} />}
         <Timeline entries={buildTimeline(order.events)} />
         <Help orderId={order.id} />
       </div>
@@ -214,42 +218,49 @@ async function Summary({ order }: { order: OrderDetails }) {
   );
 }
 
-async function Files({ order }: { order: OrderDetails }) {
+async function Files({ order, videosGone }: { order: OrderDetails; videosGone: boolean }) {
   const t = await getTranslations("Order");
   let photos = 0;
   let videos = 0;
   return (
     <Section title={t("files")}>
-      <ul className="grid grid-cols-3 gap-2">
-        {order.media.map((file) => {
-          const label =
-            file.mediaType === "photo" ? t("photo", { n: ++photos }) : t("video", { n: ++videos });
-          return (
-            <li key={file.id} className="aspect-square overflow-hidden rounded-chip bg-well">
-              {!file.url ? (
-                <span className="flex size-full items-center justify-center p-1 text-center text-11 text-muted">
-                  {t("fileMissing")}
-                </span>
-              ) : file.mediaType === "photo" ? (
-                <a href={file.url} target="_blank" rel="noreferrer" className="block size-full">
-                  {/* Private files behind signed links that expire in an hour:
+      {videosGone && (
+        <p className="text-13 text-muted">{t("videosDeleted", { days: VIDEO_RETENTION_DAYS })}</p>
+      )}
+      {order.media.length > 0 && (
+        <ul className="grid grid-cols-3 gap-2">
+          {order.media.map((file) => {
+            const label =
+              file.mediaType === "photo"
+                ? t("photo", { n: ++photos })
+                : t("video", { n: ++videos });
+            return (
+              <li key={file.id} className="aspect-square overflow-hidden rounded-chip bg-well">
+                {!file.url ? (
+                  <span className="flex size-full items-center justify-center p-1 text-center text-11 text-muted">
+                    {t("fileMissing")}
+                  </span>
+                ) : file.mediaType === "photo" ? (
+                  <a href={file.url} target="_blank" rel="noreferrer" className="block size-full">
+                    {/* Private files behind signed links that expire in an hour:
                       next/image would cache them on the server, so a plain img. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={file.url} alt={label} className="size-full object-cover" />
-                </a>
-              ) : (
-                <video
-                  src={file.url}
-                  controls
-                  preload="metadata"
-                  aria-label={label}
-                  className="size-full bg-navy object-cover"
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={file.url} alt={label} className="size-full object-cover" />
+                  </a>
+                ) : (
+                  <video
+                    src={file.url}
+                    controls
+                    preload="metadata"
+                    aria-label={label}
+                    className="size-full bg-navy object-cover"
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Section>
   );
 }

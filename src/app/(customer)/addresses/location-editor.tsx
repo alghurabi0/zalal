@@ -149,7 +149,7 @@ function Editor({
             : null;
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-phone flex-col overflow-hidden bg-map-bg">
+    <main className="mx-auto flex h-dvh w-full max-w-phone flex-col overflow-hidden bg-map-bg">
       {outOfArea && (
         <div
           role="alertdialog"
@@ -292,6 +292,6 @@ function Editor({
           </Button>
         </form>
       </SheetPanel>
-    </div>
+    </main>
   );
 }

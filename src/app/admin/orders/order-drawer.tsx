@@ -169,7 +169,7 @@ async function CertificateAndRating({ order }: { order: AdminOrderDetails }) {
         {rating ? (
           <>
             <p className="flex items-center gap-2 text-15 font-bold">
-              <span aria-hidden className="text-star" dir="ltr">
+              <span aria-hidden className="text-warn-icon" dir="ltr">
                 {"★".repeat(rating.stars)}
                 <span className="text-track">{"★".repeat(5 - rating.stars)}</span>
               </span>

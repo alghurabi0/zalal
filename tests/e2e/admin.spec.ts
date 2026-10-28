@@ -222,7 +222,8 @@ test("the board shows places taken and opens a slot's orders", async ({ page }) 
   await page.goto("/admin/orders/board");
   const link = page.locator(`a[href*="slot=${slot.id}"][href*="date=${date}"]`);
   await expect(link).toHaveText(/1\/2/);
-  await expect(link).toHaveAttribute("aria-label", /1 من 2/);
+  // The visible count leads the accessible name, then the day in words.
+  await expect(link).toHaveAccessibleName(/^1\/2 محجوزة، /);
   await screenshot(page, "admin-board");
   await link.click();
   await expect(page).toHaveURL(new RegExp(`date=${date}.*slot=${slot.id}`));

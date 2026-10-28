@@ -150,7 +150,7 @@ async function Articles({ searchParams }: PageProps<"/admin/content">) {
                   </td>
                   <td className="px-3 py-3">
                     {article.featured && (
-                      <span className="inline-flex items-center gap-1 text-13 font-bold text-star">
+                      <span className="inline-flex items-center gap-1 text-13 font-bold text-warn-icon">
                         <Star aria-hidden className="size-4 fill-current" />
                         {t("featured")}
                       </span>

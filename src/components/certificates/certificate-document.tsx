@@ -153,7 +153,7 @@ export async function CertificateDocument({
           </div>
         </div>
         <div className="flex items-center justify-center rounded-card border-2 border-dashed border-track p-4">
-          <span className="text-14 font-bold text-control-off">{t("stamp")}</span>
+          <span className="text-14 font-bold text-muted">{t("stamp")}</span>
         </div>
       </div>
 

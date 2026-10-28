@@ -194,7 +194,7 @@ async function RatingTable({ ratings }: { ratings: AdminRatingRow[] }) {
                 </span>
               </td>
               <td className="px-3 py-3 whitespace-nowrap">
-                <span className="flex items-center gap-1 font-bold text-star">
+                <span className="flex items-center gap-1 font-bold text-warn-icon">
                   <Star aria-hidden className="size-4" fill="currentColor" />
                   {t("stars", { n: rating.stars })}
                 </span>

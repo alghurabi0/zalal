@@ -103,7 +103,8 @@ async function Tabs({ active }: { active: OrdersTab }) {
               replace
               aria-current={tab === active ? "page" : undefined}
               className={cn(
-                "flex h-10 items-center justify-center rounded-10 text-14 font-extrabold",
+                // 40px as drawn; the strip makes the touch target 48px.
+                "relative flex h-10 items-center justify-center rounded-10 text-14 font-extrabold after:absolute after:inset-x-0 after:-inset-y-1",
                 tab === active ? "bg-surface text-navy shadow-segment" : "text-muted",
               )}
             >
