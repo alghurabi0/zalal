@@ -96,6 +96,88 @@ export type Database = {
           },
         ];
       };
+      article_categories: {
+        Row: {
+          created_at: string;
+          icon: Database["public"]["Enums"]["category_icon"];
+          id: number;
+          name: string;
+          sort: number;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          icon?: Database["public"]["Enums"]["category_icon"];
+          id?: never;
+          name: string;
+          sort?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          icon?: Database["public"]["Enums"]["category_icon"];
+          id?: never;
+          name?: string;
+          sort?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      articles: {
+        Row: {
+          body_md: string;
+          category_id: number;
+          cover_path: string | null;
+          created_at: string;
+          featured: boolean;
+          id: string;
+          published_at: string | null;
+          read_minutes: number | null;
+          slug: string;
+          status: Database["public"]["Enums"]["article_status"];
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          body_md?: string;
+          category_id: number;
+          cover_path?: string | null;
+          created_at?: string;
+          featured?: boolean;
+          id?: string;
+          published_at?: string | null;
+          read_minutes?: never;
+          slug: string;
+          status?: Database["public"]["Enums"]["article_status"];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          body_md?: string;
+          category_id?: number;
+          cover_path?: string | null;
+          created_at?: string;
+          featured?: boolean;
+          id?: string;
+          published_at?: string | null;
+          read_minutes?: never;
+          slug?: string;
+          status?: Database["public"]["Enums"]["article_status"];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "articles_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "article_categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       blocked_dates: {
         Row: {
           created_at: string;
@@ -1369,6 +1451,8 @@ export type Database = {
         };
         Returns: number;
       };
+      admin_delete_article: { Args: { p_id: string }; Returns: string };
+      admin_delete_category: { Args: { p_id: number }; Returns: undefined };
       admin_rating_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1377,6 +1461,31 @@ export type Database = {
         }[];
       };
       admin_remove_admin: { Args: { p_user_id: string }; Returns: undefined };
+      admin_reorder_categories: { Args: { p_ids: number[] }; Returns: undefined };
+      admin_save_article: {
+        Args: {
+          p_body_md: string;
+          p_category_id: number;
+          p_cover_path: string;
+          p_featured: boolean;
+          p_id: string;
+          p_slug: string;
+          p_status: Database["public"]["Enums"]["article_status"];
+          p_title: string;
+        };
+        Returns: {
+          article_id: string;
+          replaced_cover: string;
+        }[];
+      };
+      admin_save_category: {
+        Args: {
+          p_icon: Database["public"]["Enums"]["category_icon"];
+          p_id: number;
+          p_name: string;
+        };
+        Returns: number;
+      };
       admin_save_service_area: {
         Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
         Returns: Record<string, unknown>;
@@ -1608,7 +1717,9 @@ export type Database = {
     Enums: {
       address_label: "home" | "family" | "work";
       app_role: "customer" | "crew" | "admin";
+      article_status: "draft" | "published";
       cancel_reason: "plans_changed" | "time_unsuitable" | "other";
+      category_icon: "droplet" | "sun" | "lid" | "lightbulb" | "help" | "shield";
       chat_author: "customer" | "admin" | "system";
       chat_message_kind: "message" | "auto_reply" | "no_show" | "ticket";
       chat_topic: "reschedule" | "cancel" | "price" | "complaint";
@@ -1764,7 +1875,9 @@ export const Constants = {
     Enums: {
       address_label: ["home", "family", "work"],
       app_role: ["customer", "crew", "admin"],
+      article_status: ["draft", "published"],
       cancel_reason: ["plans_changed", "time_unsuitable", "other"],
+      category_icon: ["droplet", "sun", "lid", "lightbulb", "help", "shield"],
       chat_author: ["customer", "admin", "system"],
       chat_message_kind: ["message", "auto_reply", "no_show", "ticket"],
       chat_topic: ["reschedule", "cancel", "price", "complaint"],

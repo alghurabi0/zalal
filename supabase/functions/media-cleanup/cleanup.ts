@@ -7,8 +7,10 @@ export { serviceKeyFrom };
 
 // The nightly cleanup of uploads nothing uses (spec §7 Storage): order-media
 // files no order uses, chat-media files no message sent (migration chat) and
-// ticket-media files no ticket attached (migration tickets_app). pg_cron
-// posts {"folder": "customer" | "crew" | "chat" | "ticket"} here through pg_net
+// ticket-media files no ticket attached (migration tickets_app) and article
+// covers no article uses (public-content/articles/, migration articles).
+// pg_cron posts {"folder": "customer" | "crew" | "chat" | "ticket" |
+// "content"} here through pg_net
 // (private.invoke_media_cleanup, migration media_cleanup) with the job's
 // secret in x-media-cleanup-secret. The rules for what may go live in
 // Postgres (public.unattached_media); this only deletes, through the Storage
@@ -18,7 +20,7 @@ export { serviceKeyFrom };
 export const SECRET_HEADER = "x-media-cleanup-secret";
 
 export const requestSchema = z
-  .object({ folder: z.enum(["customer", "crew", "chat", "ticket"]) })
+  .object({ folder: z.enum(["customer", "crew", "chat", "ticket", "content"]) })
   .strict();
 export type Folder = z.infer<typeof requestSchema>["folder"];
 
@@ -28,6 +30,7 @@ export const BUCKETS = {
   crew: "order-media",
   chat: "chat-media",
   ticket: "ticket-media",
+  content: "public-content",
 } as const satisfies Record<Folder, string>;
 
 const pageSchema = z.array(z.object({ name: z.string().min(1), created_at: z.string().min(1) }));
