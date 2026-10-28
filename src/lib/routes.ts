@@ -45,6 +45,16 @@ export const routes = {
   /** Chat with the next message tagged with an order (مساعدة, Tracking, Job progress). */
   chatAbout: (orderId: string) => `/chat?order=${encodeURIComponent(orderId)}`,
   profile: "/profile",
+  /** Edit profile (N10): the name, and the way to change the phone. */
+  editProfile: "/profile/edit",
+  /** Phone change (N10): a code to the current number, then the new one. */
+  changePhone: "/profile/phone",
+  /** The code screen of the phone change, for whichever number is being proved. */
+  changePhoneVerify: "/profile/phone/verify",
+  /** Certificates (N12): one card per certificate, each opening Report. */
+  certificates: "/profile/certificates",
+  /** Settings (N13): language, Terms, Privacy, log out everywhere, delete account. */
+  settings: "/profile/settings",
   /** Issue report (§5.17); `?order=` picks the related order. */
   issue: "/issue",
   issueAbout: (orderId: string) => `/issue?order=${encodeURIComponent(orderId)}`,

@@ -23,10 +23,13 @@ function fakeAdmin(opts: {
   requestRow?: Record<string, unknown>;
   checkRow?: Record<string, unknown>;
   profile?: Profile | null;
+  rpcErrors?: Record<string, { code?: string; message: string }>;
 }) {
-  type RpcResult = { data: unknown; error: { message: string } | null };
+  type RpcResult = { data: unknown; error: { code?: string; message: string } | null };
   const rpc = vi.fn<(name: string, args: Record<string, unknown>) => Promise<RpcResult>>(
     async (name) => {
+      const rpcError = opts.rpcErrors?.[name];
+      if (rpcError) return { data: null, error: rpcError };
       if (name === "request_otp") {
         return {
           data: opts.requestRow ?? {
@@ -344,5 +347,95 @@ describe("verifyOtp", () => {
       signIn: async () => ({ error: { code: "user_banned" } }),
     });
     expect(await svc.verifyOtp(input)).toEqual({ ok: false, reason: "account_unavailable" });
+  });
+});
+
+describe("phone change", () => {
+  const current = { phone: "07801234567", code: "123456" };
+  const next = { phone: "07709876543", code: "654321" };
+
+  it("checks the current number's code without signing in", async () => {
+    const db = fakeAdmin({});
+    const svc = service(db.admin);
+    expect(await svc.verifyCurrentPhone(current)).toEqual({ ok: true });
+    expect(db.rpc).toHaveBeenCalledWith("check_otp", {
+      p_phone: "+9647801234567",
+      p_code_hash: hashOtpCode("secret", "+9647801234567", "123456"),
+    });
+    expect(svc.signIn).not.toHaveBeenCalled();
+  });
+
+  it("passes on a wrong code for the current number", async () => {
+    const db = fakeAdmin({
+      checkRow: { result: "wrong_code", attempts_left: 2, locked_until: null },
+    });
+    expect(await service(db.admin).verifyCurrentPhone(current)).toEqual({
+      ok: false,
+      reason: "wrong_code",
+      attemptsLeft: 2,
+    });
+  });
+
+  it("says whether a new number is free", async () => {
+    expect(await service(fakeAdmin({}).admin).newPhoneAvailable("u1", "07709876543")).toEqual({
+      ok: true,
+    });
+    const taken = fakeAdmin({
+      profile: { id: "u2", role: "customer", full_name: "B", deleted_at: null },
+    });
+    expect(await service(taken.admin).newPhoneAvailable("u1", "07709876543")).toEqual({
+      ok: false,
+      reason: "phone_taken",
+    });
+    const own = fakeAdmin({
+      profile: { id: "u1", role: "customer", full_name: "A", deleted_at: null },
+    });
+    expect(await service(own.admin).newPhoneAvailable("u1", "07709876543")).toEqual({
+      ok: false,
+      reason: "same_phone",
+    });
+    expect(await service(own.admin).newPhoneAvailable("u1", "0770")).toEqual({
+      ok: false,
+      reason: "invalid_input",
+    });
+  });
+
+  it("moves the account after the new number's code, without signing in", async () => {
+    const db = fakeAdmin({});
+    const svc = service(db.admin);
+    expect(await svc.changePhone("u1", next)).toEqual({ ok: true });
+    expect(db.rpc).toHaveBeenCalledWith("change_login_phone", {
+      p_user_id: "u1",
+      p_phone: "+9647709876543",
+    });
+    expect(svc.signIn).not.toHaveBeenCalled();
+  });
+
+  it("doesn't move the account on a wrong code", async () => {
+    const db = fakeAdmin({
+      checkRow: { result: "expired", attempts_left: null, locked_until: null },
+    });
+    expect(await service(db.admin).changePhone("u1", next)).toEqual({
+      ok: false,
+      reason: "expired",
+    });
+    expect(db.rpc).not.toHaveBeenCalledWith("change_login_phone", expect.anything());
+  });
+
+  it.each([
+    [{ code: "ZL040", message: "phone_taken" }, "phone_taken"],
+    [{ code: "22023", message: "same_phone" }, "same_phone"],
+    [{ code: "P0002", message: "account_not_found" }, "account_unavailable"],
+    [{ code: "42501", message: "not_allowed" }, "account_unavailable"],
+  ])("maps %o to %s", async (error, reason) => {
+    const db = fakeAdmin({ rpcErrors: { change_login_phone: error } });
+    expect(await service(db.admin).changePhone("u1", next)).toEqual({ ok: false, reason });
+  });
+
+  it("throws on another database error", async () => {
+    const db = fakeAdmin({ rpcErrors: { change_login_phone: { message: "boom" } } });
+    await expect(service(db.admin).changePhone("u1", next)).rejects.toThrow(
+      "OTP phone change failed: boom",
+    );
   });
 });
