@@ -2,7 +2,7 @@
 
 Plan for spec §12.3 "Profile, Edit profile (N10), Certificates (N12), Settings (N13) with account deletion, Terms/Privacy placeholders (N14), N16 states". Branch `claude/phase6-task3-profile` from `origin/main` after PR 28. This file is deleted when the task ships, and its settled answers move into the spec.
 
-Open questions are at the end (§9). Each has a recommended default listed first. Nothing is built until they are answered.
+Open questions are at the end (§9). All 15 were settled on Oct 28, 2026 with the recommended default (a); the plan above already assumes them.
 
 ## 1. Findings
 
@@ -149,7 +149,7 @@ Departures to note in the migration and in §7:
 - Writing `auth.users`, `auth.sessions` and `auth.refresh_tokens` from SQL depends on Auth's schema. The integration test pins it, and the hosted projects run the same Auth version as local through the CLI.
 - An access token outlives a global logout or a deletion by up to 1 h. RLS already returns nothing to a deleted account, and a logged-out-everywhere token stays valid until it expires. That is accepted (as §13 does today).
 
-## 9. Open questions (recommended default first)
+## 9. Settled questions (Oct 28, 2026: option (a) for each)
 
 1. **Log out on all devices (§13 "Push after a session ends").** (a) Yes, a row in N13: a global sign-out plus deleting all of the user's push subscriptions. (b) No; keep it accepted for v1.
 2. **Chat after deletion (§13).** (a) Delete the thread, its messages (staff replies included) and its files. (b) Keep the thread for support history but clear the customer's text and files. (c) Keep it as is, readable by admins.
