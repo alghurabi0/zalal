@@ -340,6 +340,7 @@ set search_path = ''
 as $$
   select jsonb_build_object(
     'subscription_id', p_sub.id,
+    'address_id', p_sub.address_id,
     'label', a.label,
     'district', a.district
   ) || jsonb_strip_nulls(jsonb_build_object(
@@ -662,8 +663,9 @@ begin
 end;
 $$;
 
--- A2's "verify subscription": drops an order's coverage, or puts its
--- address's subscription on it, while the order is pending or confirmed.
+-- A2's "verify subscription": puts the address's subscription on an order
+-- while it is pending or confirmed, or drops an order's coverage in any
+-- status but completed.
 create function public.admin_set_order_subscription(p_order_id uuid, p_use boolean)
 returns void
 language plpgsql
@@ -681,7 +683,12 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'order_not_found';
   end if;
-  if v_order.status not in ('pending_confirmation', 'confirmed') then
+  -- Coverage is put on only while the order waits for its visit; it can be
+  -- dropped until the order is completed (a subscription cancelled while
+  -- the crew is on its way, or an order brought back from cancelled).
+  if v_order.status = 'completed'
+    or (coalesce(p_use, false) and v_order.status not in ('pending_confirmation', 'confirmed'))
+  then
     raise exception using errcode = 'ZL038', message = 'subscription_change_not_allowed';
   end if;
 
@@ -1124,6 +1131,27 @@ begin
       -- The crew's note is internal, like every staff note (settled Oct 26, 2026).
       v_reason := nullif(btrim(v_payload ->> 'note'), '');
     end if;
+  end if;
+
+  -- A covered order collects no cash, whoever completes it.
+  if v_order.subscription_id is not null then
+    v_cash := false;
+  end if;
+  -- An override that brings a covered order back from cancelled or no-show
+  -- (which hold no visit) takes a visit again: the same checks as a booking,
+  -- with the subscription locked (RLS audit). The admin drops the coverage
+  -- first (admin_set_order_subscription) to bring it back as a cash order.
+  if v_override
+    and v_order.subscription_id is not null
+    and v_from in ('cancelled', 'no_show')
+    and p_to_status not in ('cancelled', 'no_show')
+    and private.usable_subscription(
+      v_order.address_id, v_order.service_date,
+      (select sum(i.qty)::int from public.order_items as i where i.order_id = v_order.id),
+      v_order.id
+    ) is distinct from v_order.subscription_id
+  then
+    raise exception using errcode = 'ZL034', message = 'no_subscription';
   end if;
 
   -- Places.

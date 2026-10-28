@@ -16,13 +16,14 @@
 -- admin_end_subscription(id, reason): a request is declined (the customer
 -- is told, subscription_declined), an active one cancelled; reason required.
 -- admin_add_subscription_note(id, note): an internal note, 1–1000.
--- admin_set_order_subscription(order_id, use): while the order is pending or
--- confirmed (ZL038 otherwise), drops its coverage or puts its address's
--- subscription on it, with create_order's checks (ZL034).
+-- admin_set_order_subscription(order_id, use): puts the address's
+-- subscription on an order while it is pending or confirmed, with
+-- create_order's checks (ZL034), and drops an order's coverage in any status
+-- but completed (ZL038 otherwise).
 begin;
 \ir _helpers.psql
 
-select plan(45);
+select plan(47);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647504444444', 'admin');
@@ -240,6 +241,18 @@ select tests.authenticate_as(tests.admin());
 select throws_ok(
   $$ select public.admin_set_order_subscription(tests.id('done'), true) $$,
   'ZL038', 'subscription_change_not_allowed', 'a completed order keeps what it had'
+);
+select tests.clear_authentication();
+insert into tests.ids values ('gone', tests.create_order(tests.a(), 'cancelled'));
+update public.orders set subscription_id = tests.id('request') where id = tests.id('gone');
+select tests.authenticate_as(tests.admin());
+select throws_ok(
+  $$ select public.admin_set_order_subscription(tests.id('gone'), true) $$,
+  'ZL038', 'subscription_change_not_allowed', 'coverage is put only on an order waiting for its visit'
+);
+select lives_ok(
+  $$ select public.admin_set_order_subscription(tests.id('gone'), false) $$,
+  'but dropped from a cancelled one, so it can come back as a cash order'
 );
 
 -- End and notes ---------------------------------------------------------------------------------

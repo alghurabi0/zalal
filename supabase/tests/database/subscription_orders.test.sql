@@ -17,7 +17,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(29);
+select plan(34);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -178,6 +178,16 @@ select is(
   'which gives the visit back'
 );
 
+select lives_ok(
+  $$ select public.transition_order(tests.id('job'), 'completed', '{"override": true, "reason": "تم", "cash_collected": true}') $$,
+  'an admin completes it again'
+);
+select is(
+  (select cash_collected from public.orders where id = tests.id('job')),
+  false,
+  'and a covered order records no cash even when the override says so'
+);
+
 -- Confirming re-checks coverage ---------------------------------------------------------------------
 
 select tests.clear_authentication();
@@ -195,6 +205,21 @@ select tests.authenticate_as(tests.user_id('+9647504444444'));
 select lives_ok(
   $$ select public.transition_order(tests.id('pending'), 'confirmed') $$,
   'with the subscription active it is confirmed'
+);
+
+-- 'job' (completed) and 'pending' (confirmed) use and hold both visits now;
+-- bringing the cancelled covered2 back would take a third.
+select throws_ok(
+  $$ select public.transition_order(tests.id('covered2'), 'confirmed', '{"override": true, "reason": "رجعناه"}') $$,
+  'ZL034', 'no_visits_left', 'an override cannot bring a covered order back past its visits'
+);
+select lives_ok(
+  $$ select public.admin_set_order_subscription(tests.id('covered2'), false) $$,
+  'the admin drops its coverage'
+);
+select lives_ok(
+  $$ select public.transition_order(tests.id('covered2'), 'confirmed', '{"override": true, "reason": "رجعناه"}') $$,
+  'and brings it back as a cash order'
 );
 
 -- Rescheduling inside the period ------------------------------------------------------------------
