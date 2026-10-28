@@ -22,6 +22,7 @@ export function OrderCard({ order }: { order: OrderSummary }) {
   const t = useTranslations("Orders");
   const tBooking = useTranslations("Booking");
   const tLabels = useTranslations("Location.labels");
+  const tUI = useTranslations("UI");
   const Icon = typeIcons[order.lines[0]?.tank_type ?? "roof"];
   const action = primaryAction(order.status);
 
@@ -64,9 +65,13 @@ export function OrderCard({ order }: { order: OrderSummary }) {
               : order.district}
           </span>
         </span>
-        <span className="text-15 font-black" dir="ltr">
-          {formatIQD(order.total_iqd)}
-        </span>
+        {order.subscription_id ? (
+          <span className="text-13 font-bold text-ok-fg">{tUI("covered")}</span>
+        ) : (
+          <span className="text-15 font-black" dir="ltr">
+            {formatIQD(order.total_iqd)}
+          </span>
+        )}
       </div>
       <div className="relative z-10 flex gap-2">
         <Button href={actionHref(action, order.id)} size="sm" className="flex-1 text-14">

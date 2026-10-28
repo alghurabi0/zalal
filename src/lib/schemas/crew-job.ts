@@ -32,19 +32,26 @@ export const residualChlorineSchema = z
   .refine(oneDecimal, invalidChlorine)
   .nullable();
 
-/** C4. Each issue's message is the error key the form shows. */
-export const finishJobSchema = z.object({
-  orderId: z.uuid(),
-  cashCollected: z.literal(true, { error: "cash_not_collected" }),
-  sterilant: z
-    .string()
-    .trim()
-    .min(1, { error: "sterilant_required" })
-    .min(STERILANT_MIN, { error: "invalid_sterilant" })
-    .max(STERILANT_MAX, { error: "invalid_sterilant" }),
-  residualChlorine: residualChlorineSchema,
-  note: z.string().trim().max(STAFF_NOTE_MAX, { error: "note_too_long" }),
-});
+/**
+ * C4. Each issue's message is the error key the form shows. A subscription
+ * order (`covered`, Phase 6) has no cash to collect; the database decides
+ * from the order itself, so a wrong flag only gets cash_not_collected back.
+ */
+export const finishJobSchema = z
+  .object({
+    orderId: z.uuid(),
+    covered: z.boolean(),
+    cashCollected: z.boolean(),
+    sterilant: z
+      .string()
+      .trim()
+      .min(1, { error: "sterilant_required" })
+      .min(STERILANT_MIN, { error: "invalid_sterilant" })
+      .max(STERILANT_MAX, { error: "invalid_sterilant" }),
+    residualChlorine: residualChlorineSchema,
+    note: z.string().trim().max(STAFF_NOTE_MAX, { error: "note_too_long" }),
+  })
+  .refine((input) => input.covered || input.cashCollected, { error: "cash_not_collected" });
 
 /** The form error for a refused C4 input: the first issue's key, else "failed". */
 export function finishErrorOf(error: z.ZodError): CrewJobError {

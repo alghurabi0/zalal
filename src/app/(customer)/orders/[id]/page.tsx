@@ -203,7 +203,11 @@ async function Summary({ order }: { order: OrderDetails }) {
         </ul>
         <div className="flex justify-between border-t border-border pt-2 text-16 font-black">
           <span>{t("total")}</span>
-          <span>{tUI("iqd", { amount: formatIQD(order.total_iqd) })}</span>
+          {order.subscription_id ? (
+            <span className="text-ok-fg">{tUI("covered")}</span>
+          ) : (
+            <span>{tUI("iqd", { amount: formatIQD(order.total_iqd) })}</span>
+          )}
         </div>
       </div>
     </Card>

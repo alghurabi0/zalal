@@ -33,6 +33,7 @@ export function JobActions({
   orderId,
   status,
   amount,
+  covered,
   sterilantText,
 }: {
   userId: string;
@@ -40,6 +41,8 @@ export function JobActions({
   status: OrderStatus;
   /** The order total, formatted ("35,000 د.ع"). */
   amount: string;
+  /** A subscription order: nothing to collect, so C4 has no cash tick. */
+  covered: boolean;
   /** settings.sterilant_text, which C4 starts from. */
   sterilantText: string;
 }) {
@@ -56,6 +59,7 @@ export function JobActions({
           userId={userId}
           orderId={orderId}
           amount={amount}
+          covered={covered}
           sterilantText={sterilantText}
         >
           <Button size="footer" className="w-full">
@@ -142,23 +146,26 @@ const isFieldError = (error: CrewJobError | null): error is FinishFieldError =>
 
 /**
  * C4: the sterilant (from the company's text), the residual chlorine reading
- * (optional), the cash tick (always, until subscriptions in Phase 6) and an
+ * (optional), the cash tick (not for a subscription order) and an
  * internal note. Files still in the queue keep uploading afterwards.
  */
 function FinishSheet({
   userId,
   orderId,
   amount,
+  covered,
   sterilantText,
   children,
 }: {
   userId: string;
   orderId: string;
   amount: string;
+  covered: boolean;
   sterilantText: string;
   children: ReactNode;
 }) {
   const t = useTranslations("Crew.finish");
+  const tUI = useTranslations("UI");
   const tErrors = useTranslations("Crew.errors");
   const { open, setOpen, error, setError, pending, submit } = useSheetAction();
   const [cash, setCash] = useState(false);
@@ -183,7 +190,8 @@ function FinishSheet({
   const confirm = () => {
     const input = {
       orderId,
-      cashCollected: cash,
+      covered,
+      cashCollected: !covered && cash,
       sterilant,
       residualChlorine: parseChlorine(chlorine),
       note,
@@ -263,19 +271,25 @@ function FinishSheet({
             />
           )}
         </Field>
-        <label className="flex min-h-13 items-center gap-3 rounded-input border border-border px-4 text-15 font-bold">
-          <input
-            type="checkbox"
-            className="size-5.5 accent-navy"
-            checked={cash}
-            aria-invalid={error === "cash_not_collected" ? true : undefined}
-            onChange={(event) => {
-              setCash(event.target.checked);
-              setError(null);
-            }}
-          />
-          <span>{t("cash", { amount })}</span>
-        </label>
+        {covered ? (
+          <p className="flex min-h-13 items-center rounded-input bg-ok-bg px-4 text-15 font-bold text-ok-fg">
+            {tUI("covered")}
+          </p>
+        ) : (
+          <label className="flex min-h-13 items-center gap-3 rounded-input border border-border px-4 text-15 font-bold">
+            <input
+              type="checkbox"
+              className="size-5.5 accent-navy"
+              checked={cash}
+              aria-invalid={error === "cash_not_collected" ? true : undefined}
+              onChange={(event) => {
+                setCash(event.target.checked);
+                setError(null);
+              }}
+            />
+            <span>{t("cash", { amount })}</span>
+          </label>
+        )}
         {uploading > 0 && (
           <p role="status" className="text-14 text-body-2">
             {t("pending", { count: uploading })}

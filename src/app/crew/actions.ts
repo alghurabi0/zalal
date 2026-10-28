@@ -68,13 +68,16 @@ export async function advanceJob(input: AdvanceJobInput): Promise<CrewJobResult>
   return transition(parsed.data.orderId, parsed.data.toStatus, {});
 }
 
-/** خلصنا (C4): the cash tick, sterilant, residual chlorine and an internal note. */
+/**
+ * خلصنا (C4): the cash tick (none for a subscription order), sterilant,
+ * residual chlorine and an internal note.
+ */
 export async function finishJob(input: FinishJobInput): Promise<CrewJobResult> {
   const parsed = finishJobSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: finishErrorOf(parsed.error) };
-  const { orderId, sterilant, residualChlorine, note } = parsed.data;
+  const { orderId, cashCollected, sterilant, residualChlorine, note } = parsed.data;
   const result = await transition(orderId, "completed", {
-    cash_collected: true,
+    cash_collected: cashCollected,
     sterilant,
     residual_chlorine_mg_l: residualChlorine,
     note,

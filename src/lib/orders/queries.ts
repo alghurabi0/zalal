@@ -23,6 +23,8 @@ export type OrderSummary = {
   slot_start_at: string;
   slot_end_at: string;
   total_iqd: number;
+  /** Set when the order uses a subscription visit: nothing to pay (Phase 6). */
+  subscription_id: string | null;
   district: string;
   /** The address's label, while the address is still live. */
   label: AddressLabel | null;
@@ -30,7 +32,7 @@ export type OrderSummary = {
 };
 
 const baseColumns =
-  "id, number, status, service_date, slot_id, slot_start_at, slot_end_at, total_iqd, district, addresses(label)";
+  "id, number, status, service_date, slot_id, slot_start_at, slot_end_at, total_iqd, subscription_id, district, addresses(label)";
 const summaryColumns = `${baseColumns}, order_items(id, tank_type, size, qty)`;
 
 type SummaryRow = Omit<OrderSummary, "label" | "lines"> & {

@@ -16,7 +16,24 @@ export type BookingError =
   | "price_changed"
   /** P0002: the address or a saved tank was deleted meanwhile. */
   | "stale"
+  /** ZL034: the address's subscription can't cover this booking (Phase 6). */
+  | "no_subscription"
+  | "outside_subscription_period"
+  | "no_visits_left"
+  | "subscription_tanks_exceeded"
   | "failed";
+
+const SUBSCRIPTION_REASONS = [
+  "no_subscription",
+  "outside_subscription_period",
+  "no_visits_left",
+  "subscription_tanks_exceeded",
+] as const;
+
+export type SubscriptionBookingError = (typeof SUBSCRIPTION_REASONS)[number];
+
+export const isSubscriptionError = (error: BookingError | null): error is SubscriptionBookingError =>
+  SUBSCRIPTION_REASONS.some((reason) => reason === error);
 
 const byCode: Record<string, BookingError> = {
   ZL001: "outside_area",
@@ -29,7 +46,11 @@ const byCode: Record<string, BookingError> = {
   P0002: "stale",
 };
 
-export function bookingErrorFor(code: string | undefined): BookingError {
+/** ZL034 carries its reason in the message. */
+export function bookingErrorFor(code: string | undefined, message?: string): BookingError {
+  if (code === "ZL034") {
+    return SUBSCRIPTION_REASONS.find((reason) => reason === message) ?? "no_subscription";
+  }
   return (code && byCode[code]) || "failed";
 }
 

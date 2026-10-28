@@ -64,6 +64,9 @@ export const routes = {
   tips: "/tips",
   /** Article (N9), by its slug. */
   article: (slug: string) => `/tips/${encodeURIComponent(slug)}`,
+  /** Subscription (N8), guests too; `?address=` picks the address. */
+  subscription: "/subscription",
+  subscriptionFor: (addressId: string) => `/subscription?address=${encodeURIComponent(addressId)}`,
   /** Crew surface (spec §2, §8.1): My jobs (C2). */
   crew: "/crew",
   /** Job detail (C3). */
@@ -107,6 +110,9 @@ export const routes = {
   adminArticle: (id: string) => `/admin/content/${id}`,
   /** The article categories (A11). */
   adminCategories: "/admin/content/categories",
+  /** Subscriptions (A7), filtered by its query string; `?subscription=` opens the drawer. */
+  adminSubscriptions: "/admin/subscriptions",
+  adminSubscription: (id: string) => `/admin/subscriptions?subscription=${encodeURIComponent(id)}`,
 } as const;
 
 /**

@@ -41,6 +41,8 @@ export const createBookingSchema = z.object({
     .max(MAX_BOOKING_FILES),
   /** The total Checkout showed; create_order() refuses another (ZL018). */
   expectedTotal: z.number().int().min(0),
+  /** Checkout's toggle: create_order() checks the address's subscription (ZL034). */
+  useSubscription: z.boolean(),
 });
 
 export type CreateBookingInput = z.input<typeof createBookingSchema>;

@@ -65,7 +65,13 @@ describe("job media rules", () => {
 });
 
 describe("the C4 form", () => {
-  const form = { orderId: ORDER, cashCollected: true, residualChlorine: null, note: "" };
+  const form = {
+    orderId: ORDER,
+    covered: false,
+    cashCollected: true,
+    residualChlorine: null,
+    note: "",
+  };
   const error = (input: object) => finishJobSchema.safeParse(input).error?.issues[0]?.message;
 
   it("reads the chlorine box", () => {

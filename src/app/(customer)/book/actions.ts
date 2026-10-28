@@ -25,8 +25,17 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const viewer = await requireViewer(routes.bookConfirm);
   const parsed = createBookingSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: "failed" };
-  const { requestId, addressId, serviceDate, slotId, items, note, media, expectedTotal } =
-    parsed.data;
+  const {
+    requestId,
+    addressId,
+    serviceDate,
+    slotId,
+    items,
+    note,
+    media,
+    expectedTotal,
+    useSubscription,
+  } = parsed.data;
 
   // Uploads sit in the customer's own folder; create_order() refuses any other.
   if (media.some((file) => !file.path.startsWith(`customer/${viewer.id}/`))) {
@@ -52,11 +61,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           : { path: file.path, duration_s: file.durationS },
       ),
       p_expected_total: expectedTotal,
+      p_use_subscription: useSubscription,
     })
     .single();
 
   if (error) {
-    const code = bookingErrorFor(error.code);
+    const code = bookingErrorFor(error.code, error.message);
     // Only the SQLSTATE: the message can quote the input.
     if (code === "failed") Sentry.captureMessage(`create_order failed (${error.code})`, "error");
     return { status: "error", error: code };

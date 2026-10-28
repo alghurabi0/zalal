@@ -113,6 +113,7 @@ async function JobContent({ params }: PageProps<"/crew/jobs/[id]">) {
         orderId={job.id}
         status={job.status}
         amount={tUI("iqd", { amount: formatIQD(job.total_iqd) })}
+        covered={job.subscription_id !== null}
       />
     </>
   );

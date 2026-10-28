@@ -289,6 +289,16 @@
       "uploadMissing": "في ملف ما وصلنا، ارجع لخطوة الصور.",
       "priceChanged": "تغيّر السعر من شوية. شوف المجموع الجديد وأكّد مرة ثانية.",
       "failed": "ما كدرنا نسجل الحجز، جرب مرة ثانية."
+    },
+    "subscription": {
+      "title": "استخدم زيارة من اشتراكك",
+      "left": "باقي لك {left} من {total} زيارات",
+      "reasons": {
+        "outside_subscription_period": "موعد هذا الحجز برّا فترة اشتراكك.",
+        "no_visits_left": "خلصت زيارات اشتراكك.",
+        "subscription_tanks_exceeded": "اشتراكك يغطي {count, plural, one {خزان واحد} two {خزانين} few {# خزانات} other {# خزان}} بالزيارة. احجز الباقي بطلب ثاني.",
+        "no_subscription": "اشتراكك ما يغطي هذا الحجز."
+      }
     }
   },
   "BookingDone": {
@@ -887,6 +897,22 @@
       "unknown": {
         "title": "عندك إشعار جديد",
         "body": "افتح التطبيق حتى تشوف التفاصيل."
+      },
+      "subscription_requested": {
+        "title": "طلب اشتراك جديد",
+        "body": "{label, select, family {بيت الأهل} work {الشغل} other {البيت}} · {district}"
+      },
+      "subscription_activated": {
+        "title": "تفعّل اشتراكك السنوي",
+        "body": "{visits, plural, one {زيارة وحدة} two {زيارتين} few {# زيارات} other {# زيارة}} لـ{label, select, family {بيت الأهل} work {الشغل} other {البيت}} لحد {date}."
+      },
+      "subscription_expiring": {
+        "title": "اشتراكك يخلص قريباً",
+        "body": "اشتراك {label, select, family {بيت الأهل} work {الشغل} other {البيت}} ينتهي يوم {date}. تكدر تجدده هسه."
+      },
+      "subscription_declined": {
+        "title": "ما كدرنا نفعّل اشتراكك",
+        "body": "راسلنا بالمحادثة إذا عندك سؤال."
       }
     },
     "push": {
@@ -951,6 +977,66 @@
     "home": "تعرّف على زلال",
     "disclaimer": "هذه الشهادة وثيقة صادرة من شركة زلال لتوثيق الخدمة المنفذة، وليست شهادة من جهة رسمية"
   },
+  "Subscription": {
+    "title": "الاشتراك السنوي",
+    "intro": "خزانك يبقى نظيف طول السنة، وإحنا نتذكر موعده بدالك.",
+    "perYear": "بالسنة",
+    "features": {
+      "visits": "{count, plural, one {زيارة تنظيف وتعقيم بالسنة} two {زيارتين تنظيف وتعقيم بالسنة} few {# زيارات تنظيف وتعقيم بالسنة} other {# زيارة تنظيف وتعقيم بالسنة}}",
+      "tanks": "{count, plural, one {لخزان واحد بكل زيارة} two {لخزانين بكل زيارة} few {لحد # خزانات بكل زيارة} other {لحد # خزان بكل زيارة}}",
+      "reminders": "نذكرك بموعد التنظيف",
+      "certificate": "شهادة تعقيم بكل زيارة"
+    },
+    "payment": "تدفع مبلغ الاشتراك كاش. بعد ما تطلبه نتواصل وياك حتى نرتب الدفع ونفعّله.",
+    "addressesLabel": "الاشتراك للعنوان",
+    "addressLine": "{label} · {district}",
+    "request": "اطلب الاشتراك",
+    "renew": "جدّد الاشتراك",
+    "notOffered": "الاشتراك قريباً.",
+    "noAddressTitle": "ضيف عنوانك أول",
+    "noAddressBody": "الاشتراك يكون لعنوان واحد. ضيف عنوان بيتك حتى تطلبه.",
+    "noAddressCta": "ضيف عنوان",
+    "requestedTitle": "طلبك قيد المراجعة",
+    "requestedBody": "طلبته يوم {date}. نتواصل وياك حتى نفعّله.",
+    "chat": "راسلنا",
+    "renewalRequested": "طلب التجديد قيد المراجعة.",
+    "renewHint": "اشتراكك يخلص قريباً. تكدر تجدده هسه.",
+    "expiredTitle": "انتهى اشتراكك",
+    "expiredBody": "انتهى يوم {date}. جدّده حتى نرجع نذكرك ونجيك بموعدك.",
+    "declinedBody": "ما كدرنا نفعّل طلبك السابق. راسلنا إذا عندك سؤال، أو اطلب مرة ثانية.",
+    "cancelledBody": "انلغى اشتراكك يوم {date}. راسلنا إذا عندك سؤال.",
+    "period": "من {from} لحد {to}",
+    "nextBooked": "زيارتك الجاية",
+    "book": "احجز زيارة",
+    "errors": {
+      "exists": "عندك اشتراك فعّال لهذا العنوان.",
+      "notOffered": "الاشتراك بعد ما متوفر.",
+      "outsideArea": "بعد ما نخدم منطقتك، حالياً بس كربلاء",
+      "stale": "هذا العنوان ما موجود. اختار عنوان ثاني.",
+      "failed": "ما كدرنا نرسل طلبك، جرب مرة ثانية."
+    },
+    "card": {
+      "title": "الاشتراك السنوي",
+      "states": {
+        "active": "فعّال",
+        "upcoming": "يبدأ قريباً",
+        "requested": "قيد المراجعة",
+        "expired": "منتهي"
+      },
+      "visitsLeft": "الزيارات المتبقية",
+      "visitsValue": "{left} من {total}",
+      "next": "الزيارة الجاية",
+      "ends": "ينتهي",
+      "starts": "يبدأ",
+      "none": "—",
+      "noneBody": "زيارتين تنظيف بالسنة وتذكير بالموعد.",
+      "noneCta": "اشترك",
+      "requestedBody": "طلبك قيد المراجعة، نتواصل وياك قريباً.",
+      "expiredBody": "انتهى اشتراكك.",
+      "expiredCta": "جدّد الاشتراك",
+      "open": "افتح الاشتراك"
+    }
+  },
   "Profile": {
     "title": "حسابي",
     "addresses": "عناويني",
@@ -962,7 +1048,8 @@
     "logoutConfirm": "إي، اطلع",
     "logoutCancel": "لا",
     "reports": "بلاغاتي",
-    "openReports": "{n, plural, one {بلاغ جاري} two {بلاغين جاريين} few {{count} بلاغات جارية} other {{count} بلاغ جاري}}"
+    "openReports": "{n, plural, one {بلاغ جاري} two {بلاغين جاريين} few {{count} بلاغات جارية} other {{count} بلاغ جاري}}",
+    "subscriptions": "الاشتراكات"
   },
   "Crew": {
     "title": "شغلنا",
@@ -1156,7 +1243,8 @@
     "iqd": "{amount} د.ع",
     "photoOf": "{n} من {total}",
     "previousPhoto": "الصورة السابقة",
-    "nextPhoto": "الصورة التالية"
+    "nextPhoto": "الصورة التالية",
+    "covered": "مشمول بالاشتراك"
   },
   "Kit": {
     "title": "مكونات الواجهة",
@@ -1234,7 +1322,9 @@
     "successTitle": "وصلنا بلاغك",
     "successCta": "افتح المحادثة",
     "photo": "صورة {n}",
-    "openPhoto": "كبّر {label}"
+    "openPhoto": "كبّر {label}",
+    "switchReminder": "تذكير بموعد التنظيف",
+    "switchSubscription": "استخدم زيارة من اشتراكك"
   },
   "Admin": {
     "nav": {
