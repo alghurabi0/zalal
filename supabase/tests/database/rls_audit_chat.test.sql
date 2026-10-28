@@ -196,7 +196,9 @@ select tests.authenticate_as(tests.a());
 select throws_ok(
   $$ insert into storage.objects (bucket_id, name, owner_id)
      values ('chat-media', auth.uid() || '/sent.jpg', auth.uid()::text) $$,
-  '23505', null, 'a customer cannot upload again over a file they sent'
+  -- 42501 since migration qa_retention: the upload policy refuses the name
+  -- of a sent file before the unique key is reached.
+  '42501', null, 'a customer cannot upload again over a file they sent'
 );
 select throws_ok(
   $$ insert into storage.objects (bucket_id, name, owner_id)

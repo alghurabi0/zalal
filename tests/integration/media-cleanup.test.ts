@@ -281,6 +281,27 @@ describe("media cleanup", () => {
     expect(await exists(openJob)).toBe(true);
   });
 
+  it("deletes certificate PDFs no certificate records, after 24 hours", async () => {
+    const pdfs = service.storage.from("certificates");
+    const pdf = Buffer.from("%PDF-1.4\n%%EOF\n");
+    const stray = `${randomUUID()}/1.pdf`;
+    const fresh = `${randomUUID()}/2.pdf`;
+    for (const path of [stray, fresh]) {
+      const { error } = await pdfs.upload(path, pdf, { contentType: "application/pdf" });
+      expect(error).toBeNull();
+    }
+    sql(`update storage.objects set created_at = now() - interval '25 hours'
+         where bucket_id = 'certificates' and name = ${quoted([stray])}`);
+
+    const result = await cleanUp(service as unknown as SupabaseClient, "certificate");
+    expect(result).toMatchObject({ folder: "certificate", failed: 0, more: false });
+    expect(result.deleted).toBeGreaterThanOrEqual(1);
+
+    expect((await pdfs.download(stray)).error).not.toBeNull();
+    expect((await pdfs.download(fresh)).error).toBeNull();
+    await pdfs.remove([fresh]);
+  });
+
   it("finds nothing more on a second run", async () => {
     expect(await listed("customer")).toEqual([]);
     expect(await listed("crew")).toEqual([]);
