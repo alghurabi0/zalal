@@ -109,10 +109,12 @@ describe("crew job schemas", () => {
     expect(advanceJobSchema.safeParse({ orderId: ID, toStatus: "cancelled" }).success).toBe(false);
   });
 
-  it("needs the cash tick to finish", () => {
+  it("needs the cash tick to finish, unless the subscription covers the job", () => {
     const form = { orderId: ID, sterilant: "كلور", residualChlorine: null, note: "" };
-    expect(finishJobSchema.safeParse({ ...form, cashCollected: true }).success).toBe(true);
-    expect(finishJobSchema.safeParse({ ...form, cashCollected: false }).success).toBe(false);
+    const ok = (patch: object) => finishJobSchema.safeParse({ ...form, ...patch }).success;
+    expect(ok({ covered: false, cashCollected: true })).toBe(true);
+    expect(ok({ covered: false, cashCollected: false })).toBe(false);
+    expect(ok({ covered: true, cashCollected: false })).toBe(true);
   });
 
   it("needs a no-show note of at most 500 characters", () => {

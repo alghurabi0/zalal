@@ -82,7 +82,11 @@ export function OrderTable({
                 <td className="px-3 py-2.5">{order.district}</td>
                 <td className="px-3 py-2.5">{order.tanks}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">
-                  {tUI("iqd", { amount: formatIQD(order.total_iqd) })}
+                  {order.subscription_id ? (
+                    <span className="font-bold text-ok-fg">{tUI("covered")}</span>
+                  ) : (
+                    tUI("iqd", { amount: formatIQD(order.total_iqd) })
+                  )}
                 </td>
                 <td className="px-3 py-2.5">
                   {order.crew?.name ?? <span className="text-muted">{t("noCrew")}</span>}

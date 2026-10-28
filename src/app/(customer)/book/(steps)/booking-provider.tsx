@@ -21,6 +21,7 @@ import {
   withRequestReset,
 } from "@/lib/booking/draft";
 import { getDraft, setDraft, subscribeDraft } from "@/lib/booking/draft-store";
+import type { Subscription } from "@/lib/subscriptions/state";
 import type { BookingError } from "@/lib/booking/errors";
 import {
   type AddProblem,
@@ -44,6 +45,8 @@ export type BookingData = {
   prices: PriceTable;
   days: DayOption[];
   maxTanks: number;
+  /** Every address's; Checkout uses the booking address's (coverageFor). */
+  subscriptions: Subscription[];
 };
 
 type BookingContextValue = {

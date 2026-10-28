@@ -125,6 +125,42 @@ describe("describeNotification", () => {
       "تذكير بموعد التنظيف",
       "موعد التنظيف الجاي لخزان بيت الأهل يوم 8 تشرين الثاني.",
     ],
+    [
+      "subscription_requested",
+      { subscription_id: "s-1", label: "home", district: "حي الحسين" },
+      "طلب اشتراك جديد",
+      "البيت · حي الحسين",
+    ],
+    [
+      "subscription_activated",
+      {
+        subscription_id: "s-1",
+        label: "home",
+        district: "حي الحسين",
+        visits: 2,
+        ends_on: "2027-10-27",
+      },
+      "تفعّل اشتراكك السنوي",
+      "اشتراك البيت: زيارتين لحد 27 تشرين الأول 2027.",
+    ],
+    [
+      "subscription_expiring",
+      {
+        subscription_id: "s-1",
+        label: "family",
+        district: "حي الحسين",
+        visits: 2,
+        ends_on: "2027-10-27",
+      },
+      "اشتراكك يخلص قريباً",
+      "اشتراك بيت الأهل ينتهي يوم 27 تشرين الأول 2027. تكدر تجدده هسه.",
+    ],
+    [
+      "subscription_declined",
+      { subscription_id: "s-1", label: "home", district: "حي الحسين" },
+      "ما كدرنا نفعّل اشتراكك",
+      "راسلنا بالمحادثة إذا عندك سؤال.",
+    ],
   ])("%s %j", (type, data, title, body) => {
     const rendered = render(type, data);
     expect(rendered.title).toBe(title);
@@ -137,6 +173,9 @@ describe("describeNotification", () => {
 
   it("falls back to a generic notification for an unknown type or broken data", () => {
     expect(render("subscription_activated", {}).item).toBe("unknown");
+    expect(render("subscription_activated", { label: "home", ends_on: "soon" }).item).toBe(
+      "unknown",
+    );
     expect(render("order_confirmed", { number: "1024" }).item).toBe("unknown");
     expect(render("support_message", {}).item).toBe("unknown");
     expect(render("unknown", {}).title).toBe("عندك إشعار جديد");
@@ -163,6 +202,24 @@ describe("notificationHref", () => {
     ["something_new", "/notifications"],
   ])("%s opens %s", (type, href) => {
     expect(notificationHref(input(type))).toBe(href);
+  });
+
+  it("opens a subscription on N8, A7 or Chat", () => {
+    const data = {
+      subscription_id: "00000000-0000-4000-8000-0000000000aa",
+      address_id: "00000000-0000-4000-8000-0000000000bb",
+    };
+    expect(notificationHref(input("subscription_activated", { data }))).toBe(
+      "/subscription?address=00000000-0000-4000-8000-0000000000bb",
+    );
+    expect(notificationHref(input("subscription_expiring", { data }))).toBe(
+      "/subscription?address=00000000-0000-4000-8000-0000000000bb",
+    );
+    expect(notificationHref(input("subscription_expiring"))).toBe("/subscription");
+    expect(notificationHref(input("subscription_declined", { data }))).toBe("/chat");
+    expect(notificationHref(input("subscription_requested", { data }))).toBe(
+      "/admin/subscriptions?subscription=00000000-0000-4000-8000-0000000000aa",
+    );
   });
 
   it("opens the admin's conversation for a customer's message", () => {

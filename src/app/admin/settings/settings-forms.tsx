@@ -34,6 +34,7 @@ export function SettingsForms({ settings }: { settings: AdminSettings }) {
       <BookingSection settings={settings} />
       <CrewSection settings={settings} />
       <CertificateSection settings={settings} />
+      <SubscriptionSection settings={settings} />
       <LegalSection settings={settings} />
     </div>
   );
@@ -420,6 +421,98 @@ function CertificateSection({ settings }: { settings: AdminSettings }) {
           />
         )}
       </Field>
+    </Section>
+  );
+}
+
+/** N8's plan (Phase 6, task 2): an empty price means not offered yet. */
+function SubscriptionSection({ settings }: { settings: AdminSettings }) {
+  const t = useTranslations("Admin.settings");
+  const [price, setPrice] = useState(
+    settings.subscription_price_iqd === null ? "" : String(settings.subscription_price_iqd),
+  );
+  const [visits, setVisits] = useState(String(settings.subscription_visits));
+  const [tanks, setTanks] = useState(String(settings.subscription_tanks));
+  const whole = (text: string, min: number, max: number) => {
+    const value = Number(text);
+    return text.trim() !== "" && Number.isInteger(value) && value >= min && value <= max
+      ? value
+      : null;
+  };
+  const priceValue = price.trim() === "" ? null : whole(price, 1, 10_000_000);
+  const visitsValue = whole(visits, 1, 12);
+  const tanksValue = whole(tanks, 1, 6);
+  const priceOk = price.trim() === "" || priceValue !== null;
+
+  return (
+    <Section
+      title={t("subscription.title")}
+      input={
+        priceOk && visitsValue !== null && tanksValue !== null
+          ? {
+              section: "subscription",
+              values: {
+                subscription_price_iqd: priceValue,
+                subscription_visits: visitsValue,
+                subscription_tanks: tanksValue,
+              },
+            }
+          : null
+      }
+    >
+      <Field
+        label={t("subscription.price")}
+        variant="compact"
+        hint={t("subscription.priceHint")}
+        error={priceOk ? undefined : t("rangeHint", { min: 1, max: "10,000,000" })}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={10_000_000}
+            variant="compact"
+            dir="ltr"
+            className="w-40 text-start"
+            name="subscription_price_iqd"
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+          />
+        )}
+      </Field>
+      {(
+        [
+          ["subscription_visits", t("subscription.visits"), visits, setVisits, 12, visitsValue],
+          ["subscription_tanks", t("subscription.tanks"), tanks, setTanks, 6, tanksValue],
+        ] as const
+      ).map(([name, label, value, setValue, max, parsed]) => (
+        <Field
+          key={name}
+          label={label}
+          variant="compact"
+          hint={t("rangeHint", { min: 1, max })}
+          error={parsed === null ? t("rangeHint", { min: 1, max }) : undefined}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={max}
+              variant="compact"
+              dir="ltr"
+              className="w-32 text-start"
+              name={name}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+            />
+          )}
+        </Field>
+      ))}
+      <p className="text-13 text-muted">{t("subscription.plansHint")}</p>
     </Section>
   );
 }

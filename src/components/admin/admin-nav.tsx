@@ -10,6 +10,7 @@ import {
   MapPinned,
   MessageSquareWarning,
   MessagesSquare,
+  Repeat,
   Newspaper,
   Settings,
   ShieldCheck,
@@ -34,6 +35,7 @@ const items = [
   { href: routes.adminChat, key: "chat", icon: MessagesSquare },
   { href: routes.adminTickets, key: "tickets", icon: MessageSquareWarning },
   { href: routes.adminRatings, key: "ratings", icon: Star },
+  { href: routes.adminSubscriptions, key: "subscriptions", icon: Repeat },
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
   { href: routes.adminLive, key: "live", icon: MapPinned },
   { href: routes.adminPrices, key: "prices", icon: Tag },
@@ -65,6 +67,7 @@ export function AdminNav({
   name,
   chatUnread,
   openTickets,
+  subscriptionRequests,
   children,
 }: {
   name: string | null;
@@ -72,6 +75,8 @@ export function AdminNav({
   chatUnread: string[];
   /** Open tickets (A5); the shell refreshes on ticket changes (LiveTickets). */
   openTickets: number;
+  /** Subscription requests waiting (A7); the shell refreshes on changes (LiveSubscriptions). */
+  subscriptionRequests: number;
   children?: ReactNode;
 }) {
   const t = useTranslations("Admin.nav");
@@ -120,6 +125,15 @@ export function AdminNav({
                     <span className="ms-auto flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-aqua px-1.5 text-12 font-extrabold text-navy">
                       {openTickets}
                       <span className="sr-only"> {t("ticketsOpen", { count: openTickets })}</span>
+                    </span>
+                  )}
+                  {item.key === "subscriptions" && subscriptionRequests > 0 && (
+                    <span className="ms-auto flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-aqua px-1.5 text-12 font-extrabold text-navy">
+                      {subscriptionRequests}
+                      <span className="sr-only">
+                        {" "}
+                        {t("subscriptionRequests", { count: subscriptionRequests })}
+                      </span>
                     </span>
                   )}
                   {item.key === "chat" && unread > 0 && (

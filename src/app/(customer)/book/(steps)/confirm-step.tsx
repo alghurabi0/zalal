@@ -9,6 +9,7 @@ import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "
 import { RoofTankIcon } from "@/components/icons/tank-icons";
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { findSlot } from "@/lib/booking/availability";
 import {
   detailsComplete,
@@ -18,11 +19,12 @@ import {
   orderItems,
   tankCount,
 } from "@/lib/booking/draft";
-import { type BookingError, stepFor } from "@/lib/booking/errors";
+import { type BookingError, isSubscriptionError, stepFor } from "@/lib/booking/errors";
 import { cn } from "@/lib/cn";
 import { serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { routes } from "@/lib/routes";
+import { coverageFor } from "@/lib/subscriptions/state";
 
 import { createBooking } from "../actions";
 import { BookingHeader } from "./booking-header";
@@ -35,7 +37,10 @@ const payments = ["cash", "zain", "card"] as const;
  * Booking step 3 (Checkout.dc.html, spec §5.11): the summary with links back
  * to each step, cash payment (ZainCash and card "قريباً"), the price
  * breakdown and "أكّد الحجز", which waits for uploads, then creates the
- * order as pending_confirmation and opens Booking success (N5).
+ * order as pending_confirmation and opens Booking success (N5). When the
+ * address has a subscription, "استخدم زيارة من اشتراكك" (Phase 6, task 2):
+ * on, the total reads "مشمول بالاشتراك"; when it can't cover this booking
+ * (the date, no visit left, too many tanks) the switch is off and says why.
  */
 export function ConfirmStep() {
   const t = useTranslations("Checkout");
@@ -76,6 +81,13 @@ export function ConfirmStep() {
 
   const slot = findSlot(data.days, draft.serviceDate, draft.slotId);
   const total = draftTotal(draft.lines, data.savedTanks, data.prices);
+  const coverage = coverageFor(
+    data.subscriptions,
+    data.address.id,
+    draft.serviceDate,
+    tankCount(draft.lines),
+  );
+  const covered = draft.useSubscription && coverage.status === "usable";
   const uploading = uploads.some((u) => u.status === "preparing" || u.status === "uploading");
   const uploadFailed = uploads.some((u) => u.status === "failed");
 
@@ -116,6 +128,14 @@ export function ConfirmStep() {
           latestData.current.savedTanks,
           latestData.current.prices,
         ),
+        useSubscription:
+          current.useSubscription &&
+          coverageFor(
+            latestData.current.subscriptions,
+            current.addressId,
+            current.serviceDate,
+            tankCount(current.lines),
+          ).status === "usable",
       });
 
       if (result.status === "booked") {
@@ -137,6 +157,12 @@ export function ConfirmStep() {
       // A price changed: reload the prices, so the total shown is the one
       // the next "أكّد الحجز" sends.
       if (result.error === "price_changed") router.refresh();
+      // The subscription can't cover it any more (a visit went meanwhile):
+      // the switch goes off, with fresh counts, and the reason shows.
+      if (isSubscriptionError(result.error)) {
+        update((d) => ({ ...d, useSubscription: false }));
+        router.refresh();
+      }
       // Refused although the device thought it fresh (a file saved before
       // upload times were kept): forget those, or every retry fails again.
       if (result.error === "upload_missing") dropExpiredUploads({ unknownAge: true });
@@ -223,9 +249,13 @@ export function ConfirmStep() {
         ? t("errors.uploadMissing")
         : error === "price_changed"
           ? t("errors.priceChanged")
-          : error
-            ? t("errors.failed")
-            : null;
+          : isSubscriptionError(error)
+            ? t(`subscription.reasons.${error}`, {
+                count: coverage.status === "none" ? 1 : coverage.subscription.tanksCovered,
+              })
+            : error
+              ? t("errors.failed")
+              : null;
 
   return (
     <Screen className="bg-bg">
@@ -298,6 +328,34 @@ export function ConfirmStep() {
           })}
         </fieldset>
 
+        {coverage.status !== "none" && (
+          <div className="flex flex-col rounded-card border border-border bg-surface px-3.5 pb-2">
+            <Switch
+              name="useSubscription"
+              checked={covered}
+              disabled={coverage.status !== "usable"}
+              onChange={(event) => {
+                const on = event.target.checked;
+                setError(null);
+                update((d) => ({ ...d, useSubscription: on }));
+              }}
+              aria-describedby="subscription-hint"
+            >
+              <span className="text-15 font-extrabold">{t("subscription.title")}</span>
+            </Switch>
+            <span id="subscription-hint" className="text-13 text-muted">
+              {coverage.status === "usable"
+                ? t("subscription.left", {
+                    left: coverage.subscription.visitsLeft,
+                    total: coverage.subscription.visitsTotal,
+                  })
+                : t(`subscription.reasons.${coverage.reason}`, {
+                    count: coverage.subscription.tanksCovered,
+                  })}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5 rounded-card border border-border bg-surface px-3.5 py-3">
           {draft.lines.map((line) => {
             const tank = lineTank(line, data.savedTanks);
@@ -322,7 +380,11 @@ export function ConfirmStep() {
           </div>
           <div className="flex justify-between gap-3 border-t border-dashed border-track pt-2 text-18 font-black">
             <span>{t("total")}</span>
-            <span>{tUI("iqd", { amount: formatIQD(total) })}</span>
+            {covered ? (
+              <span className="text-ok-fg">{tUI("covered")}</span>
+            ) : (
+              <span>{tUI("iqd", { amount: formatIQD(total) })}</span>
+            )}
           </div>
         </div>
 

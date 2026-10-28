@@ -16,12 +16,16 @@ import {
   getAdminOrder,
   slotBoard,
 } from "@/lib/admin/queries";
-import { baghdadToday, formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
+import { baghdadToday, formatDay, formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
+import { listSubscriptions } from "@/lib/subscriptions/queries";
+import { coverageFor } from "@/lib/subscriptions/state";
 
+import { SubscriptionStateBadge } from "../subscriptions/subscription-state-badge";
 import { OrderActions } from "./order-actions";
+import { OrderSubscriptionButton } from "./order-subscription";
 
 /** How far ahead an admin can reschedule from the drawer. */
 const RESCHEDULE_DAYS = 30;
@@ -74,6 +78,7 @@ export async function OrderDrawer({
       }
     >
       <Details order={order} />
+      <SubscriptionSection order={order} />
       {order.customer_note && (
         <Section title={t("note")}>
           <p className="text-15 whitespace-pre-line text-body-2">{order.customer_note}</p>
@@ -297,10 +302,67 @@ async function Details({ order }: { order: AdminOrderDetails }) {
         </ul>
         <div className="flex justify-between border-t border-border pt-2 text-16 font-black">
           <span>{tOrder("total")}</span>
-          <span>{tUI("iqd", { amount: formatIQD(order.total_iqd) })}</span>
+          {order.subscription_id ? (
+            <span className="text-ok-fg">{tUI("covered")}</span>
+          ) : (
+            <span>{tUI("iqd", { amount: formatIQD(order.total_iqd) })}</span>
+          )}
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * The order's subscription (§6 "verify subscription"): its state, visits,
+ * period and paid tick, a link to A7, and "شيل الاشتراك" until the order is
+ * completed. An uncovered order still waiting for its visit whose address
+ * has a subscription that can cover it offers "استخدم الاشتراك".
+ */
+async function SubscriptionSection({ order }: { order: AdminOrderDetails }) {
+  const t = await getTranslations("Admin.drawer.subscription");
+  const tStates = await getTranslations("Admin.subscriptions.states");
+  const waiting = order.status === "pending_confirmation" || order.status === "confirmed";
+  if (!order.subscription_id && !waiting) return null;
+  const subscriptions = await listSubscriptions(order.customer_id);
+  const own = subscriptions.find((s) => s.id === order.subscription_id) ?? null;
+  const coverage = order.subscription_id
+    ? null
+    : coverageFor(subscriptions, order.address_id, order.service_date, order.tanks);
+  if (!own && coverage?.status !== "usable") return null;
+
+  return (
+    <Section title={t("title")}>
+      {own ? (
+        <div className="flex flex-col gap-1.5 text-15">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-extrabold text-ok-fg">{t("covered")}</span>
+            <SubscriptionStateBadge state={own.state} label={tStates(own.state)} />
+          </span>
+          {own.endsOn && (
+            <span>
+              {t("visits", {
+                left: own.visitsLeft,
+                total: own.visitsTotal,
+                date: formatDay(own.endsOn),
+              })}
+            </span>
+          )}
+          <span className="text-14 text-muted">{own.paid ? t("paid") : t("unpaid")}</span>
+          <Link
+            href={routes.adminSubscription(own.id)}
+            className="inline-flex min-h-11 items-center text-14 font-bold text-teal underline"
+          >
+            {t("open")}
+          </Link>
+          {order.status !== "completed" && (
+            <OrderSubscriptionButton orderId={order.id} use={false} />
+          )}
+        </div>
+      ) : (
+        <OrderSubscriptionButton orderId={order.id} use />
+      )}
+    </Section>
   );
 }
 

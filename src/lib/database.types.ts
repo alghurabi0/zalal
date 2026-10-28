@@ -240,6 +240,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "certificates_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
         ];
       };
       chat_messages: {
@@ -445,6 +452,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "crew_live_location_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
         ];
       };
       crews: {
@@ -524,6 +538,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "job_reports_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
         ];
       };
       notifications: {
@@ -568,6 +589,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "orders";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
           },
           {
             foreignKeyName: "notifications_ticket_id_fkey";
@@ -668,6 +696,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "order_events_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
         ];
       };
       order_items: {
@@ -706,6 +741,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "orders";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
           },
           {
             foreignKeyName: "order_items_tank_id_fkey";
@@ -760,6 +802,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "order_media_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
+          {
             foreignKeyName: "order_media_uploaded_by_fkey";
             columns: ["uploaded_by"];
             isOneToOne: false;
@@ -790,6 +839,7 @@ export type Database = {
           slot_id: number;
           slot_start_at: string;
           status: Database["public"]["Enums"]["order_status"];
+          subscription_id: string | null;
           total_iqd: number;
           updated_at: string;
         };
@@ -815,6 +865,7 @@ export type Database = {
           slot_id: number;
           slot_start_at: string;
           status?: Database["public"]["Enums"]["order_status"];
+          subscription_id?: string | null;
           total_iqd: number;
           updated_at?: string;
         };
@@ -839,6 +890,7 @@ export type Database = {
           slot_id?: number;
           slot_start_at?: string;
           status?: Database["public"]["Enums"]["order_status"];
+          subscription_id?: string | null;
           total_iqd?: number;
           updated_at?: string;
         };
@@ -870,6 +922,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "slots";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_subscription_id_address_id_fkey";
+            columns: ["subscription_id", "address_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["id", "address_id"];
+          },
+          {
+            foreignKeyName: "orders_subscription_id_address_id_fkey";
+            columns: ["subscription_id", "address_id"];
+            isOneToOne: false;
+            referencedRelation: "subscriptions";
+            referencedColumns: ["id", "address_id"];
           },
         ];
       };
@@ -1052,6 +1118,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "ratings_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
+          {
             foreignKeyName: "ratings_ticket_id_fkey";
             columns: ["ticket_id"];
             isOneToOne: true;
@@ -1102,6 +1175,9 @@ export type Database = {
           privacy_md: string;
           sms_enabled: boolean;
           sterilant_text: string;
+          subscription_price_iqd: number | null;
+          subscription_tanks: number;
+          subscription_visits: number;
           support_response_text: string;
           terms_md: string;
           ticket_response_hours: number;
@@ -1124,6 +1200,9 @@ export type Database = {
           privacy_md?: string;
           sms_enabled?: boolean;
           sterilant_text?: string;
+          subscription_price_iqd?: number | null;
+          subscription_tanks?: number;
+          subscription_visits?: number;
           support_response_text?: string;
           terms_md?: string;
           ticket_response_hours?: number;
@@ -1145,6 +1224,9 @@ export type Database = {
           privacy_md?: string;
           sms_enabled?: boolean;
           sterilant_text?: string;
+          subscription_price_iqd?: number | null;
+          subscription_tanks?: number;
+          subscription_visits?: number;
           support_response_text?: string;
           terms_md?: string;
           ticket_response_hours?: number;
@@ -1185,6 +1267,13 @@ export type Database = {
             isOneToOne: true;
             referencedRelation: "orders";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "slot_bookings_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
           },
           {
             foreignKeyName: "slot_bookings_slot_id_fkey";
@@ -1228,6 +1317,129 @@ export type Database = {
           weekdays?: number[];
         };
         Relationships: [];
+      };
+      subscription_notes: {
+        Row: {
+          author_id: string;
+          created_at: string;
+          id: number;
+          note: string;
+          subscription_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          author_id: string;
+          created_at?: string;
+          id?: never;
+          note: string;
+          subscription_id: string;
+        };
+        Update: {
+          author_id?: string;
+          created_at?: string;
+          id?: never;
+          note?: string;
+          subscription_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subscription_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "subscription_notes_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "subscription_notes_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscriptions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      subscriptions: {
+        Row: {
+          activated_at: string | null;
+          address_id: string;
+          created_at: string;
+          ended_at: string | null;
+          ends_on: string | null;
+          expiry_notified_on: string | null;
+          id: string;
+          paid: boolean;
+          price_iqd: number | null;
+          requested_at: string;
+          starts_on: string | null;
+          status: Database["public"]["Enums"]["subscription_status"];
+          tanks_covered: number | null;
+          updated_at: string;
+          user_id: string;
+          visits_adjustment: number;
+          visits_total: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          activated_at?: string | null;
+          address_id: string;
+          created_at?: string;
+          ended_at?: string | null;
+          ends_on?: string | null;
+          expiry_notified_on?: string | null;
+          id?: string;
+          paid?: boolean;
+          price_iqd?: number | null;
+          requested_at?: string;
+          starts_on?: string | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tanks_covered?: number | null;
+          updated_at?: string;
+          user_id: string;
+          visits_adjustment?: number;
+          visits_total?: number | null;
+        };
+        Update: {
+          activated_at?: string | null;
+          address_id?: string;
+          created_at?: string;
+          ended_at?: string | null;
+          ends_on?: string | null;
+          expiry_notified_on?: string | null;
+          id?: string;
+          paid?: boolean;
+          price_iqd?: number | null;
+          requested_at?: string;
+          starts_on?: string | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tanks_covered?: number | null;
+          updated_at?: string;
+          user_id?: string;
+          visits_adjustment?: number;
+          visits_total?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_address_id_user_id_fkey";
+            columns: ["address_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "addresses";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       tanks: {
         Row: {
@@ -1416,12 +1628,78 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      subscription_overview: {
+        Row: {
+          activated_at: string | null;
+          address_district: string | null;
+          address_id: string;
+          address_label: Database["public"]["Enums"]["address_label"] | null;
+          address_landmark: string | null;
+          customer_name: string | null;
+          customer_phone: string | null;
+          ended_at: string | null;
+          ends_on: string | null;
+          id: string;
+          last_visit_on: string | null;
+          next_order_at: string | null;
+          next_order_id: string | null;
+          paid: boolean;
+          price_iqd: number | null;
+          requested_at: string;
+          starts_on: string | null;
+          state: string | null;
+          status: Database["public"]["Enums"]["subscription_status"];
+          tanks_covered: number | null;
+          user_id: string;
+          visits_adjustment: number;
+          visits_held: number | null;
+          visits_left: number | null;
+          visits_total: number | null;
+          visits_used: number | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_address_id_user_id_fkey";
+            columns: ["address_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "addresses";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
+      admin_activate_subscription: {
+        Args: {
+          p_note?: string;
+          p_paid: boolean;
+          p_price_iqd: number;
+          p_starts_on: string;
+          p_subscription_id: string;
+          p_tanks: number;
+          p_visits: number;
+        };
+        Returns: undefined;
+      };
       admin_add_admin: { Args: { p_name: string; p_phone: string }; Returns: boolean };
+      admin_add_subscription_note: {
+        Args: { p_note: string; p_subscription_id: string };
+        Returns: undefined;
+      };
       admin_add_ticket_note: { Args: { p_note: string; p_ticket_id: string }; Returns: number };
       admin_addresses_outside_area: { Args: Record<PropertyKey, never>; Returns: number };
+      admin_adjust_subscription_visits: {
+        Args: { p_delta: number; p_reason: string; p_subscription_id: string };
+        Returns: undefined;
+      };
       admin_block_date: { Args: { p_date: string; p_reason: string }; Returns: undefined };
       admin_chat_inbox: {
         Args: { p_limit?: number; p_search?: string };
@@ -1453,6 +1731,10 @@ export type Database = {
       };
       admin_delete_article: { Args: { p_id: string }; Returns: string };
       admin_delete_category: { Args: { p_id: number }; Returns: undefined };
+      admin_end_subscription: {
+        Args: { p_reason: string; p_subscription_id: string };
+        Returns: undefined;
+      };
       admin_rating_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1513,6 +1795,14 @@ export type Database = {
         }[];
       };
       admin_set_crew_phone: { Args: { p_crew_id: string; p_phone: string }; Returns: undefined };
+      admin_set_order_subscription: {
+        Args: { p_order_id: string; p_use: boolean };
+        Returns: undefined;
+      };
+      admin_set_subscription_paid: {
+        Args: { p_paid: boolean; p_subscription_id: string };
+        Returns: undefined;
+      };
       admin_set_ticket_status: {
         Args: { p_status: Database["public"]["Enums"]["ticket_status"]; p_ticket_id: string };
         Returns: undefined;
@@ -1578,6 +1868,7 @@ export type Database = {
           p_request_id: string;
           p_service_date: string;
           p_slot_id: number;
+          p_use_subscription?: boolean;
         };
         Returns: Record<string, unknown>;
       };
@@ -1647,6 +1938,7 @@ export type Database = {
         };
         Returns: Record<string, unknown>;
       };
+      request_subscription: { Args: { p_address_id: string }; Returns: string };
       save_push_subscription: {
         Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent?: string };
         Returns: undefined;
@@ -1742,7 +2034,11 @@ export type Database = {
         | "customer_message"
         | "new_ticket"
         | "new_job"
-        | "job_changed";
+        | "job_changed"
+        | "subscription_activated"
+        | "subscription_declined"
+        | "subscription_expiring"
+        | "subscription_requested";
       order_media_kind: "customer" | "before" | "after" | "clip";
       order_status:
         | "pending_confirmation"
@@ -1757,6 +2053,7 @@ export type Database = {
       payment_method: "cash";
       rating_tag: "on_time" | "clean_work" | "respectful" | "clear_photos";
       reminder_kind: "week" | "due";
+      subscription_status: "requested" | "active" | "declined" | "cancelled";
       tank_size: "s" | "m" | "l";
       tank_type: "roof" | "ground";
       ticket_category: "leak" | "smell" | "late" | "staff" | "payment" | "other";
@@ -1901,6 +2198,10 @@ export const Constants = {
         "new_ticket",
         "new_job",
         "job_changed",
+        "subscription_activated",
+        "subscription_declined",
+        "subscription_expiring",
+        "subscription_requested",
       ],
       order_media_kind: ["customer", "before", "after", "clip"],
       order_status: [
@@ -1917,6 +2218,7 @@ export const Constants = {
       payment_method: ["cash"],
       rating_tag: ["on_time", "clean_work", "respectful", "clear_photos"],
       reminder_kind: ["week", "due"],
+      subscription_status: ["requested", "active", "declined", "cancelled"],
       tank_size: ["s", "m", "l"],
       tank_type: ["roof", "ground"],
       ticket_category: ["leak", "smell", "late", "staff", "payment", "other"],

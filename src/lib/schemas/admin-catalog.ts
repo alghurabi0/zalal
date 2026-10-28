@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MAX_AREA_POINTS, pointCount } from "@/lib/admin/geojson";
 import { normalizeIraqiPhone, toWesternDigits } from "@/lib/phone";
 
+import { subscriptionPlanSchema } from "./subscription";
 import { tankSizes, tankTypes } from "./tank";
 
 // What the A8, A9 and A13 forms send to their Server Actions (spec §8.2).
@@ -168,6 +169,7 @@ export const settingsSectionSchema = z.discriminatedUnion("section", [
   z.object({ section: z.literal("certificate"), values: certificateSettingsSchema }),
   z.object({ section: z.literal("chat"), values: chatSettingsSchema }),
   z.object({ section: z.literal("legal"), values: legalSettingsSchema }),
+  z.object({ section: z.literal("subscription"), values: subscriptionPlanSchema }),
 ]);
 
 export type SettingsSection = z.input<typeof settingsSectionSchema>["section"];

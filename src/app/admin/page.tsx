@@ -1,5 +1,4 @@
 import { ClipboardCheck, Headset, MessagesSquare, Repeat } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
@@ -14,6 +13,7 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { adminOrdersHref, ORDER_STATUSES } from "@/lib/admin/orders-query";
 import { chatInbox, unreadThreads } from "@/lib/admin/chat-queries";
 import { openTickets, pendingConfirmations, todayCounts } from "@/lib/admin/queries";
+import { subscriptionRequests } from "@/lib/admin/subscription-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { ticketNumber } from "@/lib/certificates/format";
 import { baghdadToday, formatDate, formatDayTime } from "@/lib/dates";
@@ -22,13 +22,15 @@ import { routes } from "@/lib/routes";
 const PENDING_SHOWN = 10;
 const TICKETS_SHOWN = 5;
 const CHATS_SHOWN = 5;
+const REQUESTS_SHOWN = 5;
 
 /**
  * Overview (A1): today's orders by status and the orders waiting for
  * confirmation, kept live by the shell (AdminLive, which follows orders),
  * and the open tickets (Issue reports and low ratings, each opening the A5
  * drawer; the shell refreshes the page on ticket changes). Unread chats (A4): their count and the newest few, each
- * opening its conversation. Subscription requests arrive with Phase 6.
+ * opening its conversation. Subscription requests (A7): their count and the
+ * oldest few, each opening the A7 drawer.
  */
 export default async function OverviewPage() {
   const t = await getTranslations("Admin.overview");
@@ -49,12 +51,14 @@ async function Overview() {
   // The server's clock, in Baghdad.
   const now = new Date();
   const today = baghdadToday(now);
-  const [counts, pending, tickets, unreadIds, inbox] = await Promise.all([
+  const tLabels = await getTranslations("Location.labels");
+  const [counts, pending, tickets, unreadIds, inbox, requests] = await Promise.all([
     todayCounts(now),
     pendingConfirmations(PENDING_SHOWN),
     openTickets(TICKETS_SHOWN),
     unreadThreads(),
     chatInbox(undefined, CHATS_SHOWN),
+    subscriptionRequests(REQUESTS_SHOWN),
   ]);
   const unreadChats = inbox.filter((row) => row.admin_unread > 0);
   const todayTotal = ORDER_STATUSES.reduce((sum, status) => sum + counts[status], 0);
@@ -243,32 +247,59 @@ async function Overview() {
         )}
       </section>
 
-      <section aria-labelledby="later" className="flex flex-col gap-3">
-        <h2 id="later" className="text-18 font-extrabold">
-          {t("later")}
-        </h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          <Later icon={Repeat} title={t("subscriptions")} />
-        </ul>
+      <section aria-labelledby="subscriptions" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="subscriptions" className="text-18 font-extrabold">
+            {t("subscriptions", { count: requests.count })}
+          </h2>
+          <Button href={routes.adminSubscriptions} variant="link" size="sm">
+            {t("subscriptionsAll")}
+          </Button>
+        </div>
+        {requests.oldest.length === 0 ? (
+          <Card className="flex items-center gap-3 p-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-well text-muted">
+              <Repeat aria-hidden className="size-5" />
+            </span>
+            <span className="flex flex-col">
+              <span className="text-15 font-bold">{t("subscriptionsEmpty")}</span>
+              <span className="text-13 text-muted">{t("subscriptionsEmptyBody")}</span>
+            </span>
+          </Card>
+        ) : (
+          <Card className="p-0">
+            <ul aria-label={t("subscriptionsCaption")} className="flex flex-col">
+              {requests.oldest.map((subscription) => (
+                <li
+                  key={subscription.id}
+                  className="flex items-center justify-between gap-3 border-b border-divider px-4 py-3 last:border-0"
+                >
+                  <Link
+                    href={routes.adminSubscription(subscription.id)}
+                    className="flex min-w-0 flex-col text-15 font-bold text-teal underline-offset-4 hover:underline"
+                  >
+                    <span className="truncate">
+                      {subscription.customer.name || tChat("noName")}
+                    </span>
+                    {subscription.address && (
+                      <span className="truncate text-13 font-normal text-muted">
+                        {t("subscriptionRow", {
+                          label: tLabels(subscription.address.label),
+                          district: subscription.address.district,
+                        })}
+                      </span>
+                    )}
+                  </Link>
+                  <span className="shrink-0 text-13 text-muted">
+                    {formatDayTime(subscription.requestedAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
       </section>
     </>
-  );
-}
-
-async function Later({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
-  const t = await getTranslations("Admin.overview");
-  return (
-    <li>
-      <Card className="flex items-center gap-3 p-4 text-muted">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-well">
-          <Icon aria-hidden className="size-5" />
-        </span>
-        <span className="flex flex-col">
-          <span className="text-15 font-bold text-navy">{title}</span>
-          <span className="text-13">{t("comingSoon")}</span>
-        </span>
-      </Card>
-    </li>
   );
 }
 

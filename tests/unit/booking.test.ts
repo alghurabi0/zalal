@@ -288,6 +288,7 @@ describe("createBookingSchema", () => {
     note: "  الدرج ضيق  ",
     media: [{ path: `customer/${USER}/${FILE}.mp4`, durationS: 24.4 }],
     expectedTotal: 105000,
+    useSubscription: false,
   };
 
   it("accepts a booking and trims the note", () => {

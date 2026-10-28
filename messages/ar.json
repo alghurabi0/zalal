@@ -289,6 +289,16 @@
       "uploadMissing": "في ملف ما وصلنا، ارجع لخطوة الصور.",
       "priceChanged": "تغيّر السعر من شوية. شوف المجموع الجديد وأكّد مرة ثانية.",
       "failed": "ما كدرنا نسجل الحجز، جرب مرة ثانية."
+    },
+    "subscription": {
+      "title": "استخدم زيارة من اشتراكك",
+      "left": "باقي لك {left} من {total} زيارات",
+      "reasons": {
+        "outside_subscription_period": "موعد هذا الحجز برّا فترة اشتراكك.",
+        "no_visits_left": "خلصت زيارات اشتراكك.",
+        "subscription_tanks_exceeded": "اشتراكك يغطي {count, plural, one {خزان واحد} two {خزانين} few {# خزانات} other {# خزان}} بالزيارة. احجز الباقي بطلب ثاني.",
+        "no_subscription": "اشتراكك ما يغطي هذا الحجز."
+      }
     }
   },
   "BookingDone": {
@@ -477,6 +487,7 @@
       "slot_full": "الموعد انحجز، اختار موعد ثاني",
       "slot_unavailable": "هذا الموعد ما بقى متاح، اختار موعد ثاني",
       "invalid_transition": "تغيرت حالة الطلب، ما نكدر نغيره هسه.",
+      "outside_subscription": "هذا الطلب مشمول باشتراكك، فلازم يبقى موعده ضمن فترة الاشتراك. اختار موعد ثاني أو راسلنا.",
       "failed": "ما كدرنا نحفظ التغيير، جرب مرة ثانية."
     },
     "certificateButton": "الشهادة",
@@ -887,6 +898,22 @@
       "unknown": {
         "title": "عندك إشعار جديد",
         "body": "افتح التطبيق حتى تشوف التفاصيل."
+      },
+      "subscription_requested": {
+        "title": "طلب اشتراك جديد",
+        "body": "{label, select, family {بيت الأهل} work {الشغل} other {البيت}} · {district}"
+      },
+      "subscription_activated": {
+        "title": "تفعّل اشتراكك السنوي",
+        "body": "اشتراك {label, select, family {بيت الأهل} work {الشغل} other {البيت}}: {visits, plural, one {زيارة وحدة} two {زيارتين} few {# زيارات} other {# زيارة}} لحد {date}."
+      },
+      "subscription_expiring": {
+        "title": "اشتراكك يخلص قريباً",
+        "body": "اشتراك {label, select, family {بيت الأهل} work {الشغل} other {البيت}} ينتهي يوم {date}. تكدر تجدده هسه."
+      },
+      "subscription_declined": {
+        "title": "ما كدرنا نفعّل اشتراكك",
+        "body": "راسلنا بالمحادثة إذا عندك سؤال."
       }
     },
     "push": {
@@ -950,6 +977,65 @@
     "notFoundBody": "تأكد من الرابط أو من رمز التحقق المكتوب على الشهادة.",
     "home": "تعرّف على زلال",
     "disclaimer": "هذه الشهادة وثيقة صادرة من شركة زلال لتوثيق الخدمة المنفذة، وليست شهادة من جهة رسمية"
+  },
+  "Subscription": {
+    "title": "الاشتراك السنوي",
+    "intro": "خزانك يبقى نظيف طول السنة، وإحنا نتذكر موعده بدالك.",
+    "perYear": "بالسنة",
+    "features": {
+      "visits": "{count, plural, one {زيارة تنظيف وتعقيم بالسنة} two {زيارتين تنظيف وتعقيم بالسنة} few {# زيارات تنظيف وتعقيم بالسنة} other {# زيارة تنظيف وتعقيم بالسنة}}",
+      "tanks": "{count, plural, one {لخزان واحد بكل زيارة} two {لخزانين بكل زيارة} few {لحد # خزانات بكل زيارة} other {لحد # خزان بكل زيارة}}",
+      "reminders": "نذكرك بموعد التنظيف",
+      "certificate": "شهادة تعقيم بكل زيارة"
+    },
+    "payment": "تدفع مبلغ الاشتراك كاش. بعد ما تطلبه نتواصل وياك حتى نرتب الدفع ونفعّله.",
+    "addressesLabel": "الاشتراك للعنوان",
+    "addressLine": "{label} · {district}",
+    "request": "اطلب الاشتراك",
+    "renew": "جدّد الاشتراك",
+    "notOffered": "الاشتراك قريباً.",
+    "noAddressTitle": "ضيف عنوانك أول",
+    "noAddressBody": "الاشتراك يكون لعنوان واحد. ضيف عنوان بيتك حتى تطلبه.",
+    "noAddressCta": "ضيف عنوان",
+    "requestedTitle": "طلبك قيد المراجعة",
+    "requestedBody": "طلبته يوم {date}. نتواصل وياك حتى نفعّله.",
+    "chat": "راسلنا",
+    "renewalRequested": "طلب التجديد قيد المراجعة.",
+    "renewHint": "اشتراكك يخلص قريباً. تكدر تجدده هسه.",
+    "expiredTitle": "انتهى اشتراكك",
+    "expiredBody": "انتهى يوم {date}. جدّده حتى نرجع نذكرك ونجيك بموعدك.",
+    "declinedBody": "ما كدرنا نفعّل طلبك السابق. راسلنا إذا عندك سؤال، أو اطلب مرة ثانية.",
+    "cancelledBody": "انلغى اشتراكك يوم {date}. راسلنا إذا عندك سؤال.",
+    "period": "من {from} لحد {to}",
+    "nextBooked": "زيارتك الجاية",
+    "book": "احجز زيارة",
+    "errors": {
+      "exists": "عندك اشتراك فعّال لهذا العنوان.",
+      "notOffered": "الاشتراك بعد ما متوفر.",
+      "outsideArea": "بعد ما نخدم منطقتك، حالياً بس كربلاء",
+      "stale": "هذا العنوان ما موجود. اختار عنوان ثاني.",
+      "failed": "ما كدرنا نرسل طلبك، جرب مرة ثانية."
+    },
+    "card": {
+      "title": "الاشتراك السنوي",
+      "states": {
+        "active": "فعّال",
+        "upcoming": "يبدأ قريباً",
+        "requested": "قيد المراجعة",
+        "expired": "منتهي"
+      },
+      "visitsLeft": "الزيارات المتبقية",
+      "visitsValue": "{left} من {total}",
+      "next": "الزيارة الجاية",
+      "ends": "ينتهي",
+      "starts": "يبدأ",
+      "none": "—",
+      "noneBody": "زيارتين تنظيف بالسنة وتذكير بالموعد.",
+      "noneCta": "اشترك",
+      "requestedBody": "طلبك قيد المراجعة، نتواصل وياك قريباً.",
+      "expiredBody": "انتهى اشتراكك.",
+      "expiredCta": "جدّد الاشتراك"
+    }
   },
   "Profile": {
     "title": "حسابي",
@@ -1156,7 +1242,8 @@
     "iqd": "{amount} د.ع",
     "photoOf": "{n} من {total}",
     "previousPhoto": "الصورة السابقة",
-    "nextPhoto": "الصورة التالية"
+    "nextPhoto": "الصورة التالية",
+    "covered": "مشمول بالاشتراك"
   },
   "Kit": {
     "title": "مكونات الواجهة",
@@ -1234,7 +1321,9 @@
     "successTitle": "وصلنا بلاغك",
     "successCta": "افتح المحادثة",
     "photo": "صورة {n}",
-    "openPhoto": "كبّر {label}"
+    "openPhoto": "كبّر {label}",
+    "switchReminder": "تذكير بموعد التنظيف",
+    "switchSubscription": "استخدم زيارة من اشتراكك"
   },
   "Admin": {
     "nav": {
@@ -1256,7 +1345,9 @@
       "tickets": "البلاغات",
       "ratings": "التقييمات",
       "chatUnread": "{count, plural, one {محادثة غير مقروءة} two {محادثتين غير مقروءة} few {# محادثات غير مقروءة} other {# محادثة غير مقروءة}}",
-      "ticketsOpen": "{count, plural, one {بلاغ مفتوح} two {بلاغين مفتوحة} few {# بلاغات مفتوحة} other {# بلاغ مفتوح}}"
+      "ticketsOpen": "{count, plural, one {بلاغ مفتوح} two {بلاغين مفتوحة} few {# بلاغات مفتوحة} other {# بلاغ مفتوح}}",
+      "subscriptions": "الاشتراكات",
+      "subscriptionRequests": "{count, plural, one {طلب اشتراك جديد} two {طلبين اشتراك} few {# طلبات اشتراك} other {# طلب اشتراك}}"
     },
     "live": {
       "soundOn": "صوت التنبيه شغال",
@@ -1296,9 +1387,7 @@
       "pendingEmptyBody": "كل الحجوزات الجديدة تأكدت. الحجز الجديد يطلع هنا وينسمع صوت التنبيه إذا شغّلته.",
       "toOrders": "كل الطلبات",
       "pendingCaption": "الطلبات اللي تنتظر التأكيد، الأقرب موعداً أولاً",
-      "later": "تجي قريباً",
-      "subscriptions": "طلبات الاشتراك",
-      "comingSoon": "تنضاف ويه الاشتراكات",
+      "subscriptions": "طلبات الاشتراك ({count})",
       "ticketsOpen": "البلاغات المفتوحة ({count})",
       "ticketsEmpty": "ماكو بلاغات مفتوحة",
       "ticketsEmptyBody": "بلاغات الزبائن والتقييمات بـ 3 نجوم أو أقل تطلع هنا.",
@@ -1311,7 +1400,12 @@
       "chatsAll": "كل المحادثات",
       "chatsCaption": "المحادثات اللي بيها رسائل ما انقرت، الأحدث أولاً",
       "ticketRowNoOrder": "<num>{ticket}</num>",
-      "ticketsAll": "كل البلاغات"
+      "ticketsAll": "كل البلاغات",
+      "subscriptionsEmpty": "ماكو طلبات اشتراك",
+      "subscriptionsEmptyBody": "طلبات الاشتراك السنوي الجديدة تطلع هنا.",
+      "subscriptionsAll": "كل الاشتراكات",
+      "subscriptionsCaption": "طلبات الاشتراك، الأقدم أولاً",
+      "subscriptionRow": "{label} · {district}"
     },
     "table": {
       "number": "الطلب",
@@ -1419,7 +1513,19 @@
       "rating": "التقييم",
       "stars": "{n} من 5",
       "notRated": "الزبون بعده ما قيّم.",
-      "ticket": "بلاغ <num>{number}</num> · {status, select, open {مفتوح} in_progress {قيد المعالجة} other {مغلق}}"
+      "ticket": "بلاغ <num>{number}</num> · {status, select, open {مفتوح} in_progress {قيد المعالجة} other {مغلق}}",
+      "subscription": {
+        "title": "الاشتراك",
+        "covered": "مشمول بالاشتراك",
+        "visits": "باقي {left} من {total} زيارات · لحد {date}",
+        "paid": "مدفوع",
+        "unpaid": "بعده ما مدفوع",
+        "open": "افتح الاشتراك",
+        "drop": "شيل الاشتراك",
+        "dropHint": "يصير الطلب كاش، والزيارة ترجع للاشتراك.",
+        "use": "استخدم الاشتراك",
+        "useHint": "العنوان عنده اشتراك فعّال. الطلب يصير مشمول ويستخدم زيارة."
+      }
     },
     "actions": {
       "title": "الإجراءات",
@@ -1458,6 +1564,10 @@
         "cash_not_collected": "لازم يتأشر استلام المبلغ",
         "crew_inactive": "هذا الفريق موقوف. اختار فريق ثاني.",
         "crew_change_not_allowed": "ما يصير تغيّر الفريق بهذي الحالة",
+        "no_subscription": "الاشتراك ما يغطي هذا الطلب (انلغى أو ما فعّال). شيل الاشتراك من الطلب حتى يصير كاش.",
+        "outside_subscription_period": "موعد الطلب برّا فترة الاشتراك. شيل الاشتراك أو غيّر الموعد.",
+        "no_visits_left": "ما باقي زيارات بالاشتراك. شيل الاشتراك من الطلب حتى يصير كاش.",
+        "subscription_tanks_exceeded": "الطلب بيه خزانات أكثر من اللي يغطيها الاشتراك.",
         "not_found": "الطلب أو الفريق مو موجود",
         "failed": "ما انحفظ. اعد المحاولة."
       },
@@ -1487,6 +1597,16 @@
       "slug_taken": "في مقال بنفس الرابط. اختار رابط ثاني.",
       "slug_locked": "رابط المقال ما يتغيّر بعد ما انتشر، حتى ما تخرب الروابط اللي انشاركت.",
       "category_name_taken": "في قسم بنفس الاسم. اختار اسم ثاني.",
+      "subscription_exists": "هذا العنوان عنده اشتراك فعّال بنفس الفترة، أو طلب ثاني.",
+      "invalid_subscription_status": "حالة الاشتراك تغيّرت. حدّث الصفحة.",
+      "subscription_change_not_allowed": "ما يصير تغيّر اشتراك طلب خلص، ولا تضيف اشتراك لطلب مو بانتظار زيارته.",
+      "no_subscription": "هذا العنوان ما عنده اشتراك فعّال يغطي الطلب.",
+      "outside_subscription_period": "موعد الطلب برّا فترة الاشتراك.",
+      "no_visits_left": "ما باقي زيارات بالاشتراك.",
+      "subscription_tanks_exceeded": "الطلب بيه خزانات أكثر من اللي يغطيها الاشتراك.",
+      "reason_required": "اكتب السبب.",
+      "invalid_start": "تاريخ البداية لازم يكون من اليوم ولحد سنة.",
+      "invalid_adjustment": "هذا التعديل يخلي الزيارات أقل من صفر أو أكثر من المجموع.",
       "invalid": "في قيمة مو مقبولة. راجع الحقول.",
       "not_found": "ما لكينا هذا العنصر. حدّث الصفحة.",
       "failed": "ما انحفظ. اعد المحاولة."
@@ -1626,6 +1746,14 @@
         "title": "منطقة الخدمة",
         "body": "حدود المنطقة اللي نخدمها. العناوين برّاها تنرفض.",
         "open": "افتح محرر المنطقة"
+      },
+      "subscription": {
+        "title": "الاشتراك السنوي",
+        "price": "السعر بالسنة (د.ع)",
+        "priceHint": "خليه فارغ إذا الاشتراك بعد ما متوفر: الزبون يشوف «الاشتراك قريباً» وما يكدر يطلبه.",
+        "visits": "عدد الزيارات بالسنة",
+        "tanks": "عدد الخزانات بكل زيارة",
+        "plansHint": "الاشتراكات المفعّلة تبقى على الخطة اللي انفعّلت بيها."
       }
     },
     "area": {
@@ -1873,12 +2001,14 @@
         "profiles": "المشرفين",
         "tickets": "البلاغات",
         "articles": "المقالات",
-        "article_categories": "أقسام المقالات"
+        "article_categories": "أقسام المقالات",
+        "subscriptions": "الاشتراكات"
       },
       "actions": {
         "order": {
           "transition": "غيّر حالة الطلب",
-          "assign_crew": "غيّر فريق الطلب"
+          "assign_crew": "غيّر فريق الطلب",
+          "subscription": "غيّر اشتراك الطلب"
         },
         "price": {
           "update": "غيّر سعر"
@@ -1922,6 +2052,14 @@
           "update": "عدّل قسم مقالات",
           "delete": "حذف قسم مقالات",
           "reorder": "رتّب أقسام المقالات"
+        },
+        "subscription": {
+          "activate": "فعّل اشتراك",
+          "paid": "غيّر الدفع لاشتراك",
+          "adjust": "عدّل زيارات اشتراك",
+          "decline": "رفض طلب اشتراك",
+          "cancel": "ألغى اشتراك",
+          "note": "أضاف ملاحظة لاشتراك"
         }
       },
       "fields": {
@@ -1963,7 +2101,19 @@
         "featured": "مميز",
         "status": "الحالة",
         "icon": "الأيقونة",
-        "order": "الترتيب"
+        "order": "الترتيب",
+        "starts_on": "البداية",
+        "ends_on": "النهاية",
+        "visits_total": "الزيارات",
+        "tanks_covered": "الخزانات",
+        "price_iqd": "السعر",
+        "paid": "مدفوع",
+        "visits_left": "الزيارات المتبقية",
+        "subscription_price_iqd": "سعر الاشتراك",
+        "subscription_visits": "زيارات الاشتراك",
+        "subscription_tanks": "خزانات الاشتراك",
+        "from": "من",
+        "to": "إلى"
       },
       "yes": "إي",
       "no": "لا",
@@ -2027,7 +2177,6 @@
         "noAddresses": "ماكو عناوين",
         "address": "{label} · {district}",
         "subscription": "الاشتراك",
-        "subscriptionLater": "الاشتراكات تجي ويه المرحلة 6",
         "tickets": "البلاغات",
         "noTickets": "ماكو بلاغات",
         "ticket": "<num>{ticket}</num>",
@@ -2036,7 +2185,10 @@
           "open": "مفتوح",
           "in_progress": "قيد المعالجة",
           "closed": "مغلق"
-        }
+        },
+        "noSubscription": "ماكو اشتراك",
+        "subscriptionRow": "{label} · {state}",
+        "subscriptionVisits": "باقي {left} من {total} · لحد {date}"
       },
       "canned": {
         "label": "ردود جاهزة",
@@ -2143,6 +2295,102 @@
       "emptyFiltered": "ماكو تقييمات بهذا العدد من النجوم",
       "emptyFilteredBody": "اختار عدد ثاني أو اعرض الكل.",
       "more": "عرض المزيد"
+    },
+    "subscriptions": {
+      "title": "الاشتراكات",
+      "caption": "الاشتراكات",
+      "view": "العرض",
+      "views": {
+        "requests": "الطلبات",
+        "active": "الفعّالة",
+        "expiring": "تنتهي خلال 30 يوم",
+        "ended": "المنتهية والمرفوضة"
+      },
+      "search": "ابحث بالاسم أو الرقم",
+      "apply": "اعرض",
+      "clear": "مسح الفلتر",
+      "columns": {
+        "customer": "الزبون",
+        "address": "العنوان",
+        "state": "الحالة",
+        "period": "الفترة",
+        "visits": "الزيارات",
+        "paid": "الدفع",
+        "requested": "تاريخ الطلب"
+      },
+      "states": {
+        "requested": "طلب جديد",
+        "upcoming": "يبدأ لاحقاً",
+        "active": "فعّال",
+        "expired": "منتهي",
+        "declined": "مرفوض",
+        "cancelled": "ملغي"
+      },
+      "address": "{label} · {district}",
+      "period": "{from} ← {to}",
+      "visitsValue": "{used} مستعملة · {held} محجوزة · {left} باقية من {total}",
+      "visitsShort": "{left} من {total}",
+      "paid": "مدفوع",
+      "unpaid": "غير مدفوع",
+      "none": "—",
+      "noName": "بدون اسم",
+      "empty": {
+        "requests": "ماكو طلبات اشتراك",
+        "active": "ماكو اشتراكات فعّالة",
+        "expiring": "ماكو اشتراكات تنتهي قريباً",
+        "ended": "ماكو اشتراكات منتهية"
+      },
+      "emptyBody": "لمن الزبون يطلب اشتراك من التطبيق يطلع هنا.",
+      "emptyFiltered": "ماكو اشتراكات بهذا البحث",
+      "more": "عرض المزيد",
+      "drawer": {
+        "title": "اشتراك {name}",
+        "notFound": "ما لكينا هذا الاشتراك",
+        "notFoundBody": "يمكن الرابط غلط. ارجع لقائمة الاشتراكات.",
+        "customer": "الزبون",
+        "address": "العنوان",
+        "requested": "طلبه {date}",
+        "plan": "الخطة",
+        "planValue": "{visits, plural, one {زيارة وحدة} two {زيارتين} few {# زيارات} other {# زيارة}} · {tanks, plural, one {خزان واحد} two {خزانين} few {# خزانات} other {# خزان}} بالزيارة · {price}",
+        "period": "الفترة",
+        "visits": "الزيارات",
+        "orders": "الطلبات على الاشتراك",
+        "noOrders": "ماكو طلبات على هذا الاشتراك.",
+        "orderLink": "طلب <num>#{number}</num>",
+        "chat": "افتح المحادثة",
+        "activateTitle": "فعّل الاشتراك",
+        "startsOn": "تاريخ البداية",
+        "startsOnHint": "ينتهي بعد 12 شهر: {date}.",
+        "visitsField": "عدد الزيارات",
+        "tanksField": "عدد الخزانات بكل زيارة",
+        "priceField": "السعر (د.ع)",
+        "paidField": "استلمنا المبلغ",
+        "noteField": "ملاحظة داخلية (اختياري)",
+        "activate": "فعّل",
+        "noPrice": "سعر الاشتراك مو محدد بالإعدادات، اكتبه هنا.",
+        "paidTitle": "الدفع",
+        "markPaid": "استلمنا المبلغ",
+        "markUnpaid": "رجّعه غير مدفوع",
+        "adjustTitle": "عدّل الزيارات",
+        "adjustHint": "زيد زيارة إذا صارت زيارة برّا التطبيق، أو رجّع زيارة للزبون.",
+        "addVisit": "احسب زيارة مستعملة",
+        "giveBack": "رجّع زيارة",
+        "adjustReason": "سبب التعديل",
+        "reason": "السبب",
+        "endTitleRequest": "ارفض الطلب",
+        "endTitleActive": "ألغِ الاشتراك",
+        "endHintRequest": "الزبون يوصله إشعار إن طلبه ما انقبل. السبب يبقى داخلي.",
+        "endHintActive": "الطلبات المفتوحة على الاشتراك ترجع كاش. السبب يبقى داخلي.",
+        "decline": "ارفض",
+        "cancel": "ألغِ الاشتراك",
+        "notes": "ملاحظات داخلية",
+        "notesHint": "الزبون ما يشوفها.",
+        "noNotes": "ماكو ملاحظات.",
+        "noteLabel": "ملاحظة جديدة",
+        "addNote": "أضف الملاحظة",
+        "noteBy": "{name} · {at}",
+        "anAdmin": "مشرف"
+      }
     }
   }
 }

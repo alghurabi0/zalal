@@ -9,19 +9,25 @@ import { Screen } from "@/components/layout/screen";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { CustomerTabBar } from "@/components/chat/customer-tab-bar";
-import { listAddresses } from "@/lib/addresses";
+import { LiveSubscriptions } from "@/components/subscriptions/live-subscriptions";
+import { SubscriptionCard } from "@/components/subscriptions/subscription-card";
+import { chosenAddress, listAddresses } from "@/lib/addresses";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
+import { listSubscriptions, subscriptionPlan } from "@/lib/subscriptions/queries";
+import { currentFor, type Subscription } from "@/lib/subscriptions/state";
 
-import { AddressPicker } from "../addresses/address-picker";
+import { AddressPicker, type AddressSummary } from "../addresses/address-picker";
 
 /**
- * Profile (Profile.dc.html, spec §5.8), Phase 1 shell: name and phone, My
- * addresses (N2), My tanks (N3), My reports (N11, Phase 5) and logout. The
- * subscription card, other rows and Edit profile come in Phase 6.
+ * Profile (Profile.dc.html, spec §5.8), Phase 1 shell: name and phone, the
+ * subscription card (one per address with a subscription, else one for the
+ * chosen address; Phase 6, task 2), My addresses (N2), My tanks (N3), My
+ * reports (N11, Phase 5) and logout. The other rows and Edit profile come
+ * with Phase 6, task 3.
  */
 export default function ProfilePage() {
   return (
@@ -37,17 +43,32 @@ export default function ProfilePage() {
 
 async function ProfileContent() {
   const t = await getTranslations("Profile");
+  const tSubscription = await getTranslations("Subscription");
+  const tLabels = await getTranslations("Location.labels");
   const viewer = await requireViewer(routes.profile);
   const supabase = await createClient();
-  const [addresses, tanks, openTickets] = await Promise.all([
+  const [addresses, tanks, openTickets, subscriptions, plan] = await Promise.all([
     listAddresses(),
     supabase.from("tanks").select("id", { count: "exact", head: true }),
     supabase.from("tickets").select("id", { count: "exact", head: true }).neq("status", "closed"),
+    listSubscriptions(),
+    subscriptionPlan(),
   ]);
   if (tanks.error) throw new Error(`Tanks count failed: ${tanks.error.message}`);
   if (openTickets.error) throw new Error(`Tickets count failed: ${openTickets.error.message}`);
   const tankCount = tanks.count ?? 0;
   const name = viewer.fullName ?? "";
+
+  // One card per address whose subscription is running, asked for or
+  // expired; with none, one card for the chosen address (Home's).
+  const cards: { address: AddressSummary | null; subscription: Subscription | null }[] = addresses
+    .map((address) => ({ address, subscription: currentFor(subscriptions, address.id) }))
+    .filter(
+      ({ subscription }) =>
+        subscription && subscription.state !== "declined" && subscription.state !== "cancelled",
+    );
+  const chosen = await chosenAddress(addresses);
+  if (cards.length === 0) cards.push({ address: chosen ?? null, subscription: null });
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-5 pb-6">
@@ -66,6 +87,24 @@ async function ProfileContent() {
           </p>
         </div>
       </div>
+
+      <LiveSubscriptions userId={viewer.id} />
+      {cards.map(({ address, subscription }) => (
+        <SubscriptionCard
+          key={address?.id ?? "none"}
+          subscription={subscription}
+          addressId={address?.id ?? null}
+          addressLine={
+            address && addresses.length > 1
+              ? tSubscription("addressLine", {
+                  label: tLabels(address.label),
+                  district: address.district,
+                })
+              : undefined
+          }
+          intervalMonths={plan.cleaningIntervalMonths}
+        />
+      ))}
 
       <Card className="overflow-hidden">
         <ul className="divide-y divide-divider">

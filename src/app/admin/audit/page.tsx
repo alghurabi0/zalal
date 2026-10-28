@@ -302,6 +302,15 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
       );
     case "settings":
       return <>{t("entities.settings")}</>;
+    case "subscriptions":
+      return (
+        <Link
+          href={routes.adminSubscription(entry.entityId)}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {names.subscriptions.get(entry.entityId) ?? entry.entityId.slice(0, 8)}
+        </Link>
+      );
     default:
       return <bdi dir="ltr">{entry.entityId}</bdi>;
   }

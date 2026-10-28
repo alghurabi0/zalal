@@ -259,4 +259,51 @@ begin
 end;
 $$;
 
+-- A subscription (Phase 6) on the user's default address (made if missing),
+-- inserted past the RPCs: requested, or active from p_starts_on for 12
+-- months with p_visits visits for p_tanks tanks. Returns its id.
+create function tests.create_subscription(
+  p_user_id uuid,
+  p_status text default 'active',
+  p_starts_on date default (now() at time zone 'Asia/Baghdad')::date,
+  p_visits int default 2,
+  p_tanks int default 1,
+  p_address_id uuid default null
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_address_id uuid := p_address_id;
+  v_id uuid;
+  v_activated boolean := p_status in ('active', 'cancelled');
+begin
+  if v_address_id is null then
+    select id into v_address_id
+    from public.addresses
+    where user_id = p_user_id and deleted_at is null and is_default;
+    if not found then
+      v_address_id := tests.create_address(p_user_id);
+    end if;
+  end if;
+
+  insert into public.subscriptions (
+    user_id, address_id, status, price_iqd, visits_total, tanks_covered, starts_on, ends_on,
+    activated_at, ended_at
+  )
+  values (
+    p_user_id, v_address_id, p_status::public.subscription_status,
+    case when v_activated then 60000 end,
+    case when v_activated then p_visits end,
+    case when v_activated then p_tanks end,
+    case when v_activated then p_starts_on end,
+    case when v_activated then (p_starts_on + interval '12 months' - interval '1 day')::date end,
+    case when v_activated then now() end,
+    case when p_status in ('declined', 'cancelled') then now() end
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated, service_role;

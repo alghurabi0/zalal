@@ -24,3 +24,7 @@ from (
     ('chlorine-smell', 6)
 ) as v (slug, days_ago)
 where a.slug = v.slug and a.status = 'draft';
+
+-- Subscription plan: hosted projects start with no price (not offered until
+-- the owner sets it in A13). Locally the plan is offered at 60,000 IQD.
+update public.settings as s set subscription_price_iqd = 60000 where s.id;

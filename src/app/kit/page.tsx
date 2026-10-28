@@ -17,6 +17,7 @@ import { SheetPanel } from "@/components/ui/sheet-panel";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { StepProgress } from "@/components/ui/step-progress";
 import { Stepper } from "@/components/ui/stepper";
+import { Switch } from "@/components/ui/switch";
 import { TabBar } from "@/components/ui/tab-bar";
 import { routes } from "@/lib/routes";
 
@@ -258,6 +259,14 @@ export default function KitPage() {
           <div className="flex items-center justify-between rounded-input border border-border bg-surface px-3 py-2">
             <span className="text-15 font-extrabold">{t("countLabel")}</span>
             <Stepper label={t("countLabel")} name="count" max={6} />
+          </div>
+          <div className="flex flex-col divide-y divide-divider rounded-input border border-border bg-surface px-3.5">
+            <Switch name="reminders" defaultChecked>
+              <span className="text-15 font-bold">{t("switchReminder")}</span>
+            </Switch>
+            <Switch name="subscription">
+              <span className="text-15 font-bold">{t("switchSubscription")}</span>
+            </Switch>
           </div>
         </Section>
 

@@ -70,3 +70,54 @@ export async function logInAsCrew(page: Page) {
   await page.waitForURL("**/crew");
   return crew;
 }
+
+/**
+ * A subscription on the customer's first address (Phase 6), written
+ * directly: a request, or active from today for 12 months.
+ */
+export async function createSubscription(
+  phone: string,
+  {
+    status = "active",
+    visits = 2,
+    tanks = 1,
+  }: { status?: "requested" | "active"; visits?: number; tanks?: number } = {},
+): Promise<{ id: string; addressId: string }> {
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("phone", e164(phone))
+    .single()
+    .throwOnError();
+  const { data: address } = await admin
+    .from("addresses")
+    .select("id")
+    .eq("user_id", profile.id)
+    .is("deleted_at", null)
+    .order("created_at")
+    .limit(1)
+    .single()
+    .throwOnError();
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baghdad" }).format(new Date());
+  const end = new Date(`${today}T00:00:00Z`);
+  end.setUTCMonth(end.getUTCMonth() + 12);
+  end.setUTCDate(end.getUTCDate() - 1);
+  const active = status === "active";
+  const { data } = await admin
+    .from("subscriptions")
+    .insert({
+      user_id: profile.id,
+      address_id: address.id,
+      status,
+      price_iqd: active ? 60000 : null,
+      visits_total: active ? visits : null,
+      tanks_covered: active ? tanks : null,
+      starts_on: active ? today : null,
+      ends_on: active ? end.toISOString().slice(0, 10) : null,
+      activated_at: active ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+  return { id: data.id, addressId: address.id };
+}

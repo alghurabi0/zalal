@@ -58,7 +58,7 @@ function toRow(row: TicketRow): AdminTicketRow {
 }
 
 /** The customers a search names: by name, or by phone digits (4 or more). */
-async function customersMatching(
+export async function customersMatching(
   supabase: Awaited<ReturnType<typeof createClient>>,
   search: string,
 ): Promise<string[]> {

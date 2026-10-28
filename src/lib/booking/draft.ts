@@ -43,6 +43,8 @@ export const bookingDraftSchema = z.object({
   serviceDate: z.iso.date().nullable(),
   slotId: z.number().int().positive().nullable(),
   note: z.string().max(2000),
+  /** Checkout's "استخدم زيارة من اشتراكك" (Phase 6); older drafts have none. */
+  useSubscription: z.boolean().default(false),
 });
 
 export type BookingDraft = z.infer<typeof bookingDraftSchema>;
@@ -82,6 +84,7 @@ export function newDraft(context: DraftContext): BookingDraft {
     serviceDate: firstOpenDay(context.days),
     slotId: null,
     note: "",
+    useSubscription: false,
   };
 }
 
@@ -168,7 +171,14 @@ export function orderItems(lines: DraftLine[]) {
  */
 export function withRequestReset(before: BookingDraft, after: BookingDraft): BookingDraft {
   const booking = (d: BookingDraft) =>
-    JSON.stringify([d.addressId, d.lines, d.serviceDate, d.slotId, d.note.trim()]);
+    JSON.stringify([
+      d.addressId,
+      d.lines,
+      d.serviceDate,
+      d.slotId,
+      d.note.trim(),
+      d.useSubscription,
+    ]);
   if (after.requestId === null || after.requestId !== before.requestId) return after;
   return booking(before) === booking(after) ? after : { ...after, requestId: null };
 }

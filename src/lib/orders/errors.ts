@@ -10,6 +10,8 @@ export type OrderChangeError =
   | "slot_unavailable"
   /** ZL010: the order moved on meanwhile (confirmed → on the way, cancelled…). */
   | "invalid_transition"
+  /** ZL034: a covered order can't move outside its subscription's period (Phase 6). */
+  | "outside_subscription"
   | "failed";
 
 const byCode: Record<string, OrderChangeError> = {
@@ -17,6 +19,7 @@ const byCode: Record<string, OrderChangeError> = {
   ZL005: "slot_full",
   ZL006: "too_late",
   ZL010: "invalid_transition",
+  ZL034: "outside_subscription",
 };
 
 export function orderChangeErrorFor(code: string | undefined): OrderChangeError {

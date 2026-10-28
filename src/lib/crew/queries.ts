@@ -90,6 +90,8 @@ export type JobDetails = JobCard & {
   lat: number;
   lng: number;
   total_iqd: number;
+  /** A subscription order: nothing to collect (Phase 6). */
+  subscription_id: string | null;
   events: OrderEventRow[];
   /** Staff notes by event id (order_event_notes): the crew reads them. */
   notes: Map<number, string>;
@@ -104,6 +106,7 @@ type DetailsRow = Omit<CardRow, "order_media"> & {
   lat: number;
   lng: number;
   total_iqd: number;
+  subscription_id: string | null;
   order_events: OrderEventRow[];
   order_media: {
     id: string;
@@ -122,7 +125,7 @@ export async function getJob(id: string): Promise<JobDetails | null> {
     .from("orders")
     .select(
       `id, number, status, service_date, slot_id, slot_start_at, slot_end_at,
-       district, landmark, customer_note, crew_id, lat, lng, total_iqd,
+       district, landmark, customer_note, crew_id, lat, lng, total_iqd, subscription_id,
        order_items(id, tank_type, size, qty),
        order_events(id, from_status, to_status, actor_role, cancel_reason, is_override, details, created_at),
        order_media(id, kind, media_type, path, duration_s, created_at)`,
@@ -149,13 +152,14 @@ export async function getJob(id: string): Promise<JobDetails | null> {
     isOpenJob(data.status) ? jobContact(id) : null,
   ]);
 
-  const { crew_id, lat, lng, total_iqd, order_events, ...card } = data;
+  const { crew_id, lat, lng, total_iqd, subscription_id, order_events, ...card } = data;
   return {
     ...toCard(card),
     crew_id,
     lat,
     lng,
     total_iqd,
+    subscription_id,
     events: order_events,
     notes,
     media: files.map((file) => ({
