@@ -1,12 +1,13 @@
 "use client";
 
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { LocateFixed } from "lucide-react";
+import { LocateFixed, MapPinOff } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
 import { MapPlaceholder } from "@/components/illustrations/map-placeholder";
+import { SystemState } from "@/components/layout/system-state";
 import { CenterPin } from "@/components/location/center-pin";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,8 @@ type LocationEditorProps = {
   backHref: string;
   /** Where saving (or "بعدين") goes. */
   next: string;
+  /** settings.company_phone for N16's out-of-area screen, null while unset. */
+  supportPhone?: string | null;
 };
 
 /** Location (Location.dc.html, spec §5.4): pin on the map, district, landmark, label. */
@@ -59,11 +62,18 @@ function Editor({
   backHref,
   next,
   withMap,
+  supportPhone = null,
 }: LocationEditorProps & { withMap: boolean }) {
   const t = useTranslations("Location");
+  const tSystem = useTranslations("System");
   const [state, action, pending] = useActionState<SaveAddressState, FormData>(saveAddress, {
     error: null,
   });
+  // N16 out of area: a new user's first pin outside the area gets the full
+  // screen (settled Oct 28, 2026); later addresses keep the inline message.
+  // "غيّر الموقع" closes it for this answer, and the next refusal opens it again.
+  const [closedFor, setClosedFor] = useState<SaveAddressState | null>(null);
+  const outOfArea = onboarding && state.error === "outside_area" && closedFor !== state;
 
   const initial = address ? { lat: address.lat, lng: address.lng } : KARBALA_CENTER;
   const [center, setCenter] = useState<LatLng>(initial);
@@ -138,6 +148,28 @@ function Editor({
 
   return (
     <div className="mx-auto flex h-dvh w-full max-w-phone flex-col overflow-hidden bg-map-bg">
+      {outOfArea && (
+        <div
+          role="alertdialog"
+          aria-modal
+          aria-labelledby="out-of-area-title"
+          className="fixed inset-0 z-50"
+        >
+          <SystemState
+            icon={MapPinOff}
+            title={tSystem("outOfAreaTitle")}
+            titleId="out-of-area-title"
+            body={tSystem("outOfAreaBody")}
+            phone={supportPhone}
+            callLabel={tSystem("call")}
+            action={
+              <Button autoFocus onClick={() => setClosedFor(state)}>
+                {tSystem("changePin")}
+              </Button>
+            }
+          />
+        </div>
+      )}
       <div className="relative min-h-50 flex-1">
         <MapPlaceholder className="absolute inset-0" />
         {withMap && (

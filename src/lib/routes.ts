@@ -70,6 +70,8 @@ export const routes = {
   logout: "/logout",
   terms: "/terms",
   privacy: "/privacy",
+  /** N16 maintenance; proxy.ts shows it in place of customer pages while A13's switch is on. */
+  maintenance: "/maintenance",
   /** Tips (§5.6), guests too. */
   tips: "/tips",
   /** Article (N9), by its slug. */
@@ -144,6 +146,29 @@ export const loginRequiredPrefixes = [
   "/crew",
   "/admin",
 ] as const;
+
+/**
+ * Paths maintenance mode (N16) leaves alone: staff surfaces and their login,
+ * the legal pages Login links to, the certificate print page (PDFs) and
+ * the public certificate page a printed QR opens.
+ */
+export const maintenanceExemptPrefixes = [
+  "/admin",
+  "/crew",
+  "/login",
+  "/logout",
+  "/maintenance",
+  "/terms",
+  "/privacy",
+  "/certificates",
+  "/c",
+] as const;
+
+export function exemptFromMaintenance(pathname: string): boolean {
+  return maintenanceExemptPrefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 export function requiresLogin(pathname: string): boolean {
   return loginRequiredPrefixes.some(

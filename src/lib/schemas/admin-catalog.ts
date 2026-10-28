@@ -161,6 +161,15 @@ export const legalSettingsSchema = z.object({
   privacy_md: z.string().trim().max(LEGAL_MAX),
 });
 
+/** settings.maintenance_mode and min_app_version (N16): x.y.z, as the column checks. */
+export const appSettingsSchema = z.object({
+  maintenance_mode: z.boolean(),
+  min_app_version: z
+    .string()
+    .trim()
+    .regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/),
+});
+
 export const settingsSectionSchema = z.discriminatedUnion("section", [
   z.object({ section: z.literal("login"), values: loginSettingsSchema }),
   z.object({ section: z.literal("support"), values: supportSettingsSchema }),
@@ -170,6 +179,7 @@ export const settingsSectionSchema = z.discriminatedUnion("section", [
   z.object({ section: z.literal("chat"), values: chatSettingsSchema }),
   z.object({ section: z.literal("legal"), values: legalSettingsSchema }),
   z.object({ section: z.literal("subscription"), values: subscriptionPlanSchema }),
+  z.object({ section: z.literal("app"), values: appSettingsSchema }),
 ]);
 
 export type SettingsSection = z.input<typeof settingsSectionSchema>["section"];

@@ -13,10 +13,9 @@ import { routes } from "@/lib/routes";
 import { SettingsForms } from "./settings-forms";
 
 /**
- * Settings (A13, spec §8.2, §7): each section saves on its own. The support
- * response text and the subscription plan come with Phases 5 and 6, and
- * maintenance mode and the minimum app version with N16 (Phase 6), which is
- * what reads them.
+ * Settings (A13, spec §8.2, §7): each section saves on its own, from SMS
+ * fallback to the Terms and Privacy Markdown and "التطبيق" (maintenance
+ * mode and the minimum app version, which N16 reads).
  */
 export default async function SettingsPage() {
   const t = await getTranslations("Admin.settings");

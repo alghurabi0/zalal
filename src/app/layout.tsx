@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
+import { ForceUpdate } from "@/components/layout/force-update";
 import { OfflineBanner } from "@/components/ui/offline-banner";
 import { locale } from "@/i18n/config";
 import { brandColors } from "@/lib/brand";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <NextIntlClientProvider>
             <OfflineBanner />
             {children}
+            <ForceUpdate />
           </NextIntlClientProvider>
         </SerwistProvider>
       </body>

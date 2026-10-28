@@ -12,6 +12,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import type { AdminSettings } from "@/lib/admin/catalog-queries";
 import type { AdminEditError } from "@/lib/admin/edit-errors";
 import { normalizeIraqiPhone } from "@/lib/phone";
+import { appSettingsSchema } from "@/lib/schemas/admin-catalog";
 import {
   CERTIFICATE_TEXT_MAX,
   SUPPORT_REPLY_MAX,
@@ -21,6 +22,8 @@ import {
   type SettingsSectionInput,
   STERILANT_MAX,
 } from "@/lib/schemas/admin-catalog";
+
+import { APP_VERSION } from "@/lib/app-version";
 
 import { saveSettings } from "./actions";
 
@@ -36,6 +39,7 @@ export function SettingsForms({ settings }: { settings: AdminSettings }) {
       <CertificateSection settings={settings} />
       <SubscriptionSection settings={settings} />
       <LegalSection settings={settings} />
+      <AppSection settings={settings} />
     </div>
   );
 }
@@ -553,6 +557,47 @@ function LegalSection({ settings }: { settings: AdminSettings }) {
           )}
         </Field>
       </div>
+    </Section>
+  );
+}
+
+/**
+ * "التطبيق" (N16): maintenance mode shows customers and guests the
+ * maintenance screen (staff keep working); the minimum version shows older
+ * builds "حدّث التطبيق".
+ */
+function AppSection({ settings }: { settings: AdminSettings }) {
+  const t = useTranslations("Admin.settings.app");
+  const [maintenance, setMaintenance] = useState(settings.maintenance_mode);
+  const [version, setVersion] = useState(settings.min_app_version);
+  const values = { maintenance_mode: maintenance, min_app_version: version.trim() };
+  const valid = appSettingsSchema.safeParse(values).success;
+  return (
+    <Section title={t("title")} input={valid ? { section: "app", values } : null}>
+      <Toggle
+        label={t("maintenance")}
+        hint={t("maintenanceHint")}
+        checked={maintenance}
+        onChange={setMaintenance}
+      />
+      <Field
+        label={t("minVersion")}
+        hint={t("minVersionHint", { version: APP_VERSION })}
+        error={valid ? undefined : t("minVersionInvalid")}
+        variant="compact"
+      >
+        {(control) => (
+          <Input
+            {...control}
+            dir="ltr"
+            inputMode="decimal"
+            maxLength={14}
+            className="max-w-40 text-start"
+            value={version}
+            onChange={(event) => setVersion(event.target.value)}
+          />
+        )}
+      </Field>
     </Section>
   );
 }
