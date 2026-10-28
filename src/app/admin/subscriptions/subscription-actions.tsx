@@ -277,7 +277,7 @@ function Adjust({ subscriptionId }: { subscriptionId: string }) {
     <>
       <h3 className="text-16 font-extrabold">{t("adjustTitle")}</h3>
       <p className="text-13 text-muted">{t("adjustHint")}</p>
-      <Field label={t("reason")} variant="compact">
+      <Field label={t("adjustReason")} variant="compact">
         {(control) => (
           <Textarea
             {...control}

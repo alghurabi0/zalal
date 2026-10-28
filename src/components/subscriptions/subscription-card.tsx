@@ -76,13 +76,13 @@ export async function SubscriptionCard({
           </div>
           <div className="flex flex-col">
             <dt className="text-13 text-on-dark-muted">{t("next")}</dt>
-            <dd className="text-18 font-extrabold">{nextText}</dd>
+            <dd className="text-16 leading-tight font-extrabold">{nextText}</dd>
           </div>
           <div className="flex flex-col">
             <dt className="text-13 text-on-dark-muted">
               {state === "upcoming" ? t("starts") : t("ends")}
             </dt>
-            <dd className="text-18 font-extrabold">
+            <dd className="text-16 leading-tight font-extrabold">
               {formatDayMonth(
                 (state === "upcoming" ? subscription.startsOn : subscription.endsOn) ?? "",
               )}

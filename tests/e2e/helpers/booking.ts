@@ -159,6 +159,7 @@ export async function createOrder(
     lines = [{ tank_type: "roof", size: "m", qty: 1, unit_price_iqd: 35000 }],
     crewId = null,
     note = null,
+    subscriptionId = null,
   }: {
     slot: TestSlot;
     date: string;
@@ -168,6 +169,8 @@ export async function createOrder(
     /** The assigned crew. */
     crewId?: string | null;
     note?: string | null;
+    /** A subscription on the same address (createSubscription): a covered order. */
+    subscriptionId?: string | null;
   },
 ): Promise<{ id: string; number: number }> {
   const customerId = await userIdFor(phone);
@@ -195,6 +198,7 @@ export async function createOrder(
       status,
       crew_id: crewId,
       customer_note: note,
+      subscription_id: subscriptionId,
       total_iqd: lines.reduce((sum, l) => sum + l.qty * l.unit_price_iqd, 0),
       client_request_id: randomUUID(),
     })

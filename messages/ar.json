@@ -904,7 +904,7 @@
       },
       "subscription_activated": {
         "title": "تفعّل اشتراكك السنوي",
-        "body": "{visits, plural, one {زيارة وحدة} two {زيارتين} few {# زيارات} other {# زيارة}} لـ{label, select, family {بيت الأهل} work {الشغل} other {البيت}} لحد {date}."
+        "body": "اشتراك {label, select, family {بيت الأهل} work {الشغل} other {البيت}}: {visits, plural, one {زيارة وحدة} two {زيارتين} few {# زيارات} other {# زيارة}} لحد {date}."
       },
       "subscription_expiring": {
         "title": "اشتراكك يخلص قريباً",
@@ -2377,6 +2377,7 @@
         "adjustHint": "زيد زيارة إذا صارت زيارة برّا التطبيق، أو رجّع زيارة للزبون.",
         "addVisit": "احسب زيارة مستعملة",
         "giveBack": "رجّع زيارة",
+        "adjustReason": "سبب التعديل",
         "reason": "السبب",
         "endTitleRequest": "ارفض الطلب",
         "endTitleActive": "ألغِ الاشتراك",
