@@ -5,18 +5,17 @@ import { useTranslations } from "next-intl";
 import { useActionState, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
+import { ChannelChoice, PhoneField } from "@/components/auth/phone-field";
 import { useSendErrorMessage } from "@/components/auth/use-send-error";
-import { IraqFlag } from "@/components/illustrations/iraq-flag";
 import { Button } from "@/components/ui/button";
-import { Chip, ChipGroup } from "@/components/ui/chip";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import type { OtpChannel } from "@/lib/otp/schemas";
 import { normalizeIraqiMobile } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 
-import { sendCode, type SendCodeState } from "./actions";
+import type { SendCodeState } from "@/lib/otp/form-states";
+
+import { sendCode } from "./actions";
 
 const initialState: SendCodeState = { error: null };
 
@@ -48,60 +47,9 @@ export function LoginForm({ smsEnabled, next }: { smsEnabled: boolean; next: str
         <p className="text-16 text-muted">{showSms ? t("intro") : t("introWhatsapp")}</p>
       </div>
 
-      <Field label={t("phone")} hint={t("phoneHint")} error={phoneError}>
-        {(control) => (
-          <div dir="ltr" className="flex gap-2">
-            <div className="flex h-14 items-center gap-1.5 rounded-input border border-border bg-surface px-3.5 text-16 font-bold">
-              <IraqFlag />
-              {t("countryCode")}
-            </div>
-            <Input
-              {...control}
-              name="phone"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              maxLength={20}
-              placeholder={t("phonePlaceholder")}
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              className={cn(
-                "flex-1 border-2 px-4 text-18 font-bold tracking-phone focus:ring-0",
-                valid && "border-teal",
-              )}
-            />
-          </div>
-        )}
-      </Field>
+      <PhoneField value={phone} onChange={setPhone} error={phoneError} />
 
-      <ChipGroup
-        legend={t("channelLegend")}
-        legendClassName="mb-2.5 text-14 font-bold"
-        bodyClassName="grid grid-cols-2 gap-2.5"
-      >
-        <Chip
-          type="radio"
-          name="channel"
-          value="whatsapp"
-          checked={channel === "whatsapp" || !showSms}
-          onChange={() => setChannel("whatsapp")}
-          className={cn("h-13 rounded-input text-15", !showSms && "col-span-2")}
-        >
-          {t("whatsapp")}
-        </Chip>
-        {showSms && (
-          <Chip
-            type="radio"
-            name="channel"
-            value="sms"
-            checked={channel === "sms"}
-            onChange={() => setChannel("sms")}
-            className="h-13 rounded-input text-15"
-          >
-            {t("sms")}
-          </Chip>
-        )}
-      </ChipGroup>
+      <ChannelChoice smsEnabled={showSms} channel={channel} onChange={setChannel} />
 
       {next && <input type="hidden" name="next" value={next} />}
 

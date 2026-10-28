@@ -180,7 +180,12 @@ async function RatingTable({ ratings }: { ratings: AdminRatingRow[] }) {
               </td>
               <td className="px-3 py-3">
                 <span className="flex flex-col">
-                  <span className="font-bold">{rating.customer?.full_name ?? t("noName")}</span>
+                  <span className="font-bold">
+                    {rating.customer?.full_name ??
+                      (rating.customer && rating.customer.phone === null
+                        ? t("deletedAccount")
+                        : t("noName"))}
+                  </span>
                   {rating.customer && (
                     <span dir="ltr" className="text-end text-13 text-muted">
                       {formatPhone(rating.customer.phone)}

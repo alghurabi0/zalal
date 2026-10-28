@@ -194,7 +194,8 @@ async function SubscriptionTable({
                     className="flex min-h-11 flex-col justify-center px-3 py-2 underline-offset-2 hover:underline"
                   >
                     <span className="font-extrabold text-teal">
-                      {subscription.customer.name ?? t("noName")}
+                      {subscription.customer.name ??
+                        (subscription.customer.phone === null ? t("deletedAccount") : t("noName"))}
                     </span>
                     {subscription.customer.phone && (
                       <span dir="ltr" className="text-end text-13 text-muted">

@@ -71,7 +71,10 @@ export function OrderTable({
                 </td>
                 <td className="px-3 py-2.5">
                   <span className="block font-bold">
-                    {order.customer?.full_name ?? t("noName")}
+                    {order.customer?.full_name ??
+                      (order.customer && order.customer.phone === null
+                        ? t("deletedAccount")
+                        : t("noName"))}
                   </span>
                   {order.customer && (
                     <span dir="ltr" className="text-13 text-muted">

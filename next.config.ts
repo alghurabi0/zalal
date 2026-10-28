@@ -2,6 +2,8 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
+import packageJson from "./package.json" with { type: "json" };
+
 import { monitoringEnv } from "./src/lib/env";
 import { ANALYTICS_PATH, ERRORS_PATH } from "./src/lib/monitoring/paths";
 
@@ -13,6 +15,9 @@ const POSTHOG_HOST = "https://eu.i.posthog.com";
 const POSTHOG_ASSETS_HOST = "https://eu-assets.i.posthog.com";
 
 const nextConfig: NextConfig = {
+  // Settings (N13) shows it, and the force-update screen (N16) compares it
+  // with settings.min_app_version (src/lib/app-version.ts).
+  env: { NEXT_PUBLIC_APP_VERSION: packageJson.version },
   cacheComponents: true,
   partialPrefetching: true,
   // PostHog through our own domain (src/lib/monitoring/analytics.ts). The

@@ -13,7 +13,7 @@ import { identifyUser } from "@/lib/monitoring/analytics";
 import { OTP_LENGTH, type OtpChannel } from "@/lib/otp/schemas";
 import { formatPhone, toWesternDigits } from "@/lib/phone";
 
-import { resendCode, type ResendState, verifyCode, type VerifyState } from "../actions";
+import type { ResendState, VerifyState } from "@/lib/otp/form-states";
 
 type OtpFormProps = {
   phone: string;
@@ -22,7 +22,12 @@ type OtpFormProps = {
   /** Seconds left before "أعد الإرسال" when the page was rendered. */
   waitS: number;
   resendAfterS: number;
-  loginHref: string;
+  /** "تغيير الرقم" goes here; hidden without it (the phone change's current number). */
+  changeHref?: string;
+  /** Checks the code (the 6th digit submits). On "ok" the form goes to its destination. */
+  verifyAction: (prev: VerifyState, form: FormData) => Promise<VerifyState>;
+  /** "أعد الإرسال" and "أرسل برسالة SMS", with the channel in the form. */
+  resendAction: (prev: ResendState, form: FormData) => Promise<ResendState>;
 };
 
 /** "0:45" */
@@ -35,7 +40,9 @@ export function OtpForm({
   smsEnabled,
   waitS,
   resendAfterS,
-  loginHref,
+  changeHref,
+  verifyAction,
+  resendAction,
   ...props
 }: OtpFormProps) {
   const t = useTranslations("Otp");
@@ -66,11 +73,11 @@ export function OtpForm({
 
   const [verifyState, verify, verifying] = useActionState(
     async (prev: VerifyState, form: FormData): Promise<VerifyState> => {
-      const result = await verifyCode(prev, form);
+      const result = await verifyAction(prev, form);
       setShowVerifyError(true);
       setShowResendResult(false);
       if (result.status === "ok") {
-        identifyUser(result.userId);
+        if (result.userId) identifyUser(result.userId);
         router.replace(result.destination);
       } else {
         setCode("");
@@ -83,7 +90,7 @@ export function OtpForm({
 
   const [resendState, resend, resending] = useActionState(
     async (prev: ResendState, form: FormData): Promise<ResendState> => {
-      const result = await resendCode(prev, form);
+      const result = await resendAction(prev, form);
       setShowResendResult(true);
       setShowVerifyError(false);
       if (!result.error) {
@@ -112,6 +119,8 @@ export function OtpForm({
         return t("errors.expired");
       case "account_unavailable":
         return t("errors.accountUnavailable");
+      case "phone_taken":
+        return t("errors.phoneTaken");
       case "invalid_code":
         return t("errors.invalidCode");
       default:
@@ -151,12 +160,14 @@ export function OtpForm({
             ),
           })}
         </p>
-        <Link
-          href={loginHref}
-          className="flex min-h-11 items-center self-start text-14 font-bold text-teal underline"
-        >
-          {t("changeNumber")}
-        </Link>
+        {changeHref && (
+          <Link
+            href={changeHref}
+            className="flex min-h-11 items-center self-start text-14 font-bold text-teal underline"
+          >
+            {t("changeNumber")}
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

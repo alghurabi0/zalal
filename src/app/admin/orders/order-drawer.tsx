@@ -238,8 +238,9 @@ async function Details({ order }: { order: AdminOrderDetails }) {
         {row(
           t("customer"),
           <>
-            {order.customer?.full_name ?? t("noName")}
-            {order.customer && (
+            {order.customer?.full_name ??
+              (order.customer && order.customer.phone === null ? t("deletedAccount") : t("noName"))}
+            {order.customer?.phone && (
               <a
                 href={`tel:${order.customer.phone}`}
                 dir="ltr"

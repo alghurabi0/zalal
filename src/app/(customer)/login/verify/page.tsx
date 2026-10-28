@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { OtpForm } from "@/components/auth/otp-form";
 import { Screen } from "@/components/layout/screen";
 import { BackButton } from "@/components/ui/back-button";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { readPendingLogin, RESEND_AFTER_S, secondsUntilResend } from "@/lib/auth/pending-login";
 import { routes, withNext } from "@/lib/routes";
 
-import { OtpForm } from "./otp-form";
+import { resendCode, verifyCode } from "../actions";
 
 /** OTP (Otp.dc.html, spec §5.3). The number comes from the pending-login cookie. */
 export default function VerifyPage() {
@@ -38,7 +39,9 @@ async function VerifyContent() {
         smsEnabled={pending.smsEnabled}
         waitS={secondsUntilResend(pending)}
         resendAfterS={RESEND_AFTER_S}
-        loginHref={loginHref}
+        changeHref={loginHref}
+        verifyAction={verifyCode}
+        resendAction={resendCode}
       />
     </>
   );
