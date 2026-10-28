@@ -1,6 +1,6 @@
 // Database errors from the admin order RPCs (transition_order, assign_crew;
 // codes in supabase/CLAUDE.md), as the A2 drawer shows them. ZL011 carries
-// the missing requirement in its message.
+// the missing requirement in its message, ZL034 the subscription's problem.
 
 export const ADMIN_ORDER_ERRORS = [
   "slot_unavailable",
@@ -11,6 +11,10 @@ export const ADMIN_ORDER_ERRORS = [
   "cash_not_collected",
   "crew_inactive",
   "crew_change_not_allowed",
+  "no_subscription",
+  "outside_subscription_period",
+  "no_visits_left",
+  "subscription_tanks_exceeded",
   "not_found",
   "failed",
 ] as const;
@@ -36,6 +40,19 @@ export function adminOrderErrorFor(
   error: { code?: string; message?: string } | null | undefined,
 ): AdminOrderError {
   if (!error?.code) return "failed";
+  // ZL034: confirming a covered order whose subscription no longer covers it.
+  if (error.code === "ZL034") {
+    return (
+      ADMIN_ORDER_ERRORS.find(
+        (key) =>
+          key === error.message &&
+          (key === "no_subscription" ||
+            key === "outside_subscription_period" ||
+            key === "no_visits_left" ||
+            key === "subscription_tanks_exceeded"),
+      ) ?? "no_subscription"
+    );
+  }
   if (error.code === "ZL011") {
     return error.message && requirements.has(error.message)
       ? (error.message as AdminOrderError)

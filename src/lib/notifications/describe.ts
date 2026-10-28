@@ -1,6 +1,6 @@
 import { ticketNumber } from "@/lib/certificates/format";
 import type { Database } from "@/lib/database.types";
-import { formatDayShort, serviceDayParts, slotParts } from "@/lib/dates";
+import { formatDay, formatDayShort, serviceDayParts, slotParts } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
 import type messages from "../../../messages/ar.json";
@@ -160,6 +160,24 @@ export function describeNotification(
       }
       return UNKNOWN;
     }
+    case "subscription_requested":
+    case "subscription_activated":
+    case "subscription_expiring":
+    case "subscription_declined": {
+      const subscription = record(data);
+      if (!subscription) return UNKNOWN;
+      const label = oneOf(subscription, "label", ADDRESS_LABELS);
+      const district = text(subscription, "district") ?? "";
+      const endsOn = text(subscription, "ends_on");
+      const visits = whole(subscription, "visits");
+      if (!label) return UNKNOWN;
+      if (type === "subscription_requested") return { item: type, values: { label, district } };
+      if (type === "subscription_declined") return { item: type, values: {} };
+      if (!endsOn || !DAY.test(endsOn)) return UNKNOWN;
+      const date = formatDay(endsOn);
+      if (type === "subscription_expiring") return { item: type, values: { label, date } };
+      return visits === undefined ? UNKNOWN : { item: type, values: { label, date, visits } };
+    }
     case "cleaning_reminder": {
       const reminder = record(data);
       if (!reminder) return UNKNOWN;
@@ -175,6 +193,12 @@ export function describeNotification(
     default:
       return UNKNOWN;
   }
+}
+
+/** A uuid the notification's values name (thread_id, subscription_id, address_id). */
+function idIn(data: unknown, key: string): string | null {
+  const id = text(record(data) ?? {}, key);
+  return id && /^[0-9a-f-]{36}$/.test(id) ? id : null;
 }
 
 /** The thread an admin's customer_message opens, from its values. */
@@ -210,6 +234,17 @@ export function notificationHref(notification: NotificationInput): string {
       return ticketId ? routes.report(ticketId) : routes.reports;
     case "cleaning_reminder":
       return routes.book;
+    case "subscription_activated":
+    case "subscription_expiring": {
+      const address = idIn(notification.data, "address_id");
+      return address ? routes.subscriptionFor(address) : routes.subscription;
+    }
+    case "subscription_declined":
+      return routes.chat;
+    case "subscription_requested": {
+      const subscription = idIn(notification.data, "subscription_id");
+      return subscription ? routes.adminSubscription(subscription) : routes.adminSubscriptions;
+    }
     case "new_booking":
     case "customer_rescheduled":
     case "customer_cancelled":

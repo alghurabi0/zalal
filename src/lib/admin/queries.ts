@@ -29,6 +29,8 @@ export type AdminOrderRow = {
   slot_end_at: string;
   district: string;
   total_iqd: number;
+  /** Set when the order uses a subscription visit (Phase 6). */
+  subscription_id: string | null;
   crew_id: string | null;
   customer: { full_name: string | null; phone: string } | null;
   crew: { name: string } | null;
@@ -37,7 +39,7 @@ export type AdminOrderRow = {
 };
 
 const rowColumns = `id, number, status, service_date, slot_id, slot_start_at, slot_end_at,
-  district, total_iqd, crew_id,
+  district, total_iqd, subscription_id, crew_id,
   customer:profiles!orders_customer_id_fkey(full_name, phone),
   crew:crews(name),
   order_items(qty)`;
@@ -164,6 +166,7 @@ export type CrewChange = {
 
 export type AdminOrderDetails = AdminOrderRow & {
   customer_id: string;
+  address_id: string;
   landmark: string;
   lat: number;
   lng: number;
@@ -198,6 +201,7 @@ export type AdminRating = {
 
 type DetailsRaw = Omit<RawRow, "order_items"> & {
   customer_id: string;
+  address_id: string;
   landmark: string;
   lat: number;
   lng: number;
@@ -225,7 +229,8 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetails | nul
     .from("orders")
     .select(
       `id, number, status, service_date, slot_id, slot_start_at, slot_end_at, district,
-       total_iqd, crew_id, customer_id, landmark, lat, lng, customer_note, payment_method,
+       total_iqd, subscription_id, crew_id, customer_id, address_id, landmark, lat, lng,
+       customer_note, payment_method,
        cash_collected, created_at,
        customer:profiles!orders_customer_id_fkey(full_name, phone),
        crew:crews(name),

@@ -1,4 +1,4 @@
-// Database errors from the A8, A9, A10, A11, A13 and A14 admin RPCs (codes in
+// Database errors from the A7, A8, A9, A10, A11, A13 and A14 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
 export const ADMIN_EDIT_ERRORS = [
@@ -16,6 +16,16 @@ export const ADMIN_EDIT_ERRORS = [
   "slug_taken",
   "slug_locked",
   "category_name_taken",
+  "subscription_exists",
+  "invalid_subscription_status",
+  "subscription_change_not_allowed",
+  "no_subscription",
+  "outside_subscription_period",
+  "no_visits_left",
+  "subscription_tanks_exceeded",
+  "reason_required",
+  "invalid_start",
+  "invalid_adjustment",
   "invalid",
   "not_found",
   "failed",
@@ -36,6 +46,9 @@ const byCode: Record<string, AdminEditError> = {
   ZL031: "slug_taken",
   ZL032: "slug_locked",
   ZL033: "category_name_taken",
+  ZL035: "subscription_exists",
+  ZL036: "invalid_subscription_status",
+  ZL038: "subscription_change_not_allowed",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.
@@ -47,11 +60,29 @@ const byCode: Record<string, AdminEditError> = {
   "22003": "invalid",
 };
 
+const SUBSCRIPTION_REASONS = [
+  "no_subscription",
+  "outside_subscription_period",
+  "no_visits_left",
+  "subscription_tanks_exceeded",
+] as const;
+
 export function adminEditErrorFor(
   error: { code?: string; message?: string } | null | undefined,
 ): AdminEditError {
   if (!error?.code) return "failed";
-  if (error.code === "22023") return error.message === "date_in_past" ? "date_in_past" : "invalid";
+  if (error.code === "22023") {
+    if (error.message === "date_in_past") return "date_in_past";
+    if (error.message === "invalid_start") return "invalid_start";
+    if (error.message === "invalid_adjustment") return "invalid_adjustment";
+    return "invalid";
+  }
+  // ZL034 and ZL011 carry the reason in the message (A7, A2).
+  if (error.code === "ZL034") {
+    const reason = SUBSCRIPTION_REASONS.find((r) => r === error.message);
+    return reason ?? "no_subscription";
+  }
+  if (error.code === "ZL011" && error.message === "reason_required") return "reason_required";
   // A phone whose account was deleted (A10, A14): Auth still holds it.
   if (error.code === "P0002" && error.message === "account_not_found") return "account_deleted";
   return byCode[error.code] ?? "failed";

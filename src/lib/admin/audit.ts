@@ -36,6 +36,13 @@ export const AUDIT_ACTIONS = [
   "category.update",
   "category.delete",
   "category.reorder",
+  "subscription.activate",
+  "subscription.paid",
+  "subscription.adjust",
+  "subscription.decline",
+  "subscription.cancel",
+  "subscription.note",
+  "order.subscription",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

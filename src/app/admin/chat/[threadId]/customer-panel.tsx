@@ -5,17 +5,28 @@ import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { customerPanel } from "@/lib/admin/chat-queries";
 import { ticketNumber } from "@/lib/certificates/format";
-import { formatDayTime } from "@/lib/dates";
+import { formatDay, formatDayTime } from "@/lib/dates";
 import { routes } from "@/lib/routes";
+import { listSubscriptions } from "@/lib/subscriptions/queries";
+import { currentFor } from "@/lib/subscriptions/state";
 
 /**
  * A4's side panel (spec §8.2): the customer's latest orders (each opens the
- * A2 drawer), saved addresses, subscription (Phase 6) and tickets.
+ * A2 drawer), saved addresses, subscriptions (one per address, each opening
+ * the A7 drawer) and tickets.
  */
 export async function CustomerPanel({ userId }: { userId: string }) {
   const t = await getTranslations("Admin.chat.panel");
   const tLabels = await getTranslations("Location.labels");
-  const { orders, addresses, tickets } = await customerPanel(userId);
+  const tSubscriptions = await getTranslations("Admin.subscriptions");
+  const [{ orders, addresses, tickets }, all] = await Promise.all([
+    customerPanel(userId),
+    listSubscriptions(userId),
+  ]);
+  // Every address's current one (running, asked for or ended last).
+  const subscriptions = [...new Set(all.map((s) => s.addressId))]
+    .map((addressId) => currentFor(all, addressId))
+    .filter((s) => s !== null);
   const num = (chunks: ReactNode) => <span dir="ltr">{chunks}</span>;
 
   return (
@@ -64,7 +75,39 @@ export async function CustomerPanel({ userId }: { userId: string }) {
       </Section>
 
       <Section title={t("subscription")}>
-        <Muted>{t("subscriptionLater")}</Muted>
+        {subscriptions.length === 0 ? (
+          <Muted>{t("noSubscription")}</Muted>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {subscriptions.map((subscription) => (
+              <li key={subscription.id}>
+                <Link
+                  href={routes.adminSubscription(subscription.id)}
+                  className="flex min-h-11 flex-col justify-center rounded-chip border border-border px-3 py-2 hover:bg-bg"
+                >
+                  <span className="text-14 font-bold text-teal">
+                    {t("subscriptionRow", {
+                      label: subscription.address
+                        ? tLabels(subscription.address.label)
+                        : tSubscriptions("none"),
+                      state: tSubscriptions(`states.${subscription.state}`),
+                    })}
+                  </span>
+                  {(subscription.state === "active" || subscription.state === "upcoming") &&
+                    subscription.endsOn && (
+                      <span className="text-12 text-muted">
+                        {t("subscriptionVisits", {
+                          left: subscription.visitsLeft,
+                          total: subscription.visitsTotal,
+                          date: formatDay(subscription.endsOn),
+                        })}
+                      </span>
+                    )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
 
       <Section title={t("tickets")}>

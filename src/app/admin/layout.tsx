@@ -4,9 +4,11 @@ import { AdminLive } from "@/components/admin/admin-live";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { PushSync } from "@/components/notifications/push-sync";
 import { StaffPushButton } from "@/components/notifications/staff-push-button";
+import { LiveSubscriptions } from "@/components/subscriptions/live-subscriptions";
 import { LiveTickets } from "@/components/tickets/live-tickets";
 import { Skeleton } from "@/components/ui/skeleton";
 import { unreadThreads } from "@/lib/admin/chat-queries";
+import { subscriptionRequestCount } from "@/lib/admin/subscription-queries";
 import { openTicketCount } from "@/lib/admin/ticket-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
@@ -34,18 +36,25 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
 
 async function Chrome() {
   const viewer = await requireViewer(routes.admin, "admin");
-  const [unread, openTickets] = await Promise.all([unreadThreads(), openTicketCount()]);
+  const [unread, openTickets, requests] = await Promise.all([
+    unreadThreads(),
+    openTicketCount(),
+    subscriptionRequestCount(),
+  ]);
   return (
     <AdminNav
       name={viewer.fullName}
       chatUnread={unread.map((thread) => thread.id)}
       openTickets={openTickets}
+      subscriptionRequests={requests}
     >
       <AdminLive chatUnread={unread} />
       <StaffPushButton />
       <PushSync />
       {/* A new ticket or a status change refreshes every admin page (A1, A5, the nav count). */}
       <LiveTickets />
+      {/* A new subscription request or a change refreshes them too (A1, A7, the nav count). */}
+      <LiveSubscriptions />
     </AdminNav>
   );
 }

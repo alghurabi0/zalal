@@ -77,6 +77,7 @@ export const AUDIT_ENTITIES = [
   "tickets",
   "articles",
   "article_categories",
+  "subscriptions",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -170,8 +171,8 @@ function categoryIdsIn(entry: AuditEntry): number[] {
 }
 
 /**
- * Order numbers, crew names, article titles and category names the page's
- * rows point at, for links and labels.
+ * Order numbers, crew names, article titles, category names and the
+ * customers of subscriptions the page's rows point at, for links and labels.
  */
 export async function auditNames(entries: AuditEntry[]): Promise<{
   orders: Map<string, number>;
@@ -179,6 +180,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   tickets: Map<string, number>;
   articles: Map<string, string>;
   categories: Map<number, string>;
+  subscriptions: Map<string, string | null>;
 }> {
   const supabase = await createClient();
   const idsOf = (entity: string) => [
@@ -189,14 +191,18 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   const crewIds = [...new Set(entries.flatMap(crewIdsIn))];
   const articleIds = idsOf("articles");
   const categoryIds = [...new Set(entries.flatMap(categoryIdsIn))];
+  const subscriptionIds = idsOf("subscriptions");
   const none = Promise.resolve({ data: [], error: null });
-  const [orders, crews, tickets, articles, categories] = await Promise.all([
+  const [orders, crews, tickets, articles, categories, subscriptions] = await Promise.all([
     orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
     crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
     ticketIds.length ? supabase.from("tickets").select("id, number").in("id", ticketIds) : none,
     articleIds.length ? supabase.from("articles").select("id, title").in("id", articleIds) : none,
     categoryIds.length
       ? supabase.from("article_categories").select("id, name").in("id", categoryIds)
+      : none,
+    subscriptionIds.length
+      ? supabase.from("subscription_overview").select("id, customer_name").in("id", subscriptionIds)
       : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
@@ -206,11 +212,15 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   if (categories.error) {
     throw new Error(`Audit categories read failed: ${categories.error.message}`);
   }
+  if (subscriptions.error) {
+    throw new Error(`Audit subscriptions read failed: ${subscriptions.error.message}`);
+  }
   return {
     orders: new Map(orders.data.map((o) => [o.id, o.number])),
     crews: new Map(crews.data.map((c) => [c.id, c.name])),
     tickets: new Map(tickets.data.map((ticket) => [ticket.id, ticket.number])),
     articles: new Map(articles.data.map((article) => [article.id, article.title])),
     categories: new Map(categories.data.map((category) => [category.id, category.name])),
+    subscriptions: new Map(subscriptions.data.map((s) => [s.id, s.customer_name])),
   };
 }

@@ -3,6 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import type { z } from "zod";
 
+import { type AdminEditResult, editFailure } from "@/lib/admin/edit-errors";
 import { type AdminOrderError, adminOrderErrorFor } from "@/lib/admin/errors";
 import { requireViewer } from "@/lib/auth/viewer";
 import type { Json } from "@/lib/database.types";
@@ -21,11 +22,16 @@ import {
   type OverrideInput,
   overrideSchema,
 } from "@/lib/schemas/admin-order";
+import {
+  type SetOrderSubscriptionInput,
+  setOrderSubscriptionSchema,
+} from "@/lib/schemas/subscription";
 import { createClient } from "@/lib/supabase/server";
 
 // The A2 drawer's actions (spec §6, §8.2), as the admin: transition_order()
-// for status changes and assign_crew() for the crew. Both check the role,
-// write the audit log and keep staff reasons internal.
+// for status changes, assign_crew() for the crew and
+// admin_set_order_subscription() for its coverage. Each checks the role,
+// writes the audit log and keeps staff reasons internal.
 
 export type AdminOrderResult = { status: "done" } | { status: "error"; error: AdminOrderError };
 
@@ -131,4 +137,26 @@ export async function overrideStatus(input: OverrideInput): Promise<AdminOrderRe
     override: true,
     reason: parsed.data.reason,
   });
+}
+
+/**
+ * "Verify subscription" (A2): drops the order's coverage (it becomes a cash
+ * order) or puts its address's subscription on it. The database checks the
+ * order's status and the subscription (ZL034, ZL038) and audits it.
+ */
+export async function setOrderSubscription(
+  input: SetOrderSubscriptionInput,
+): Promise<AdminEditResult> {
+  const parsed = setOrderSubscriptionSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", error: "invalid" };
+  const supabase = await admin(parsed.data.orderId);
+  const { error } = await supabase.rpc("admin_set_order_subscription", {
+    p_order_id: parsed.data.orderId,
+    p_use: parsed.data.use,
+  });
+  return error
+    ? editFailure("admin_set_order_subscription", error, (message) =>
+        Sentry.captureMessage(message, "error"),
+      )
+    : { status: "done" };
 }
