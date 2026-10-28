@@ -280,7 +280,7 @@ test("Home shows the active order live and the tank status", async ({ page }) =>
   const card = main.getByRole("link", { name: new RegExp(`#${order.number}`) });
   await expect(card).toContainText(Home.activeOrder.pending_confirmation);
   await expect(card).toHaveAttribute("href", `/orders/${order.id}`);
-  await expect(main.getByText(Home.tank.overdue)).toBeVisible();
+  await expect(main.getByText(Home.tank.overdue, { exact: true })).toBeVisible();
   await expect(main.getByText("آخر تنظيف: قبل 7 أشهر")).toBeVisible();
   await expect(main.getByText("الموصى به: كل 6 أشهر")).toBeVisible();
   await screenshot(page, "home");

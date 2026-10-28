@@ -1,4 +1,6 @@
+import * as Sentry from "@sentry/nextjs";
 import { CalendarCheck, Clock, House, type LucideIcon, Sparkles, Truck } from "lucide-react";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
@@ -8,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { chosenAddress, listAddresses } from "@/lib/addresses";
+import { homeArticles } from "@/lib/articles/queries";
 import { getViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { formatDate, serviceDayParts, slotParts } from "@/lib/dates";
@@ -21,12 +24,19 @@ import { tankStatus, type TankStatus } from "@/lib/tanks/status";
 /**
  * Home's cards (Home.dc.html, spec §5.5). Customers: the active-order card
  * (live) and the tank status card. Guests: the price list with a book button,
- * which goes through login. Quick actions, the tips strip and the bell come
- * with the screens they open (Phases 5–6).
+ * which goes through login. Everyone: the tips strip. Quick actions come with
+ * the screens they open (Phase 6, tasks 2 and 3).
  */
 export async function HomeCards() {
   const viewer = await getViewer();
-  if (!viewer) return <PriceListCard />;
+  if (!viewer) {
+    return (
+      <>
+        <PriceListCard />
+        <TipsStrip />
+      </>
+    );
+  }
   // Staff are sent to their surface by the header.
   if (viewer.role !== "customer") return null;
 
@@ -36,6 +46,7 @@ export async function HomeCards() {
       <LiveOrders customerId={viewer.id} />
       {order && <ActiveOrderCard order={order} />}
       <TankCard status={tank.status} interval={tank.interval} />
+      <TipsStrip />
     </>
   );
 }
@@ -212,6 +223,54 @@ async function PriceListCard() {
         {t("book")}
       </Button>
     </Card>
+  );
+}
+
+/**
+ * معلومات تهمك: the 2 newest featured articles (filled with the newest
+ * others), the first on navy-2 as in the canvas; hidden when none is
+ * published. A failed read only hides it: Home's cards matter more.
+ */
+async function TipsStrip() {
+  const articles = await homeArticles().catch((error: unknown) => {
+    Sentry.captureException(error);
+    return [];
+  });
+  if (articles.length === 0) return null;
+  const t = await getTranslations("Home.tips");
+
+  return (
+    <section aria-labelledby="home-tips" className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="home-tips" className="text-16 font-extrabold">
+          {t("title")}
+        </h2>
+        <Link
+          href={routes.tips}
+          className="flex min-h-11 items-center text-14 font-bold text-teal hover:text-navy focus-visible:outline-teal"
+        >
+          {t("seeAll")}
+        </Link>
+      </div>
+      <ul className="flex gap-2.5">
+        {articles.map((article, i) => (
+          <li key={article.id} className="flex min-w-0 flex-1">
+            <Link
+              href={routes.article(article.slug)}
+              className={cn(
+                "flex flex-1 flex-col gap-1 rounded-button p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal",
+                i === 0 ? "bg-navy-2 text-white" : "border border-border bg-surface text-navy",
+              )}
+            >
+              <span className={cn("text-12 font-bold", i === 0 ? "text-aqua" : "text-teal")}>
+                {article.category.name}
+              </span>
+              <span className="text-14 leading-normal font-extrabold">{article.title}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

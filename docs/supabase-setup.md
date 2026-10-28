@@ -150,7 +150,7 @@ With that, Claude can read dev's tables, policies, logs and the security advisor
 
 ## 8. Media cleanup job (both projects, once)
 
-Two nightly jobs delete photos and videos that were uploaded but never booked or attached (spec §7 Storage). CI deploys the Edge Function `media-cleanup` and the migration `media_cleanup` that schedules them, but the jobs send nothing until the project has two secrets. Do this per project after the code reaches it: dev after the merge, prod after the next **Deploy prod**. Use a different secret for each project, and never paste it into a Claude chat.
+Nightly jobs delete files that were uploaded but never booked, sent or attached (spec §7 Storage): booking and crew media, chat files, ticket files and article covers. CI deploys the Edge Function `media-cleanup` and the migration `media_cleanup` that schedules them, but the jobs send nothing until the project has two secrets. Do this per project after the code reaches it: dev after the merge, prod after the next **Deploy prod**. Use a different secret for each project, and never paste it into a Claude chat.
 
 1. Make a random secret on your computer: `openssl rand -base64 32`.
 2. **Edge Functions → Secrets**: add `MEDIA_CLEANUP_SECRET` with that value. (`SUPABASE_URL` and the service keys are already there; Supabase adds them.)
@@ -165,7 +165,7 @@ Two nightly jobs delete photos and videos that were uploaded but never booked or
    select status_code, content from net._http_response order by id desc limit 1;
    ```
 
-   A 401 means `MEDIA_CLEANUP_SECRET` is missing or differs from the Vault value (the function says which in its logs). A null from the first line means a Vault secret is missing or misnamed. Later runs show under **Integrations → Cron** (jobs `media-cleanup-customer` and `media-cleanup-crew`, 03:17 and 03:47 Baghdad time) and in the function's logs, which hold counts only.
+   A 401 means `MEDIA_CLEANUP_SECRET` is missing or differs from the Vault value (the function says which in its logs). A null from the first line means a Vault secret is missing or misnamed. Later runs show under **Integrations → Cron** (jobs `media-cleanup-customer`, `media-cleanup-chat`, `media-cleanup-crew`, `media-cleanup-ticket` and `media-cleanup-content`, between 03:17 and 04:17 Baghdad time) and in the function's logs, which hold counts only.
 
 To change the secret, update both places (steps 2 and 3) together. The CI tokens need no new permission.
 

@@ -60,6 +60,10 @@ export const routes = {
   logout: "/logout",
   terms: "/terms",
   privacy: "/privacy",
+  /** Tips (§5.6), guests too. */
+  tips: "/tips",
+  /** Article (N9), by its slug. */
+  article: (slug: string) => `/tips/${encodeURIComponent(slug)}`,
   /** Crew surface (spec §2, §8.1): My jobs (C2). */
   crew: "/crew",
   /** Job detail (C3). */
@@ -97,6 +101,12 @@ export const routes = {
   adminRatings: "/admin/ratings",
   /** Live map (A3): crews on the way. */
   adminLive: "/admin/live",
+  /** Content (A11): the articles; `?status=` filters. */
+  adminContent: "/admin/content",
+  adminNewArticle: "/admin/content/new",
+  adminArticle: (id: string) => `/admin/content/${id}`,
+  /** The article categories (A11). */
+  adminCategories: "/admin/content/categories",
 } as const;
 
 /**

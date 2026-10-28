@@ -29,6 +29,13 @@ export const AUDIT_ACTIONS = [
   "admin.remove",
   "ticket.status",
   "ticket.note",
+  "article.create",
+  "article.update",
+  "article.delete",
+  "category.create",
+  "category.update",
+  "category.delete",
+  "category.reorder",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

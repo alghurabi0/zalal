@@ -21,8 +21,8 @@ import { HomeCards, HomeCardsSkeleton } from "./home-cards";
 /**
  * Home (Home.dc.html, spec §5.5): the header with the address picker (N2) or,
  * for guests, "سجّل دخول"; the greeting; the cards (home-cards.tsx); the tab
- * bar. The bell (with its unread dot) opens Notifications; quick actions and
- * the tips strip come with their phases.
+ * bar. The bell (with its unread dot) opens Notifications; the tips strip
+ * opens Tips and Article. Quick actions come with their phase.
  */
 export default function HomePage() {
   return (
