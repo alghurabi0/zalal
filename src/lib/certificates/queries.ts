@@ -90,7 +90,7 @@ type Row = {
       duration_s: number | null;
       created_at: string;
     }[];
-    profiles: { full_name: string | null; phone: string; reminders_enabled: boolean } | null;
+    profiles: { full_name: string | null; phone: string | null; reminders_enabled: boolean } | null;
     ratings: {
       stars: number;
       tags: RatingTag[];
@@ -227,4 +227,42 @@ export async function getPublicCertificate(code: string): Promise<PublicCertific
     district: data.district,
     tanks: (data.items as CertificateTank[] | null) ?? [],
   };
+}
+
+export type MyCertificate = {
+  id: string;
+  orderId: string;
+  orderNumber: number;
+  serviceDate: string;
+  district: string;
+  nextDueOn: string;
+  tanks: CertificateTank[];
+};
+
+/**
+ * Certificates (N12): the customer's certificates, newest first. RLS shows
+ * only the certificates of their completed orders. At most 100, which is
+ * decades of cleanings.
+ */
+export async function listMyCertificates(): Promise<MyCertificate[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("certificates")
+    .select(
+      "id, issued_at, next_due_on, orders!inner(id, number, service_date, district, order_items(id, tank_type, size, qty))",
+    )
+    .order("issued_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(`Certificates read failed: ${error.message}`);
+  return data.map((c) => ({
+    id: c.id,
+    orderId: c.orders.id,
+    orderNumber: c.orders.number,
+    serviceDate: c.orders.service_date,
+    district: c.orders.district,
+    nextDueOn: c.next_due_on,
+    tanks: [...c.orders.order_items]
+      .sort((a, b) => a.id - b.id)
+      .map(({ tank_type, size, qty }) => ({ tank_type, size, qty })),
+  }));
 }

@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { generateOtpCode, hashOtpCode, signInPassword } from "@/lib/otp/code";
 import { deliverOtp } from "@/lib/otp/deliver";
 import { requestOtpInputSchema, verifyOtpInputSchema, type OtpChannel } from "@/lib/otp/schemas";
+import { phoneInputSchema } from "@/lib/phone";
 import type { OtpSenders, SendError } from "@/lib/otp/senders";
 
 // Login by phone (spec §9.1). Our server makes, sends and checks the code;
@@ -46,11 +47,21 @@ export type RequestOtpResult =
       smsEnabled: boolean;
     };
 
-export type VerifyOtpResult =
-  | { ok: true; userId: string; isNewUser: boolean; role: Database["public"]["Enums"]["app_role"] }
-  | { ok: false; reason: "invalid_input" | "expired" | "no_code" | "account_unavailable" }
+/** Why a typed code wasn't accepted. */
+export type CodeFailure =
+  | { ok: false; reason: "invalid_input" | "expired" | "no_code" }
   | { ok: false; reason: "wrong_code"; attemptsLeft: number }
   | { ok: false; reason: "locked"; retryAfterS: number };
+
+export type VerifyOtpResult =
+  | { ok: true; userId: string; isNewUser: boolean; role: Database["public"]["Enums"]["app_role"] }
+  | { ok: false; reason: "account_unavailable" }
+  | CodeFailure;
+
+export type ChangePhoneResult =
+  | { ok: true }
+  | { ok: false; reason: "phone_taken" | "same_phone" | "account_unavailable" }
+  | CodeFailure;
 
 const requestOtpRowSchema = z.object({
   allowed: z.boolean(),
@@ -140,12 +151,11 @@ export function createOtpService(deps: OtpDeps) {
     };
   }
 
-  /** OTP screen. Checks the code and, when it is right, signs the user in. */
-  async function verifyOtp(input: unknown): Promise<VerifyOtpResult> {
-    const parsed = verifyOtpInputSchema.safeParse(input);
-    if (!parsed.success) return { ok: false, reason: "invalid_input" };
-    const { phone, code } = parsed.data;
-
+  /**
+   * Checks a typed code against the number's latest code (check_otp: the
+   * attempt limit and lock apply). Null when it is right.
+   */
+  async function checkCode(phone: string, code: string): Promise<CodeFailure | null> {
     const { data, error } = await admin.rpc("check_otp", {
       p_phone: phone,
       p_code_hash: hashOtpCode(deps.hmacSecret, phone, code),
@@ -168,8 +178,18 @@ export function createOtpService(deps: OtpDeps) {
       case "no_code":
         return { ok: false, reason: check.result };
       case "ok":
-        break;
+        return null;
     }
+  }
+
+  /** OTP screen. Checks the code and, when it is right, signs the user in. */
+  async function verifyOtp(input: unknown): Promise<VerifyOtpResult> {
+    const parsed = verifyOtpInputSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, reason: "invalid_input" };
+    const { phone, code } = parsed.data;
+
+    const failure = await checkCode(phone, code);
+    if (failure) return failure;
 
     const { data: profile, error: profileError } = await admin
       .from("profiles")
@@ -229,5 +249,66 @@ export function createOtpService(deps: OtpDeps) {
     return { ok: true, userId, isNewUser, role };
   }
 
-  return { requestOtp, verifyOtp };
+  /**
+   * Phone change (N10, spec §9.1), first step: the code sent to the
+   * account's current number. Proves the number only; nobody signs in.
+   */
+  async function verifyCurrentPhone(input: unknown): Promise<{ ok: true } | CodeFailure> {
+    const parsed = verifyOtpInputSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, reason: "invalid_input" };
+    return (await checkCode(parsed.data.phone, parsed.data.code)) ?? { ok: true };
+  }
+
+  /**
+   * Whether `phone` may become this user's number, checked before a code is
+   * sent to it (change_login_phone checks again under a lock).
+   */
+  async function newPhoneAvailable(
+    userId: string,
+    input: unknown,
+  ): Promise<
+    | { ok: true; phone: string }
+    | { ok: false; reason: "invalid_input" | "phone_taken" | "same_phone" }
+  > {
+    const parsed = phoneInputSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, reason: "invalid_input" };
+    const { data, error } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("phone", parsed.data)
+      .maybeSingle();
+    if (error) fail("profile read", error);
+    if (data === null) return { ok: true, phone: parsed.data };
+    return { ok: false, reason: data.id === userId ? "same_phone" : "phone_taken" };
+  }
+
+  /**
+   * Phone change, last step: the code sent to the new number. When it is
+   * right, change_login_phone moves the account to that number. The user
+   * stays signed in: the password comes from the user id, not the phone.
+   */
+  async function changePhone(userId: string, input: unknown): Promise<ChangePhoneResult> {
+    const parsed = verifyOtpInputSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, reason: "invalid_input" };
+    const { phone, code } = parsed.data;
+
+    const failure = await checkCode(phone, code);
+    if (failure) return failure;
+
+    const { error } = await admin.rpc("change_login_phone", {
+      p_user_id: userId,
+      p_phone: phone,
+    });
+    if (error) {
+      if (error.code === "ZL040") return { ok: false, reason: "phone_taken" };
+      if (error.message === "same_phone") return { ok: false, reason: "same_phone" };
+      if (error.code === "P0002" || error.code === "42501") {
+        return { ok: false, reason: "account_unavailable" };
+      }
+      fail("phone change", error);
+    }
+    return { ok: true };
+  }
+
+  return { requestOtp, verifyOtp, verifyCurrentPhone, newPhoneAvailable, changePhone };
 }

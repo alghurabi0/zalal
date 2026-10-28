@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl";
 
-import type { SendError } from "@/app/(customer)/login/actions";
+import type { SendError } from "@/lib/otp/form-states";
 
 /** "جرب بعد 3 دقايق" or "جرب بعد 40 ثانية", rounded up. */
 export function useWaitMessage() {
@@ -32,6 +32,10 @@ export function useSendErrorMessage() {
         return error.canTrySms ? t("whatsappFailed") : t("sendFailed");
       case "send_failed":
         return t("sendFailed");
+      case "phone_taken":
+        return t("phoneTaken");
+      case "same_phone":
+        return t("samePhone");
     }
   };
 }

@@ -18,7 +18,7 @@ export type AddressFieldError =
   "district_short" | "district_long" | "landmark_short" | "landmark_long";
 
 export type SaveAddressState = {
-  error: "outside_area" | "label_taken" | "invalid" | "failed" | null;
+  error: "outside_area" | "label_taken" | "subscribed" | "invalid" | "failed" | null;
   fields?: AddressFieldError[];
 };
 
@@ -67,6 +67,8 @@ export async function saveAddress(
   if (error) {
     if (error.code === "ZL001") return { error: "outside_area" };
     if (error.code === "23505") return { error: "label_taken" };
+    // The pin of an address with a live subscription stays put (spec §13).
+    if (error.code === "ZL041") return { error: "subscribed" };
     return { error: "failed" };
   }
 

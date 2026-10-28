@@ -63,7 +63,9 @@ export async function SubscriptionDrawer({
       closeHref={closeHref}
       title={
         <>
-          {t("drawer.title", { name: customer.name ?? t("noName") })}
+          {t("drawer.title", {
+            name: customer.name ?? (customer.phone === null ? t("deletedAccount") : t("noName")),
+          })}
           <SubscriptionStateBadge
             state={subscription.state}
             label={t(`states.${subscription.state}`)}
@@ -76,7 +78,7 @@ export async function SubscriptionDrawer({
           {row(
             t("drawer.customer"),
             <>
-              {customer.name ?? t("noName")}
+              {customer.name ?? (customer.phone === null ? t("deletedAccount") : t("noName"))}
               {customer.phone && (
                 <a
                   href={`tel:${customer.phone}`}

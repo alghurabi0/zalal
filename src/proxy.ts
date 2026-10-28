@@ -4,9 +4,24 @@ import { type NextRequest, NextResponse } from "next/server";
 import { WELCOMED_COOKIE } from "@/lib/cookies";
 import type { Database } from "@/lib/database.types";
 import { publicEnv } from "@/lib/env";
-import { requiresLogin, routes, withNext } from "@/lib/routes";
+import { exemptFromMaintenance, requiresLogin, routes, withNext } from "@/lib/routes";
 
 const ONE_YEAR_S = 60 * 60 * 24 * 365;
+
+// Maintenance mode (N16, A13), read at most every 10 s per server instance,
+// so the switch costs no query on most requests. A failed read counts as
+// off: a database hiccup must not take the app down.
+const MAINTENANCE_TTL_MS = 10_000;
+let maintenance: { readAt: number; on: boolean } | null = null;
+
+async function maintenanceOn(
+  supabase: ReturnType<typeof createServerClient<Database>>,
+): Promise<boolean> {
+  if (maintenance && Date.now() - maintenance.readAt < MAINTENANCE_TTL_MS) return maintenance.on;
+  const { data, error } = await supabase.from("settings").select("maintenance_mode").single();
+  maintenance = { readAt: Date.now(), on: !error && data.maintenance_mode };
+  return maintenance.on;
+}
 
 /**
  * Runs before every page:
@@ -15,7 +30,10 @@ const ONE_YEAR_S = 60 * 60 * 24 * 365;
  * - sends a guest on a page that needs a login to Login, with `next` set so
  *   they come back (pages check again on the server);
  * - sends a logged-in user away from Welcome and Login;
- * - shows Welcome on first open only.
+ * - shows Welcome on first open only;
+ * - while maintenance mode is on (A13), shows N16's maintenance screen in
+ *   place of customer pages, at the same URL, so a reload after it ends
+ *   lands where the user was. Staff surfaces and Login stay open.
  */
 export async function proxy(request: NextRequest) {
   const env = publicEnv();
@@ -54,6 +72,13 @@ export async function proxy(request: NextRequest) {
     redirect.headers.set("Cache-Control", "private, no-store");
     return redirect;
   };
+
+  if (!exemptFromMaintenance(pathname) && (await maintenanceOn(supabase))) {
+    const rewrite = NextResponse.rewrite(new URL(routes.maintenance, request.url));
+    for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
+    rewrite.headers.set("Cache-Control", "private, no-store");
+    return rewrite;
+  }
 
   if (!loggedIn && requiresLogin(pathname)) {
     return redirectTo(withNext(routes.login, `${pathname}${search}`));

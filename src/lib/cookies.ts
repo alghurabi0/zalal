@@ -12,3 +12,10 @@ export const PENDING_LOGIN_COOKIE = "zl_login";
 
 /** The address Home shows, chosen in the picker (N2). Falls back to the default. */
 export const HOME_ADDRESS_COOKIE = "zl_address";
+
+/**
+ * The phone change in progress (N10): which step, the number the latest code
+ * went to, and when. Signed, because it records that the current number was
+ * proved. Read by src/lib/auth/phone-change.ts.
+ */
+export const PHONE_CHANGE_COOKIE = "zl_phone";

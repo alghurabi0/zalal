@@ -32,7 +32,7 @@ const MAX_AGE_S = 15 * 60;
 export const RESEND_AFTER_S = 45;
 
 /** Seconds until OTP may offer "أعد الإرسال" for this login. */
-export function secondsUntilResend(pending: PendingLogin, now: number = Date.now()): number {
+export function secondsUntilResend(pending: { sentAt: number }, now: number = Date.now()): number {
   return Math.max(0, Math.ceil(RESEND_AFTER_S - (now - pending.sentAt) / 1000));
 }
 

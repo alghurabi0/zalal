@@ -33,7 +33,8 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(`Profile read failed: ${error.message}`);
-  if (!profile || profile.deleted_at !== null) return null;
+  // A deleted account has no phone either (delete_account).
+  if (!profile || profile.deleted_at !== null || profile.phone === null) return null;
 
   return { id: profile.id, role: profile.role, phone: profile.phone, fullName: profile.full_name };
 });

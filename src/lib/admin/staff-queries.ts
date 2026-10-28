@@ -12,7 +12,7 @@ export type AdminCrew = {
   id: string;
   name: string;
   active: boolean;
-  phone: string;
+  phone: string | null;
   /** Orders from booked to in progress that name this crew. */
   openOrders: number;
 };
@@ -49,7 +49,7 @@ export async function adminCrews(): Promise<AdminCrew[]> {
   }));
 }
 
-export type AdminAccount = { id: string; fullName: string | null; phone: string };
+export type AdminAccount = { id: string; fullName: string | null; phone: string | null };
 
 /** Every live admin account, oldest first. */
 export async function adminAccounts(): Promise<AdminAccount[]> {
@@ -90,7 +90,7 @@ export type AuditEntry = {
   entityId: string;
   diff: Json;
   createdAt: string;
-  admin: { fullName: string | null; phone: string };
+  admin: { fullName: string | null; phone: string | null };
 };
 
 /**

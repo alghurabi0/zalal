@@ -87,7 +87,7 @@ export type AdminSubscriptionDetails = Subscription & {
     id: number;
     note: string;
     createdAt: string;
-    author: { full_name: string | null; phone: string } | null;
+    author: { full_name: string | null; phone: string | null } | null;
   }[];
   orders: { id: string; number: number; status: OrderStatus; slotStartAt: string }[];
 };

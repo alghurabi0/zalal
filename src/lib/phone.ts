@@ -71,7 +71,9 @@ export const phoneInputSchema = z
   });
 
 /** "+9647801234567" → "+964 780 123 4567", as the designs show numbers. Wrap it in dir="ltr". */
-export function formatPhone(e164: string): string {
+export function formatPhone(e164: string | null): string {
+  // A deleted account keeps no phone (delete_account).
+  if (e164 === null) return "—";
   const match = /^\+964(\d{3})(\d{3})(\d{4})$/.exec(e164);
   return match ? `+964 ${match[1]} ${match[2]} ${match[3]}` : e164;
 }

@@ -1,4 +1,13 @@
-import { ChevronRight, LogOut, type LucideIcon, MapPin, MessageSquareWarning } from "lucide-react";
+import {
+  ChevronRight,
+  CreditCard,
+  LogOut,
+  type LucideIcon,
+  MapPin,
+  MessageSquareWarning,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { type ComponentProps, Suspense } from "react";
@@ -21,13 +30,14 @@ import { listSubscriptions, subscriptionPlan } from "@/lib/subscriptions/queries
 import { currentFor, type Subscription } from "@/lib/subscriptions/state";
 
 import { AddressPicker, type AddressSummary } from "../addresses/address-picker";
+import { RemindersSwitch } from "./reminders-switch";
 
 /**
- * Profile (Profile.dc.html, spec §5.8), Phase 1 shell: name and phone, the
- * subscription card (one per address with a subscription, else one for the
- * chosen address; Phase 6, task 2), My addresses (N2), My tanks (N3), My
- * reports (N11, Phase 5) and logout. The other rows and Edit profile come
- * with Phase 6, task 3.
+ * Profile (Profile.dc.html, spec §5.8): name and phone with "تعديل" (N10),
+ * the subscription card (one per address with a subscription, else one for
+ * the chosen address), then the rows: My addresses (N2), My tanks (N3), the
+ * read-only payment row, Certificates (N12), My reports (N11), Settings
+ * (N13) and the reminder toggle; then help (Chat) and logout.
  */
 export default function ProfilePage() {
   return (
@@ -47,15 +57,23 @@ async function ProfileContent() {
   const tLabels = await getTranslations("Location.labels");
   const viewer = await requireViewer(routes.profile);
   const supabase = await createClient();
-  const [addresses, tanks, openTickets, subscriptions, plan] = await Promise.all([
-    listAddresses(),
-    supabase.from("tanks").select("id", { count: "exact", head: true }),
-    supabase.from("tickets").select("id", { count: "exact", head: true }).neq("status", "closed"),
-    listSubscriptions(),
-    subscriptionPlan(),
-  ]);
+  const [addresses, tanks, openTickets, certificates, profile, subscriptions, plan] =
+    await Promise.all([
+      listAddresses(),
+      supabase.from("tanks").select("id", { count: "exact", head: true }),
+      supabase.from("tickets").select("id", { count: "exact", head: true }).neq("status", "closed"),
+      // RLS shows the certificates of the customer's completed orders.
+      supabase.from("certificates").select("id", { count: "exact", head: true }),
+      supabase.from("profiles").select("reminders_enabled").eq("id", viewer.id).single(),
+      listSubscriptions(),
+      subscriptionPlan(),
+    ]);
   if (tanks.error) throw new Error(`Tanks count failed: ${tanks.error.message}`);
   if (openTickets.error) throw new Error(`Tickets count failed: ${openTickets.error.message}`);
+  if (certificates.error) {
+    throw new Error(`Certificates count failed: ${certificates.error.message}`);
+  }
+  if (profile.error) throw new Error(`Profile read failed: ${profile.error.message}`);
   const tankCount = tanks.count ?? 0;
   const name = viewer.fullName ?? "";
 
@@ -80,12 +98,19 @@ async function ProfileContent() {
         >
           {name.charAt(0)}
         </span>
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <p className="truncate text-22 font-black">{name}</p>
           <p dir="ltr" className="text-end text-15 text-muted">
             {formatPhone(viewer.phone)}
           </p>
         </div>
+        <Link
+          href={routes.editProfile}
+          aria-label={t("editLabel")}
+          className="flex min-h-11 items-center px-1 text-15 font-bold text-teal underline"
+        >
+          {t("edit")}
+        </Link>
       </div>
 
       <LiveSubscriptions userId={viewer.id} />
@@ -128,6 +153,18 @@ async function ProfileContent() {
             />
           </li>
           <li>
+            <Row icon={CreditCard} label={t("payment")} value={t("paymentValue")} />
+          </li>
+          <li>
+            <Row
+              as="link"
+              href={routes.certificates}
+              icon={ShieldCheck}
+              label={t("certificates")}
+              value={certificates.count ? String(certificates.count) : ""}
+            />
+          </li>
+          <li>
             <Row
               as="link"
               href={routes.reports}
@@ -140,10 +177,22 @@ async function ProfileContent() {
               }
             />
           </li>
+          <li>
+            <Row as="link" href={routes.settings} icon={Settings} label={t("settings")} value="" />
+          </li>
+          <li>
+            <RemindersSwitch enabled={profile.data.reminders_enabled} />
+          </li>
         </ul>
       </Card>
 
       <Card className="overflow-hidden">
+        <Link
+          href={routes.chat}
+          className="flex min-h-14 w-full items-center border-b border-divider px-4 text-17 font-extrabold"
+        >
+          {t("help")}
+        </Link>
         <LogoutButton>
           <button
             type="button"
@@ -163,10 +212,15 @@ type RowProps = {
   label: string;
   value: string;
 } & (
-  ({ as: "button" } & Omit<ComponentProps<"button">, "children">) | { as: "link"; href: string }
+  | ({ as: "button" } & Omit<ComponentProps<"button">, "children">)
+  | { as: "link"; href: string }
+  | { as?: undefined }
 );
 
-/** A Profile row: icon, label, value and a chevron (Profile.dc.html). */
+/**
+ * A Profile row: icon, label, value and a chevron (Profile.dc.html). Without
+ * `as` it is read-only text, with no chevron (the payment row).
+ */
 function Row({ icon: Icon, label, value, ...props }: RowProps) {
   const classes = "flex min-h-14 w-full items-center gap-3 px-4 text-start";
   const content = (
@@ -174,9 +228,12 @@ function Row({ icon: Icon, label, value, ...props }: RowProps) {
       <Icon aria-hidden className="size-6 shrink-0 text-teal" strokeWidth={2} />
       <span className="flex-1 text-17 font-extrabold">{label}</span>
       <span className="text-15 text-muted">{value}</span>
-      <ChevronRight aria-hidden className="size-5 shrink-0 text-control-off rtl:-scale-x-100" />
+      {props.as && (
+        <ChevronRight aria-hidden className="size-5 shrink-0 text-control-off rtl:-scale-x-100" />
+      )}
     </>
   );
+  if (!props.as) return <div className={classes}>{content}</div>;
   if (props.as === "link") {
     return (
       <Link href={props.href} className={classes}>

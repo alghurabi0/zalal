@@ -1,5 +1,16 @@
 import * as Sentry from "@sentry/nextjs";
-import { CalendarCheck, Clock, House, type LucideIcon, Sparkles, Truck } from "lucide-react";
+import {
+  CalendarCheck,
+  Clock,
+  House,
+  type LucideIcon,
+  MessageSquare,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  TriangleAlert,
+  Truck,
+} from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
@@ -24,8 +35,8 @@ import { tankStatus, type TankStatus } from "@/lib/tanks/status";
 /**
  * Home's cards (Home.dc.html, spec §5.5). Customers: the active-order card
  * (live) and the tank status card. Guests: the price list with a book button,
- * which goes through login. Everyone: the tips strip. Quick actions come with
- * the screens they open (Phase 6, tasks 2 and 3).
+ * which goes through login. Customers also get the quick actions row.
+ * Everyone: the tips strip.
  */
 export async function HomeCards() {
   const viewer = await getViewer();
@@ -46,6 +57,7 @@ export async function HomeCards() {
       <LiveOrders customerId={viewer.id} />
       {order && <ActiveOrderCard order={order} />}
       <TankCard status={tank.status} interval={tank.interval} />
+      <QuickActions />
       <TipsStrip />
     </>
   );
@@ -271,6 +283,40 @@ async function TipsStrip() {
         ))}
       </ul>
     </section>
+  );
+}
+
+const quickActions = [
+  { key: "subscription", href: routes.subscription, icon: Star },
+  { key: "certificates", href: routes.certificates, icon: ShieldCheck },
+  { key: "chat", href: routes.chat, icon: MessageSquare },
+  { key: "issue", href: routes.issue, icon: TriangleAlert },
+] as const;
+
+/**
+ * The quick actions row (Home.dc.html, spec §5.5; customers only): Subscription
+ * (N8), Certificates (N12), Chat and Issue report, as 58 px white tiles.
+ */
+async function QuickActions() {
+  const t = await getTranslations("Home.quick");
+  return (
+    <nav aria-label={t("label")} className="py-1">
+      <ul className="grid grid-cols-4 gap-2">
+        {quickActions.map(({ key, href, icon: Icon }) => (
+          <li key={key}>
+            <Link
+              href={href}
+              className="flex flex-col items-center gap-1.5 rounded-chip text-center text-12 font-bold"
+            >
+              <span className="flex size-14.5 items-center justify-center rounded-card border border-border bg-surface text-teal">
+                <Icon aria-hidden className="size-6.5" strokeWidth={2} />
+              </span>
+              {t(key)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 

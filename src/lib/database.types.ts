@@ -1013,7 +1013,7 @@ export type Database = {
           deleted_at: string | null;
           full_name: string | null;
           id: string;
-          phone: string;
+          phone: string | null;
           reminders_enabled: boolean;
           role: Database["public"]["Enums"]["app_role"];
           updated_at: string;
@@ -1024,7 +1024,7 @@ export type Database = {
           deleted_at?: string | null;
           full_name?: string | null;
           id: string;
-          phone: string;
+          phone?: string | null;
           reminders_enabled?: boolean;
           role?: Database["public"]["Enums"]["app_role"];
           updated_at?: string;
@@ -1034,7 +1034,7 @@ export type Database = {
           deleted_at?: string | null;
           full_name?: string | null;
           id?: string;
-          phone?: string;
+          phone?: string | null;
           reminders_enabled?: boolean;
           role?: Database["public"]["Enums"]["app_role"];
           updated_at?: string;
@@ -1853,6 +1853,7 @@ export type Database = {
           start_at: string;
         }[];
       };
+      change_login_phone: { Args: { p_phone: string; p_user_id: string }; Returns: undefined };
       chat_thread: { Args: Record<PropertyKey, never>; Returns: string };
       check_otp: {
         Args: { p_code_hash: string; p_phone: string };
@@ -1892,7 +1893,9 @@ export type Database = {
           phone: string;
         }[];
       };
+      delete_account: { Args: Record<PropertyKey, never>; Returns: string[] };
       delete_address: { Args: { p_address_id: string }; Returns: undefined };
+      delete_my_push_subscriptions: { Args: Record<PropertyKey, never>; Returns: undefined };
       delete_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
       in_service_area: { Args: { p_lat: number; p_lng: number }; Returns: boolean };
       mark_all_notifications_read: { Args: Record<PropertyKey, never>; Returns: number };

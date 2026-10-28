@@ -27,7 +27,10 @@ async function NewAddress({ searchParams }: Pick<PageProps<"/addresses/new">, "s
   await requireViewer(self);
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("addresses").select("label");
+  const [{ data, error }, settings] = await Promise.all([
+    supabase.from("addresses").select("label"),
+    supabase.from("settings").select("company_phone").single(),
+  ]);
   if (error) throw new Error(`Addresses read failed: ${error.message}`);
   const usedLabels: AddressLabel[] = data.map((row) => row.label);
   const back = next ?? routes.home;
@@ -54,6 +57,7 @@ async function NewAddress({ searchParams }: Pick<PageProps<"/addresses/new">, "s
       onboarding={onboarding}
       backHref={back}
       next={back}
+      supportPhone={settings.data?.company_phone ?? null}
     />
   );
 }

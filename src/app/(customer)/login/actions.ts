@@ -6,6 +6,8 @@ import { z } from "zod";
 import { afterLogin } from "@/lib/auth/destination";
 import { readPendingLogin, writePendingLogin } from "@/lib/auth/pending-login";
 import { requestOtp, verifyOtp } from "@/lib/otp";
+import type { ResendState, SendCodeState, VerifyState } from "@/lib/otp/form-states";
+import { sendError } from "@/lib/otp/send-error";
 import { otpChannelSchema } from "@/lib/otp/schemas";
 import { phoneInputSchema } from "@/lib/phone";
 import { routes, safeNext } from "@/lib/routes";
@@ -13,17 +15,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 // Login (spec §5.2) and OTP (§5.3). The OTP library applies every limit
 // in Postgres; these actions only translate its results for the screens.
-
-/** Why a send didn't happen, for the Login and OTP screens to word. */
-export type SendError =
-  | { kind: "invalid_phone" }
-  | { kind: "wait"; retryAfterS: number }
-  | { kind: "locked"; retryAfterS: number }
-  | { kind: "sms_disabled" }
-  | { kind: "whatsapp_failed"; canTrySms: boolean }
-  | { kind: "send_failed" };
-
-export type SendCodeState = { error: SendError | null; smsEnabled?: boolean };
 
 const sendCodeFormSchema = z.object({
   phone: phoneInputSchema,
@@ -47,38 +38,6 @@ async function send(phone: string, channel: "whatsapp" | "sms", next: string | n
   return { ok: false as const, error: sendError(result, channel) };
 }
 
-function sendError(
-  result: Exclude<Awaited<ReturnType<typeof requestOtp>>, { ok: true }>,
-  channel: "whatsapp" | "sms",
-): SendCodeState {
-  switch (result.reason) {
-    case "invalid_input":
-      return { error: { kind: "invalid_phone" } };
-    case "sms_disabled":
-      return { error: { kind: "sms_disabled" }, smsEnabled: false };
-    case "locked":
-      return {
-        error: { kind: "locked", retryAfterS: result.retryAfterS ?? 15 * 60 },
-        smsEnabled: result.smsEnabled,
-      };
-    case "too_soon":
-    case "too_many":
-    case "daily_limit":
-      return {
-        error: { kind: "wait", retryAfterS: result.retryAfterS ?? 60 },
-        smsEnabled: result.smsEnabled,
-      };
-    case "send_failed":
-      return {
-        error:
-          channel === "whatsapp"
-            ? { kind: "whatsapp_failed", canTrySms: result.canTrySms }
-            : { kind: "send_failed" },
-        smsEnabled: result.smsEnabled,
-      };
-  }
-}
-
 /** Login's "أرسل الرمز". On success, opens the OTP screen. */
 export async function sendCode(_prev: SendCodeState, form: FormData): Promise<SendCodeState> {
   const parsed = sendCodeFormSchema.safeParse({
@@ -94,12 +53,6 @@ export async function sendCode(_prev: SendCodeState, form: FormData): Promise<Se
   redirect(routes.verify);
 }
 
-export type ResendState = {
-  error: SendError | null;
-  sentAt?: number;
-  channel?: "whatsapp" | "sms";
-};
-
 /** OTP's "أعد الإرسال" and "أرسل برسالة SMS", for the number being verified. */
 export async function resendCode(_prev: ResendState, form: FormData): Promise<ResendState> {
   const pending = await readPendingLogin();
@@ -111,13 +64,6 @@ export async function resendCode(_prev: ResendState, form: FormData): Promise<Re
   if (!outcome.ok) return { error: outcome.error.error };
   return { error: null, sentAt: outcome.pending.sentAt, channel: outcome.pending.channel };
 }
-
-export type VerifyState =
-  | { status: "idle" }
-  | { status: "ok"; userId: string; destination: string }
-  | { status: "wrong_code"; attemptsLeft: number }
-  | { status: "locked"; retryAfterS: number }
-  | { status: "expired" | "account_unavailable" | "invalid_code" };
 
 /** OTP's "تحقق وكمّل" (and the 6th digit). Signs in, then says where to go. */
 export async function verifyCode(_prev: VerifyState, form: FormData): Promise<VerifyState> {

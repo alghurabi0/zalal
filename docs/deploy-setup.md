@@ -18,6 +18,8 @@ Two things to know:
 
 - **Previews of PRs that change the schema.** Dev Supabase gets a PR's migrations only after the merge, so until then that PR's preview runs against the old schema. Screens that need the new tables only work on the preview after the merge.
 - **Previews are private.** Vercel protects preview URLs by default. Open them on your phone while logged in to Vercel.
+- **Forcing an update (N16).** An installed app keeps running the build it loaded until it reloads. When a release must reach everyone (say, an old screen would now fail against the new database), bump `version` in `package.json` in that release's PR (for example 0.1.0 → 0.2.0). After Deploy prod finishes, set A13 → "التطبيق" → "أقل إصدار مسموح" to that version: older builds then show "حدّث التطبيق". Settings (N13) shows each build's version.
+- **Maintenance mode (N16).** A13 → "التطبيق" → "وضع الصيانة" shows customers and guests a maintenance screen with the company phone within about 10 seconds; the dashboard and crew app keep working. Turn it off the same way.
 
 ## 1. Vercel
 

@@ -14,6 +14,9 @@ const status = JSON.parse(
   }),
 ) as { API_URL: string; SECRET_KEY: string };
 
+/** The local API's URL, which the app under test also uses (.env.local). */
+export const SUPABASE_URL = status.API_URL;
+
 export const admin = createClient<Database>(status.API_URL, status.SECRET_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });

@@ -11,6 +11,19 @@ const PORT = 3100;
 // `playwright install chromium`.
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 
+const mobile = {
+  ...devices["Desktop Chrome"],
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+  locale: "ar-IQ",
+  timezoneId: "Asia/Baghdad",
+  launchOptions: { executablePath },
+};
+
+const GLOBAL_SETTINGS_SPECS = /system-states\.spec\.ts/;
+
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: true,
@@ -22,18 +35,19 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
+    // Tests that flip a setting every page sees (maintenance mode) run as
+    // this project's teardown: after everything else, so no other test
+    // meets the maintenance screen, and even when another test failed.
     {
       name: "mobile-chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        viewport: { width: 390, height: 844 },
-        deviceScaleFactor: 2,
-        isMobile: true,
-        hasTouch: true,
-        locale: "ar-IQ",
-        timezoneId: "Asia/Baghdad",
-        launchOptions: { executablePath },
-      },
+      use: mobile,
+      testIgnore: GLOBAL_SETTINGS_SPECS,
+      teardown: "global-settings",
+    },
+    {
+      name: "global-settings",
+      use: mobile,
+      testMatch: GLOBAL_SETTINGS_SPECS,
     },
   ],
   webServer: {
