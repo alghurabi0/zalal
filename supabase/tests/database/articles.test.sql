@@ -14,7 +14,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(42);
+select plan(43);
 
 -- Shape ---------------------------------------------------------------------------------
 
@@ -152,6 +152,11 @@ where slug = 'test-draft';
 select is(
   (select read_minutes from public.articles where slug = 'test-draft'),
   3::smallint, '375 words read in 3 minutes (rounded)'
+);
+update public.articles set body_md = repeat(E'كلمة\u00a0كلمة ', 225) where slug = 'test-draft';
+select is(
+  (select read_minutes from public.articles where slug = 'test-draft'),
+  2::smallint, 'words are split on ASCII whitespace only (a no-break space joins them)'
 );
 
 -- Reads -----------------------------------------------------------------------------------

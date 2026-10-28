@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { CalendarCheck, Clock, House, type LucideIcon, Sparkles, Truck } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -231,7 +232,10 @@ async function PriceListCard() {
  * published. A failed read only hides it: Home's cards matter more.
  */
 async function TipsStrip() {
-  const articles = await homeArticles().catch(() => []);
+  const articles = await homeArticles().catch((error: unknown) => {
+    Sentry.captureException(error);
+    return [];
+  });
   if (articles.length === 0) return null;
   const t = await getTranslations("Home.tips");
 

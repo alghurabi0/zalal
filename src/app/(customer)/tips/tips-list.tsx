@@ -100,7 +100,7 @@ function TopCard({ top: { article, highlights } }: { top: Top }) {
               >
                 {i + 1}
               </span>
-              <span className="text-14 leading-relaxed text-on-dark-body">{item}</span>
+              <span className="line-clamp-2 text-14 leading-relaxed text-on-dark-body">{item}</span>
             </li>
           ))}
         </ol>

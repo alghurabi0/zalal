@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import type { CategoryIcon } from "@/lib/articles/category-icons";
+import { slugSchema } from "@/lib/schemas/article";
 import { createClient } from "@/lib/supabase/server";
 
 // Reads for Tips, Article (N9) and Home's tips strip (spec §5.5, §5.6, N9).
@@ -50,13 +51,17 @@ function toSummary(row: SummaryRow): ArticleSummary {
   };
 }
 
-/** Every published article, newest first, and the categories in their order. */
+/**
+ * Every published article, newest first, the categories in their order, and
+ * the body of the newest featured article (Tips' top card), in one round trip.
+ */
 export async function listPublishedArticles(): Promise<{
   articles: ArticleSummary[];
   categories: ArticleCategory[];
+  topBody: { id: string; body: string } | null;
 }> {
   const supabase = await createClient();
-  const [articles, categories] = await Promise.all([
+  const [articles, categories, top] = await Promise.all([
     supabase
       .from("articles")
       .select(summaryColumns)
@@ -65,18 +70,30 @@ export async function listPublishedArticles(): Promise<{
       .order("id")
       .limit(200),
     supabase.from("article_categories").select("id, name, icon").order("sort").order("id"),
+    supabase
+      .from("articles")
+      .select("id, body_md")
+      .eq("status", "published")
+      .eq("featured", true)
+      .order("published_at", { ascending: false })
+      .order("id")
+      .limit(1)
+      .maybeSingle(),
   ]);
   if (articles.error) throw new Error(`Articles read failed: ${articles.error.message}`);
   if (categories.error) throw new Error(`Categories read failed: ${categories.error.message}`);
-  return { articles: articles.data.map(toSummary), categories: categories.data };
+  if (top.error) throw new Error(`Article read failed: ${top.error.message}`);
+  return {
+    articles: articles.data.map(toSummary),
+    categories: categories.data,
+    topBody: top.data ? { id: top.data.id, body: top.data.body_md } : null,
+  };
 }
-
-/** articles.slug's format; anything else can't be an article. */
-export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /** One published article by its slug, or null. Once per request (page and metadata). */
 export const publishedArticle = cache(async (slug: string): Promise<PublishedArticle | null> => {
-  if (!SLUG_PATTERN.test(slug) || slug.length > 80) return null;
+  // Anything else can't be an article's slug.
+  if (!slugSchema.safeParse(slug).success || slug !== slug.trim().toLowerCase()) return null;
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("articles")
@@ -94,19 +111,6 @@ export const publishedArticle = cache(async (slug: string): Promise<PublishedArt
       : null,
   };
 });
-
-/** A published article's Markdown body, or null. */
-export async function articleBody(id: string): Promise<string | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("articles")
-    .select("body_md")
-    .eq("id", id)
-    .eq("status", "published")
-    .maybeSingle();
-  if (error) throw new Error(`Article read failed: ${error.message}`);
-  return data?.body_md ?? null;
-}
 
 /** Home's strip (§5.5). */
 export const HOME_TIPS = 2;

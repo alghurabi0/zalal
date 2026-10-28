@@ -1785,7 +1785,9 @@
         "deleteYes": "إي، احذفه",
         "cancel": "إلغاء",
         "notFoundTitle": "ما لكينا هذا المقال",
-        "notFoundBody": "يمكن انحذف. ارجع لقائمة المقالات."
+        "notFoundBody": "يمكن انحذف. ارجع لقائمة المقالات.",
+        "noCategories": "ماكو أقسام بعد، والمقال يحتاج قسم.",
+        "addCategory": "أضف قسم"
       },
       "categoriesPage": {
         "title": "أقسام المقالات",

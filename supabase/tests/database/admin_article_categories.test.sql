@@ -14,7 +14,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(32);
+select plan(33);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -154,6 +154,11 @@ select is(
 select throws_ok(
   $$ select public.admin_delete_category(999999) $$,
   'P0002', 'category_not_found', 'a missing category is refused'
+);
+select is(
+  (select icon from public.article_categories where id = public.admin_save_category(null, 'رابعة')),
+  'lightbulb'::public.category_icon,
+  'a category added without an icon gets the default one'
 );
 
 select tests.clear_authentication();

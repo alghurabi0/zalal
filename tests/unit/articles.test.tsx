@@ -220,3 +220,18 @@ describe("article schemas", () => {
     expect(adminEditErrorFor({ code: "22023", message: "invalid_order" })).toBe("invalid");
   });
 });
+
+describe("articleHighlights, harder lists", () => {
+  it("reads loose lists and wrapped items", () => {
+    expect(articleHighlights("1. أول\n\n2. ثاني\n   يكمل هنا\n\n3. ثالث\n\nفقرة")).toEqual({
+      kind: "list",
+      items: ["أول", "ثاني يكمل هنا", "ثالث"],
+    });
+  });
+
+  it("keeps comparisons, inner underscores and escaped marks", () => {
+    expect(plainText("الحرارة < 50 و > 30")).toBe("الحرارة < 50 و > 30");
+    expect(plainText("file_name و _مائل_")).toBe("file_name و مائل");
+    expect(plainText("نجمة \\* و \\_ هنا")).toBe("نجمة * و _ هنا");
+  });
+});

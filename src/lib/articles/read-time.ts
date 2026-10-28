@@ -7,6 +7,7 @@ export const WORDS_PER_MINUTE = 150;
  * articles), so A11's live count matches what Tips shows after saving.
  */
 export function readMinutes(body: string): number {
-  const words = body.match(/\S+/g)?.length ?? 0;
+  // ASCII whitespace only, as the SQL (a no-break space joins two words).
+  const words = body.match(/[^ \t\n\r\f\v]+/g)?.length ?? 0;
   return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
 }

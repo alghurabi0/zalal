@@ -20,12 +20,21 @@ export function articleHighlights(body: string): ArticleHighlights {
     const items: string[] = [];
     for (const line of lines.slice(start)) {
       const match = orderedItem.exec(line);
-      if (!match) break;
-      const text = plainText(match[1] ?? "");
-      if (text) items.push(text);
-      if (items.length === MAX_HIGHLIGHTS) break;
+      if (match) {
+        if (items.length === MAX_HIGHLIGHTS) break;
+        items.push(match[1] ?? "");
+      } else if (!line.trim()) {
+        // A loose list: blank lines between items.
+        continue;
+      } else if (/^\s{2,}\S/.test(line) && items.length > 0) {
+        // An item's wrapped line.
+        items[items.length - 1] += ` ${line.trim()}`;
+      } else {
+        break;
+      }
     }
-    if (items.length > 0) return { kind: "list", items };
+    const texts = items.map(plainText).filter(Boolean);
+    if (texts.length > 0) return { kind: "list", items: texts };
   }
 
   const paragraph: string[] = [];
@@ -44,13 +53,21 @@ export function articleHighlights(body: string): ArticleHighlights {
   return text ? { kind: "text", text } : null;
 }
 
-/** Inline Markdown to plain text: links keep their words, marks go. */
+/**
+ * Inline Markdown to plain text: links keep their words, emphasis and code
+ * marks go, HTML tags go, escaped characters keep only the character. A
+ * lone "<", ">" or an "_" inside a word stays.
+ */
 export function plainText(markdown: string): string {
+  const escaped: string[] = [];
   return markdown
+    .replace(/\\([!-/:-@[-`{-~])/g, (_, char: string) => `\u0000${escaped.push(char) - 1}\u0000`)
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/<[^>]*>/g, "")
-    .replace(/(\*\*|__|\*|_|~~|`)/g, "")
+    .replace(/<\/?[a-zA-Z][^<>]*>/g, "")
+    .replace(/(\*\*|__|\*|~~|`)/g, "")
+    .replace(/(^|[\s(])_+|_+(?=$|[\s).,\u060C:;!?\u061F])/g, "$1")
+    .replace(/\u0000(\d+)\u0000/g, (_, i: string) => escaped[Number(i)] ?? "")
     .replace(/\s+/g, " ")
     .trim();
 }

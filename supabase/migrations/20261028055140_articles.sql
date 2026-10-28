@@ -101,9 +101,10 @@ create table public.articles (
     constraint articles_cover_path_key unique
     check (cover_path ~ '^articles/[^/]+$'),
   body_md text not null default '' check (char_length(body_md) <= 20000),
-  -- Words ÷ 150, rounded, at least 1 (src/lib/articles/read-time.ts matches it).
+  -- Words ÷ 150, rounded, at least 1 (src/lib/articles/read-time.ts matches
+  -- it). Words are split on ASCII whitespace only, named so both sides agree.
   read_minutes smallint generated always as (
-    greatest(1, round(regexp_count(body_md, '\S+') / 150.0))::smallint
+    greatest(1, round(regexp_count(body_md, '[^ \t\n\r\f\v]+') / 150.0))::smallint
   ) stored,
   featured boolean not null default false,
   status public.article_status not null default 'draft',
@@ -363,15 +364,16 @@ begin
 
   begin
     if p_id is null then
-      -- At the end of the order; the lock makes two adds take turns.
-      perform 1 from public.article_categories as c order by c.id for update;
+      -- At the end of the order. The table lock makes two adds (and a
+      -- reorder) take turns, even while the table is still empty.
+      lock table public.article_categories in share row exclusive mode;
       insert into public.article_categories (name, icon, sort)
-      select p_name, p_icon, coalesce(max(c.sort), 0) + 1
+      select p_name, coalesce(p_icon, 'lightbulb'), coalesce(max(c.sort), 0) + 1
       from public.article_categories as c
       returning id into v_id;
       perform private.log_admin_action(
         'category.create', 'article_categories', v_id::text,
-        jsonb_build_object('name', p_name, 'icon', p_icon)
+        jsonb_build_object('name', p_name, 'icon', coalesce(p_icon, 'lightbulb'))
       );
       return v_id;
     end if;
@@ -383,6 +385,8 @@ begin
     if v_old.name is distinct from p_name then
       v_diff := v_diff || jsonb_build_object('name', jsonb_build_object('from', v_old.name, 'to', p_name));
     end if;
+    -- No icon given: keep the one it has.
+    p_icon := coalesce(p_icon, v_old.icon);
     if v_old.icon is distinct from p_icon then
       v_diff := v_diff || jsonb_build_object('icon', jsonb_build_object('from', v_old.icon, 'to', p_icon));
     end if;
@@ -456,8 +460,8 @@ begin
     raise exception using errcode = '22023', message = 'invalid_order';
   end if;
 
-  -- Two reorders take turns.
-  perform 1 from public.article_categories as c order by c.id for update;
+  -- Two reorders (and an add) take turns.
+  lock table public.article_categories in share row exclusive mode;
 
   -- Every category: the listed ones first, in the given order, then the
   -- rest as they were.

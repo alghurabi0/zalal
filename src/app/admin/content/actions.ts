@@ -1,11 +1,13 @@
 "use server";
 
 import * as Sentry from "@sentry/nextjs";
+import { z } from "zod";
 
 import { type AdminEditFailure, editFailure } from "@/lib/admin/edit-errors";
 import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
 import {
+  coverPathSchema,
   deleteArticleSchema,
   deleteCategorySchema,
   reorderCategoriesSchema,
@@ -76,10 +78,11 @@ export async function deleteArticle(input: {
 
 /** A cover uploaded in the editor but replaced before saving. */
 export async function discardCover(input: { path: string }): Promise<{ status: "done" }> {
+  const parsed = z.object({ path: coverPathSchema }).safeParse(input);
+  if (!parsed.success) return { status: "done" };
   const supabase = await admin();
-  const path = /^articles\/[^/]+$/.test(input.path) ? input.path : null;
   // The delete policy refuses a cover an article uses.
-  await removeCover(supabase, path);
+  await removeCover(supabase, parsed.data.path);
   return { status: "done" };
 }
 

@@ -67,6 +67,8 @@ export function ArticleEditor({
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [notice, setNotice] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
+  // Publishing also needs a body; a draft doesn't.
+  const [triedPublish, setTriedPublish] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, startDelete] = useTransition();
   const [deleteError, setDeleteError] = useState<AdminEditError | null>(null);
@@ -80,6 +82,7 @@ export function ArticleEditor({
 
   const save = (next: ArticleStatus) => {
     setTried(true);
+    setTriedPublish(next === "published");
     setNotice(null);
     const bodyMissing = next === "published" && !/\S/.test(body);
     if (!titleOk || !slugOk || bodyTooLong || bodyMissing || !categoryId) return;
@@ -105,6 +108,7 @@ export function ArticleEditor({
           setFeatured(false);
           setCover(null);
           setTried(false);
+          setTriedPublish(false);
           setTab("write");
           router.replace(routes.adminArticle(result.id));
           return;
@@ -120,7 +124,7 @@ export function ArticleEditor({
     );
   };
 
-  const publishMissingBody = tried && !/\S/.test(body);
+  const publishMissingBody = triedPublish && !/\S/.test(body);
 
   return (
     <form
@@ -232,7 +236,7 @@ export function ArticleEditor({
                 error={
                   bodyTooLong
                     ? t("bodyTooLong", { max: BODY_MAX })
-                    : publishMissingBody && status === "published"
+                    : publishMissingBody
                       ? t("bodyRequired")
                       : undefined
                 }
@@ -309,9 +313,17 @@ export function ArticleEditor({
             {tErrors(edit.error)}
           </p>
         )}
-        {publishMissingBody && status === "draft" && (
+        {publishMissingBody && (
           <p role="alert" className="text-14 font-bold text-danger">
             {t("bodyRequired")}
+          </p>
+        )}
+        {categories.length === 0 && (
+          <p role="alert" className="text-14 font-bold text-danger">
+            {t("noCategories")}{" "}
+            <Link href={routes.adminCategories} className="text-teal underline">
+              {t("addCategory")}
+            </Link>
           </p>
         )}
         <div className="flex flex-wrap gap-2">

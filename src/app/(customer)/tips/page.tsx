@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { articleHighlights } from "@/lib/articles/highlights";
-import { articleBody, listPublishedArticles, topArticle } from "@/lib/articles/queries";
+import { listPublishedArticles, topArticle } from "@/lib/articles/queries";
 import { routes } from "@/lib/routes";
 
 import { TipsList } from "./tips-list";
@@ -47,7 +47,7 @@ export default async function TipsPage() {
 
 async function TipsContent() {
   const t = await getTranslations("Tips");
-  const { articles, categories } = await listPublishedArticles();
+  const { articles, categories, topBody } = await listPublishedArticles();
 
   if (articles.length === 0) {
     return (
@@ -65,7 +65,8 @@ async function TipsContent() {
   }
 
   const top = topArticle(articles);
-  const body = top ? await articleBody(top.id) : null;
+  // Both are the newest featured article; the body comes from the same round trip.
+  const body = top && topBody?.id === top.id ? topBody.body : null;
   const used = new Set(articles.map((article) => article.category.id));
 
   return (

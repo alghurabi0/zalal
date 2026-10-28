@@ -1,12 +1,13 @@
 import "server-only";
 
 import type { CategoryIcon } from "@/lib/articles/category-icons";
+import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
 
 // Reads for A11 (spec §8.2). Admins read drafts through RLS; every page
 // checks the role first with requireViewer(…, "admin").
 
-export type ArticleStatus = "draft" | "published";
+export type ArticleStatus = Database["public"]["Enums"]["article_status"];
 export const ARTICLE_STATUSES = ["published", "draft"] as const satisfies ArticleStatus[];
 
 export type AdminArticleRow = {
