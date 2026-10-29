@@ -1735,6 +1735,19 @@ export type Database = {
         };
         Returns: number;
       };
+      admin_customers: {
+        Args: { p_limit?: number; p_search?: string; p_sort?: string };
+        Returns: {
+          created_at: string;
+          district: string;
+          full_name: string;
+          id: string;
+          last_order_at: string;
+          orders_count: number;
+          phone: string;
+          total: number;
+        }[];
+      };
       admin_delete_article: { Args: { p_id: string }; Returns: string };
       admin_delete_category: { Args: { p_id: number }; Returns: undefined };
       admin_end_subscription: {
