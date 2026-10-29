@@ -95,6 +95,21 @@ describe("filters", () => {
     expect(soonestFirst({ status: "all" })).toBe(false);
     expect(soonestFirst({ status: "completed" })).toBe(false);
     expect(soonestFirst({ status: "completed", date: "2026-10-26" })).toBe(true);
+    expect(soonestFirst({ status: "all", from: "2026-10-26" })).toBe(true);
+  });
+
+  it("reads a day range and keeps it in links", () => {
+    expect(parseAdminOrdersQuery({ from: "2026-10-29", to: "2026-10-31" })).toMatchObject({
+      from: "2026-10-29",
+      to: "2026-10-31",
+    });
+    expect(parseAdminOrdersQuery({ from: "29/10", to: "x" })).toEqual({ status: "active", n: 50 });
+    expect(adminOrdersHref({ status: "confirmed", from: "2026-10-29" })).toBe(
+      "/admin/orders?status=confirmed&from=2026-10-29",
+    );
+    expect(adminOrdersHref({ status: "all", from: "2026-11-01", to: "2026-11-30" })).toBe(
+      "/admin/orders?status=all&from=2026-11-01&to=2026-11-30",
+    );
   });
 
   it("builds links without defaults", () => {

@@ -256,6 +256,67 @@ test("Overview updates live and links a new booking", async ({ page }) => {
   await expectStatus(page, "pending_confirmation");
 });
 
+test("Overview counts orders by period and links each count to A2", async ({ page }) => {
+  slot = await createSlot();
+  const customer = await createCustomer();
+  // A month far ahead that no other test books, so its counts are this test's.
+  const year = 2100 + Math.floor(Math.random() * 800);
+  const month = `${year}-0${1 + Math.floor(Math.random() * 8)}`;
+  const nextMonth = `${year}-${String(Number(month.slice(5)) + 1).padStart(2, "0")}`;
+  const a = await createOrder(customer.phone, { slot, date: `${month}-03`, status: "confirmed" });
+  const b = await createOrder(customer.phone, { slot, date: `${month}-28`, status: "confirmed" });
+  await createOrder(customer.phone, { slot, date: `${month}-10`, status: "cancelled" });
+  await createOrder(customer.phone, { slot, date: `${nextMonth}-01`, status: "confirmed" });
+  const monthName = (m: string) =>
+    new Intl.DateTimeFormat("ar-IQ-u-ca-gregory-nu-latn", {
+      timeZone: "Asia/Baghdad",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(`${m}-15T12:00:00Z`));
+
+  await logInAsAdmin(page);
+  // From today on is the default.
+  const periods = page.getByRole("navigation", { name: Admin.overview.periods });
+  await expect(periods.getByRole("link", { name: Admin.overview.periodUpcoming })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.getByRole("heading", { level: 2 }).first()).toContainText(
+    Admin.overview.upcoming.replace(" ({count})", ""),
+  );
+  await periods.getByRole("link", { name: Admin.overview.periodToday, exact: true }).click();
+  await expect(page).toHaveURL("/admin?period=today");
+
+  // A whole month (not the one under way).
+  await page.goto(`/admin?period=${month}`);
+  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(
+    Admin.overview.month.replace("{month}", monthName(month)).replace("{count}", "3"),
+  );
+  await expect(page.getByTestId("count-confirmed")).toHaveText("2");
+  await expect(page.getByTestId("count-cancelled")).toHaveText("1");
+  await screenshot(page, "admin-overview-month");
+
+  await periods.getByRole("link", { name: Admin.overview.nextMonth }).click();
+  await expect(page).toHaveURL(`/admin?period=${nextMonth}`);
+  await expect(page.getByTestId("count-confirmed")).toHaveText("1");
+  await expect(page.getByTestId("count-cancelled")).toHaveText("0");
+
+  // A card opens A2 over the same days.
+  await periods.getByRole("link", { name: Admin.overview.prevMonth }).click();
+  await expect(page).toHaveURL(`/admin?period=${month}`);
+  await page.getByTestId("count-confirmed").click();
+  const last = new Date(Date.UTC(year, Number(month.slice(5)), 0)).getUTCDate();
+  await expect(page).toHaveURL(
+    `/admin/orders?status=confirmed&from=${month}-01&to=${month}-${last}`,
+  );
+  const table = page.getByRole("table", { name: Admin.orders.caption });
+  await expect(table).toContainText(`#${a.number}`);
+  await expect(table).toContainText(`#${b.number}`);
+  await expect(table.getByRole("row")).toHaveCount(3);
+  await page.getByRole("link", { name: Admin.orders.clearRange }).click();
+  await expect(page).toHaveURL("/admin/orders?status=confirmed");
+});
+
 test.describe("on a tablet", () => {
   test.use({ viewport: { width: 820, height: 1180 } });
 

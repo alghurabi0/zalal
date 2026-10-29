@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Database } from "@/lib/database.types";
-import { addDays, baghdadToday } from "@/lib/dates";
+import { addDays } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -61,6 +61,8 @@ export async function listAdminOrders(
     .select(rowColumns)
     .in("status", [...statusesFor(query.status)]);
   if (query.date) request = request.eq("service_date", query.date);
+  if (query.from) request = request.gte("service_date", query.from);
+  if (query.to) request = request.lte("service_date", query.to);
   if (query.slot) request = request.eq("slot_id", query.slot);
   if (query.district) request = request.ilike("district", likePattern(query.district));
   if (query.crew === "none") request = request.is("crew_id", null);
@@ -75,20 +77,30 @@ export async function listAdminOrders(
   return { orders: data.slice(0, query.n).map(toRow), more: data.length > query.n };
 }
 
-/** A1: today's orders (Baghdad) counted by status. */
-export async function todayCounts(now: Date): Promise<Record<OrderStatus, number>> {
+/**
+ * A1: the orders of a range of service days counted by status (`to` null =
+ * from `from` on). One exact count per status, so the numbers never stop
+ * at the API's row limit.
+ */
+export async function orderCounts(range: {
+  from: string;
+  to: string | null;
+}): Promise<Record<OrderStatus, number>> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select("status")
-    .eq("service_date", baghdadToday(now));
-  if (error) throw new Error(`Today's orders read failed: ${error.message}`);
-  const counts = Object.fromEntries(ORDER_STATUSES.map((s) => [s, 0])) as Record<
-    OrderStatus,
-    number
-  >;
-  for (const row of data) counts[row.status] += 1;
-  return counts;
+  const counts = await Promise.all(
+    ORDER_STATUSES.map(async (status) => {
+      let request = supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", status)
+        .gte("service_date", range.from);
+      if (range.to) request = request.lte("service_date", range.to);
+      const { count, error } = await request;
+      if (error) throw new Error(`Order counts read failed: ${error.message}`);
+      return [status, count ?? 0] as const;
+    }),
+  );
+  return Object.fromEntries(counts) as Record<OrderStatus, number>;
 }
 
 /** A1: orders waiting for confirmation, soonest first. */
