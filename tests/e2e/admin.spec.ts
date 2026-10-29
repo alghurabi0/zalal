@@ -376,9 +376,9 @@ test.describe("on a tablet", () => {
 
   test("the shell and the list fit", async ({ page }) => {
     await logInAsAdmin(page);
-    await page.getByRole("link", { name: Admin.nav.orders }).click();
+    await page.getByRole("link", { name: Admin.nav.orders, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(Admin.orders.title);
-    await expect(page.getByRole("link", { name: Admin.nav.orders })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: Admin.nav.orders, exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
