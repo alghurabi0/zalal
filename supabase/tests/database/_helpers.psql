@@ -228,7 +228,8 @@ begin
   insert into public.order_items (order_id, tank_id, tank_type, size, qty, unit_price_iqd)
   values (v_order_id, v_tank_id, 'roof', 'm', 1, 35000);
 
-  if p_status <> 'cancelled' then
+  -- Cancelled and postponed orders hold no place.
+  if p_status not in ('cancelled', 'postponed') then
     insert into public.slot_bookings (service_date, slot_id, seat, order_id)
     select v_date, v_slot_id, coalesce(max(b.seat), 0) + 1, v_order_id
     from public.slot_bookings as b
