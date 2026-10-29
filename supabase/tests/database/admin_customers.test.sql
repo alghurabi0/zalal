@@ -12,7 +12,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(19);
+select plan(22);
 
 select tests.create_user('+9647801111111');            -- customer, 3 orders
 select tests.create_user('+9647802222222');            -- another customer, 1 order
@@ -20,6 +20,8 @@ select tests.create_user('+9647803333333');            -- customer, never booked
 select tests.create_user('+9647804444444');            -- deleted account
 select tests.create_user('+9647505555555', 'admin');
 select tests.create_crew('+9647706666666');
+select tests.create_crew('+9647707777777');           -- switched off below
+select tests.create_user('+9647508888888', 'admin');  -- demoted below
 
 -- Accounts other tests left in the database count as deleted (which the list
 -- skips), so only this test's customers are live. Then set sign-up times.
@@ -55,6 +57,7 @@ values (tests.user_id('+9647801111111'), 'work', 'حي النقيب', 'قرب ا
 
 update public.profiles set deleted_at = now(), phone = null, full_name = null
 where id = tests.user_id('+9647804444444');
+update public.crews set active = false where user_id = tests.user_id('+9647707777777');
 
 grant execute on all functions in schema tests to anon, authenticated;
 
@@ -80,6 +83,22 @@ select throws_ok(
   $$ select * from public.admin_customers() $$,
   '42501', 'not_allowed', 'a crew cannot list customers'
 );
+
+select tests.authenticate_as(tests.user_id('+9647707777777'));
+select throws_ok(
+  $$ select * from public.admin_customers() $$,
+  '42501', 'not_allowed', 'a switched-off crew cannot list customers'
+);
+-- A former admin is a customer again: refused at once, whatever their token says.
+select tests.clear_authentication();
+update public.profiles set role = 'customer' where id = tests.user_id('+9647508888888');
+select tests.authenticate_as(tests.user_id('+9647508888888'));
+select throws_ok(
+  $$ select * from public.admin_customers() $$,
+  '42501', 'not_allowed', 'a demoted admin cannot list customers'
+);
+select tests.clear_authentication();
+update public.profiles set deleted_at = now(), phone = null where id = tests.user_id('+9647508888888');
 
 -- Admin --------------------------------------------------------------------------------------
 
@@ -141,6 +160,10 @@ select results_eq(
 select is_empty(
   $$ select 1 from public.admin_customers('%') $$,
   'a % in the search is literal'
+);
+select is_empty(
+  $$ select 1 from public.admin_customers('زينب_علي') $$,
+  'a _ in the search is literal'
 );
 select is_empty(
   $$ select 1 from public.admin_customers('+96475055') $$,

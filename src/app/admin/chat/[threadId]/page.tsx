@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { z } from "zod";
 
+import { CustomerPanel } from "@/components/admin/customer-panel";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
@@ -20,7 +21,6 @@ import { InboxList, InboxListSkeleton } from "../inbox-list";
 import { inboxQuerySchema } from "../inbox-query";
 
 import { AdminConversation } from "./conversation";
-import { CustomerPanel } from "./customer-panel";
 
 /**
  * One conversation in the inbox (A4, spec §8.2): the thread list beside it

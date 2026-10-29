@@ -112,6 +112,9 @@ export const routes = {
   /** Tickets (A5), filtered by its query string; `?ticket=` opens the drawer. */
   adminTickets: "/admin/tickets",
   adminTicket: (id: string) => `/admin/tickets?ticket=${encodeURIComponent(id)}`,
+  /** Customers (A6): `?q=` search, `?sort=`, `?customer=` opens the drawer. */
+  adminCustomers: "/admin/customers",
+  adminCustomer: (id: string) => `/admin/customers?customer=${encodeURIComponent(id)}`,
   /** Ratings (A12); `?stars=` filters by stars. */
   adminRatings: "/admin/ratings",
   /** Live map (A3): crews on the way. */

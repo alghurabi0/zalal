@@ -154,6 +154,8 @@ test.describe("admin", () => {
       "/admin/live",
       "/admin/chat",
       "/admin/tickets",
+      "/admin/customers",
+      `/admin/customers?customer=${customer.id}`,
       "/admin/ratings",
       "/admin/prices",
       "/admin/schedule",

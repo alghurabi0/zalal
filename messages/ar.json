@@ -1443,7 +1443,8 @@
       "chatUnread": "{count, plural, one {محادثة غير مقروءة} two {محادثتين غير مقروءة} few {# محادثات غير مقروءة} other {# محادثة غير مقروءة}}",
       "ticketsOpen": "{count, plural, one {بلاغ مفتوح} two {بلاغين مفتوحة} few {# بلاغات مفتوحة} other {# بلاغ مفتوح}}",
       "subscriptions": "الاشتراكات",
-      "subscriptionRequests": "{count, plural, one {طلب اشتراك جديد} two {طلبين اشتراك} few {# طلبات اشتراك} other {# طلب اشتراك}}"
+      "subscriptionRequests": "{count, plural, one {طلب اشتراك جديد} two {طلبين اشتراك} few {# طلبات اشتراك} other {# طلب اشتراك}}",
+      "customers": "الزبائن"
     },
     "live": {
       "soundOn": "صوت التنبيه شغال",
@@ -2393,6 +2394,42 @@
         "addNote": "أضف الملاحظة",
         "noteBy": "{name} · {at}",
         "anAdmin": "مشرف"
+      }
+    },
+    "customers": {
+      "title": "الزبائن",
+      "caption": "الزبائن المسجلين وعدد حجوزات كل واحد",
+      "count": "{count, plural, =0 {ماكو زبائن} one {زبون واحد} two {زبونين} few {# زبائن} other {# زبون}}",
+      "search": "ابحث بالاسم أو الرقم",
+      "sort": "الترتيب",
+      "sorts": {
+        "newest": "الأحدث تسجيلاً",
+        "most_orders": "الأكثر حجوزات"
+      },
+      "apply": "اعرض",
+      "clear": "مسح البحث",
+      "columns": {
+        "customer": "الزبون",
+        "joined": "تاريخ التسجيل",
+        "orders": "عدد الحجوزات",
+        "lastOrder": "آخر حجز",
+        "district": "الحي"
+      },
+      "noName": "بدون اسم",
+      "none": "—",
+      "empty": "ماكو زبائن بعد",
+      "emptyBody": "كل من يسجّل بالتطبيق يطلع هنا، حجز أو ما حجز.",
+      "emptyFiltered": "ماكو زبون بهذا البحث",
+      "emptyFilteredBody": "جرّب اسم أو رقم ثاني، أو امسح البحث حتى تشوف كل الزبائن.",
+      "more": "عرض المزيد",
+      "drawer": {
+        "notFound": "الزبون مو موجود",
+        "notFoundBody": "يمكن الحساب انحذف أو الرابط غلط. ارجع لقائمة الزبائن.",
+        "phone": "الرقم",
+        "joined": "تاريخ التسجيل",
+        "orders": "عدد الحجوزات",
+        "chat": "افتح المحادثة",
+        "noThread": "ما راسلنا بعد."
       }
     },
     "ratings": {

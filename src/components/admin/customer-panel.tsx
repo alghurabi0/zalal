@@ -11,9 +11,9 @@ import { listSubscriptions } from "@/lib/subscriptions/queries";
 import { currentFor } from "@/lib/subscriptions/state";
 
 /**
- * A4's side panel (spec §8.2): the customer's latest orders (each opens the
- * A2 drawer), saved addresses, subscriptions (one per address, each opening
- * the A7 drawer) and tickets.
+ * A4's side panel and the body of the A6 customer drawer (spec §8.2): the
+ * customer's latest orders (each opens the A2 drawer), saved addresses,
+ * subscriptions (one per address, each opening the A7 drawer) and tickets.
  */
 export async function CustomerPanel({ userId }: { userId: string }) {
   const t = await getTranslations("Admin.chat.panel");
