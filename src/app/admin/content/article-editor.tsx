@@ -17,6 +17,7 @@ import type { AdminEditError } from "@/lib/admin/edit-errors";
 import { readMinutes } from "@/lib/articles/read-time";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/dates";
+import { PUBLIC_CONTENT_MAX_BYTES, toWebp } from "@/lib/media/to-webp";
 import { routes } from "@/lib/routes";
 import {
   articleTitleSchema,
@@ -30,8 +31,6 @@ import { createClient } from "@/lib/supabase/browser";
 import { deleteArticle, discardCover, saveArticle } from "./actions";
 import { ArticleStatusBadge } from "./status-badge";
 
-/** public-content's cap (migration storage_buckets). */
-const COVER_MAX_BYTES = 5 * 1024 * 1024;
 const COVER_MAX_EDGE = 1600;
 
 type Cover = { path: string; url: string; uploaded: boolean } | null;
@@ -436,8 +435,8 @@ function CoverPicker({ cover, onChange }: { cover: Cover; onChange: (cover: Cove
     setBusy(true);
     setProblem(null);
     try {
-      const webp = await toWebp(file);
-      if (webp.size > COVER_MAX_BYTES) {
+      const webp = await toWebp(file, COVER_MAX_EDGE);
+      if (webp.size > PUBLIC_CONTENT_MAX_BYTES) {
         setProblem("too_big");
         return;
       }
@@ -524,17 +523,4 @@ function CoverPicker({ cover, onChange }: { cover: Cover; onChange: (cover: Cove
       </span>
     </div>
   );
-}
-
-/** Scales a photo down and converts it to WebP on the main thread. */
-async function toWebp(file: File): Promise<File> {
-  const { default: imageCompression } = await import("browser-image-compression");
-  const smaller = await imageCompression(file, {
-    maxWidthOrHeight: COVER_MAX_EDGE,
-    fileType: "image/webp",
-    initialQuality: 0.82,
-    // The worker would load the library from a CDN.
-    useWebWorker: false,
-  });
-  return new File([smaller], "cover.webp", { type: "image/webp" });
 }

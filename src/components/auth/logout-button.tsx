@@ -5,6 +5,7 @@ import { type ReactNode, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { releaseAllLayers } from "@/components/ui/use-back-to-close";
 import { clearMediaQueue } from "@/lib/crew/use-media-queue";
 import { resetAnalytics } from "@/lib/monitoring/analytics";
 import { forgetPush } from "@/lib/push/client";
@@ -30,6 +31,7 @@ export function LogoutButton({ children, warning }: { children: ReactNode; warni
       // A shared phone must not get this account's pushes after it.
       forgetPush(),
     ]);
+    releaseAllLayers();
     formRef.current?.submit();
   };
 

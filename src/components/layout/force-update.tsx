@@ -6,11 +6,12 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { APP_VERSION, compareVersions } from "@/lib/app-version";
+import { companyPhones } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 
 import { SystemState } from "./system-state";
 
-type Required = { phone: string | null };
+type Required = { phones: string[] };
 
 /**
  * N16 force update, on every surface (the root layout renders it). An open
@@ -43,12 +44,12 @@ export function ForceUpdate() {
       const { createClient } = await import("@/lib/supabase/browser");
       const { data } = await createClient()
         .from("settings")
-        .select("min_app_version, company_phone")
+        .select("min_app_version, company_phone, company_phone_2")
         .single();
       if (cancelled || !data) return;
       setRequired(
         compareVersions(APP_VERSION, data.min_app_version) < 0
-          ? { phone: data.company_phone }
+          ? { phones: companyPhones(data) }
           : null,
       );
     };
@@ -99,7 +100,7 @@ export function ForceUpdate() {
         title={t("updateTitle")}
         titleId="force-update-title"
         body={t("updateBody")}
-        phone={required.phone}
+        phones={required.phones}
         callLabel={t("call")}
         action={
           <Button onClick={() => void update()} loading={updating}>

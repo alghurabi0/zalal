@@ -90,21 +90,25 @@ export const unblockDateSchema = z.object({ date: z.iso.date() });
 
 export const loginSettingsSchema = z.object({ sms_enabled: z.boolean() });
 
+/** An optional company phone (empty clears it), stored as E.164. */
+const companyPhoneSchema = z
+  .string()
+  .trim()
+  .max(32)
+  .transform((value, ctx) => {
+    if (value === "") return null;
+    const phone = normalizeIraqiPhone(value);
+    if (phone === null) {
+      ctx.addIssue({ code: "custom", message: "invalid_phone" });
+      return z.NEVER;
+    }
+    return phone;
+  });
+
 export const supportSettingsSchema = z
   .object({
-    company_phone: z
-      .string()
-      .trim()
-      .max(32)
-      .transform((value, ctx) => {
-        if (value === "") return null;
-        const phone = normalizeIraqiPhone(value);
-        if (phone === null) {
-          ctx.addIssue({ code: "custom", message: "invalid_phone" });
-          return z.NEVER;
-        }
-        return phone;
-      }),
+    company_phone: companyPhoneSchema,
+    company_phone_2: companyPhoneSchema,
     working_hours_start: timeSchema,
     working_hours_end: timeSchema,
     working_days: z
@@ -114,7 +118,14 @@ export const supportSettingsSchema = z
   .refine((s) => s.working_hours_start < s.working_hours_end, {
     message: "end_before_start",
     path: ["working_hours_end"],
+  })
+  .refine((s) => s.company_phone_2 === null || s.company_phone_2 !== s.company_phone, {
+    message: "same_phone",
+    path: ["company_phone_2"],
   });
+
+/** settings.certificate_stamp_path: an image in public-content/stamp/ (A13). */
+export const stampPathSchema = z.string().regex(/^stamp\/[\w-]+\.(webp|png|jpe?g)$/);
 
 /** The ranges in the settings table's checks. */
 export const SETTING_RANGES = {

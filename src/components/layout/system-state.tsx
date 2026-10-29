@@ -7,14 +7,14 @@ import { formatPhone } from "@/lib/phone";
 
 /**
  * N16's full-screen states (out of area, force update, maintenance): an icon
- * on a soft tile, the title and text, the company's support phone (tap to
+ * on a soft tile, the title and text, the company's support phones (tap to
  * call; hidden while A13 has none) and the screen's action.
  */
 export function SystemState({
   icon: Icon,
   title,
   body,
-  phone,
+  phones,
   callLabel,
   action,
   className,
@@ -25,8 +25,8 @@ export function SystemState({
   /** For a dialog that names itself by the title. */
   titleId?: string;
   body: string;
-  /** settings.company_phone (E.164), or null while unset. */
-  phone: string | null;
+  /** The company phones (companyPhones), none while A13 has none. */
+  phones: string[];
   callLabel: string;
   action?: ReactNode;
   className?: string;
@@ -47,15 +47,20 @@ export function SystemState({
         </h1>
         <p className="text-16 text-muted">{body}</p>
       </div>
-      {phone && (
-        <a
-          href={`tel:${phone}`}
-          className="flex min-h-11 items-center gap-2 text-16 font-extrabold text-teal"
-        >
-          <Phone aria-hidden className="size-5" strokeWidth={2} />
-          {callLabel}
-          <span dir="ltr">{formatPhone(phone)}</span>
-        </a>
+      {phones.length > 0 && (
+        <div className="flex flex-col items-center">
+          {phones.map((phone) => (
+            <a
+              key={phone}
+              href={`tel:${phone}`}
+              className="flex min-h-11 items-center gap-2 text-16 font-extrabold text-teal"
+            >
+              <Phone aria-hidden className="size-5" strokeWidth={2} />
+              {callLabel}
+              <span dir="ltr">{formatPhone(phone)}</span>
+            </a>
+          ))}
+        </div>
       )}
       {action && <div className="flex w-full flex-col gap-2 pt-2">{action}</div>}
     </div>

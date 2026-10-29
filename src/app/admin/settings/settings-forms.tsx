@@ -25,6 +25,7 @@ import {
 } from "@/lib/schemas/admin-catalog";
 
 import { saveSettings } from "./actions";
+import { StampSection } from "./stamp-section";
 
 /** A13's sections, each with its own Save. */
 export function SettingsForms({ settings }: { settings: AdminSettings }) {
@@ -36,6 +37,7 @@ export function SettingsForms({ settings }: { settings: AdminSettings }) {
       <BookingSection settings={settings} />
       <CrewSection settings={settings} />
       <CertificateSection settings={settings} />
+      <StampSection settings={settings} />
       <SubscriptionSection settings={settings} />
       <LegalSection settings={settings} />
       <AppSection settings={settings} />
@@ -156,21 +158,26 @@ const hhmm = (time: string) => time.slice(0, 5);
 function SupportSection({ settings }: { settings: AdminSettings }) {
   const t = useTranslations("Admin.settings.support");
   const [phone, setPhone] = useState(settings.company_phone ?? "");
+  const [phone2, setPhone2] = useState(settings.company_phone_2 ?? "");
   const [start, setStart] = useState(hhmm(settings.working_hours_start));
   const [end, setEnd] = useState(hhmm(settings.working_hours_end));
   const [days, setDays] = useState(settings.working_days);
   const phoneOk = phone.trim() === "" || normalizeIraqiPhone(phone) !== null;
+  const phone2Valid = phone2.trim() === "" || normalizeIraqiPhone(phone2) !== null;
+  const phone2Same =
+    phone2.trim() !== "" && normalizeIraqiPhone(phone2) === normalizeIraqiPhone(phone);
   const orderOk = start !== "" && end !== "" && start < end;
 
   return (
     <Section
       title={t("title")}
       input={
-        phoneOk && orderOk
+        phoneOk && phone2Valid && !phone2Same && orderOk
           ? {
               section: "support",
               values: {
                 company_phone: phone,
+                company_phone_2: phone2,
                 working_hours_start: start,
                 working_hours_end: end,
                 working_days: days,
@@ -195,6 +202,25 @@ function SupportSection({ settings }: { settings: AdminSettings }) {
             autoComplete="off"
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field
+        label={t("phone2")}
+        variant="compact"
+        hint={t("phone2Hint")}
+        error={!phone2Valid ? t("invalidPhone") : phone2Same ? t("samePhone") : undefined}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            type="tel"
+            variant="compact"
+            dir="ltr"
+            className="text-start"
+            autoComplete="off"
+            value={phone2}
+            onChange={(event) => setPhone2(event.target.value)}
           />
         )}
       </Field>

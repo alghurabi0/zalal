@@ -35,6 +35,15 @@ function onPopState() {
   top.onBack();
 }
 
+/**
+ * Before a full page load (location.assign, a form post): forget every open
+ * layer, so none calls history.back() as it unmounts, which would cancel the
+ * load (account deletion, logout).
+ */
+export function releaseAllLayers() {
+  layers.length = 0;
+}
+
 export function useBackToClose(
   open: boolean,
   onBack: () => void,

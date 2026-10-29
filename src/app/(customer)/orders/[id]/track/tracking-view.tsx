@@ -1,8 +1,9 @@
 "use client";
 
-import { MessageSquare, Phone, TriangleAlert } from "lucide-react";
+import { MessageSquare, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { CallCompany } from "@/components/layout/call-company";
 import { TrackingMap } from "@/components/live/tracking-map";
 import { useCrewPosition } from "@/components/live/use-crew-position";
 import { useServerNow } from "@/components/live/use-server-now";
@@ -119,17 +120,14 @@ export function TrackingView({ order }: { order: TrackingData }) {
           <div className="flex flex-1 flex-col">
             <span className="text-15 font-extrabold">{t("contact")}</span>
             <span className="text-12 text-muted">
-              {order.companyPhone ? t("contactBody") : t("contactChat")}
+              {order.companyPhones.length > 0 ? t("contactBody") : t("contactChat")}
             </span>
           </div>
-          {order.companyPhone && (
-            <IconButton
-              href={`tel:${order.companyPhone}`}
-              label={t("call")}
-              icon={Phone}
-              className="border border-border bg-surface"
-            />
-          )}
+          <CallCompany
+            phones={order.companyPhones}
+            label={t("call")}
+            className="border border-border bg-surface"
+          />
           <IconButton
             href={routes.chatAbout(order.id)}
             label={t("chat")}

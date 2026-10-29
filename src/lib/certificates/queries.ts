@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/database.types";
 import type { OrderStatus } from "@/lib/orders/status";
+import { companyPhones } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 
 import { normalizePublicCode, type RatingTag } from "./format";
@@ -59,8 +60,10 @@ export type CertificateData = {
   after: CertificateFile[];
   clips: CertificateFile[];
   rating: CertificateRating | null;
-  /** settings.company_phone (footer); null until set in A13. */
-  companyPhone: string | null;
+  /** The company phones for the footer (companyPhones); none until set in A13. */
+  companyPhones: string[];
+  /** The stamp image's public URL (settings.certificate_stamp_path); null until uploaded in A13. */
+  stampUrl: string | null;
   /** settings.certificate_text (§10.1 item 4). */
   serviceText: string;
 };
@@ -123,7 +126,10 @@ export async function loadCertificate(
   query = "orderId" in by ? query.eq("order_id", by.orderId) : query.eq("id", by.certificateId);
   const [{ data, error }, settings] = await Promise.all([
     query.maybeSingle().overrideTypes<Row, { merge: false }>(),
-    client.from("settings").select("company_phone, certificate_text").single(),
+    client
+      .from("settings")
+      .select("company_phone, company_phone_2, certificate_stamp_path, certificate_text")
+      .single(),
   ]);
   if (error) throw new Error(`Certificate read failed: ${error.message}`);
   if (settings.error) throw new Error(`Settings read failed: ${settings.error.message}`);
@@ -194,7 +200,11 @@ export async function loadCertificate(
           ticketNumber: order.ratings.tickets?.number ?? null,
         }
       : null,
-    companyPhone: settings.data.company_phone,
+    companyPhones: companyPhones(settings.data),
+    stampUrl: settings.data.certificate_stamp_path
+      ? client.storage.from("public-content").getPublicUrl(settings.data.certificate_stamp_path)
+          .data.publicUrl
+      : null,
     serviceText: settings.data.certificate_text,
   };
 }

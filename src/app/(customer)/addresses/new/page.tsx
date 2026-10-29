@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { requireViewer } from "@/lib/auth/viewer";
 import { routes, safeNext, withNext } from "@/lib/routes";
 import { addressLabels, type AddressLabel } from "@/lib/schemas/address";
+import { companyPhones } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 
 import { AddressMessage } from "../address-message";
@@ -29,7 +30,7 @@ async function NewAddress({ searchParams }: Pick<PageProps<"/addresses/new">, "s
   const supabase = await createClient();
   const [{ data, error }, settings] = await Promise.all([
     supabase.from("addresses").select("label"),
-    supabase.from("settings").select("company_phone").single(),
+    supabase.from("settings").select("company_phone, company_phone_2").single(),
   ]);
   if (error) throw new Error(`Addresses read failed: ${error.message}`);
   const usedLabels: AddressLabel[] = data.map((row) => row.label);
@@ -57,7 +58,7 @@ async function NewAddress({ searchParams }: Pick<PageProps<"/addresses/new">, "s
       onboarding={onboarding}
       backHref={back}
       next={back}
-      supportPhone={settings.data?.company_phone ?? null}
+      supportPhones={settings.data ? companyPhones(settings.data) : []}
     />
   );
 }

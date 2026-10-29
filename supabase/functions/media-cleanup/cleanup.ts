@@ -8,8 +8,10 @@ export { serviceKeyFrom };
 // The nightly cleanup of uploads nothing uses (spec §7 Storage): order-media
 // files no order uses, chat-media files no message sent (migration chat) and
 // ticket-media files no ticket attached (migration tickets_app), article
-// covers no article uses (public-content/articles/, migration articles) and
-// certificate PDFs no certificate records (migration qa_retention).
+// covers no article uses (public-content/articles/, migration articles),
+// certificate stamps the settings don't use (public-content/stamp/, migration
+// company_contact) and certificate PDFs no certificate records (migration
+// qa_retention).
 // pg_cron posts {"folder": "customer" | "crew" | "chat" | "ticket" |
 // "content" | "certificate"} here through pg_net
 // (private.invoke_media_cleanup, migration media_cleanup) with the job's

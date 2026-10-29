@@ -1,10 +1,10 @@
 import { getTranslations } from "next-intl/server";
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 
 import { MarkdownText } from "@/components/articles/markdown";
 import { BackButton } from "@/components/ui/back-button";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
-import { formatPhone } from "@/lib/phone";
+import { companyPhones, formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -65,31 +65,39 @@ async function LegalText({ kind }: { kind: Kind }) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("settings")
-    .select("terms_md, privacy_md, company_phone")
+    .select("terms_md, privacy_md, company_phone, company_phone_2")
     .single();
   if (error) throw new Error(`Settings read failed: ${error.message}`);
   const text = (kind === "terms" ? data.terms_md : data.privacy_md).trim();
 
   if (text) return <MarkdownText>{text}</MarkdownText>;
+  const [phone, phone2] = companyPhones(data);
   return (
     <div className="flex flex-col gap-3 text-16 leading-body text-body-2">
       <p>{t("placeholder")}</p>
       <p>
-        {data.company_phone
-          ? t.rich("placeholderContact", {
-              phone: formatPhone(data.company_phone),
-              tel: (chunks) => (
-                <a
-                  href={`tel:${data.company_phone}`}
-                  dir="ltr"
-                  className="font-bold text-teal underline"
-                >
-                  {chunks}
-                </a>
-              ),
+        {phone2 && phone
+          ? t.rich("placeholderContactTwo", {
+              phone: formatPhone(phone),
+              phone2: formatPhone(phone2),
+              tel: (chunks) => <TelLink phone={phone}>{chunks}</TelLink>,
+              tel2: (chunks) => <TelLink phone={phone2}>{chunks}</TelLink>,
             })
-          : t("placeholderChat")}
+          : phone
+            ? t.rich("placeholderContact", {
+                phone: formatPhone(phone),
+                tel: (chunks) => <TelLink phone={phone}>{chunks}</TelLink>,
+              })
+            : t("placeholderChat")}
       </p>
     </div>
+  );
+}
+
+function TelLink({ phone, children }: { phone: string; children: ReactNode }) {
+  return (
+    <a href={`tel:${phone}`} dir="ltr" className="font-bold text-teal underline">
+      {children}
+    </a>
   );
 }

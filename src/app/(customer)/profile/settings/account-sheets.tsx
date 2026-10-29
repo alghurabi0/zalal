@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { releaseAllLayers } from "@/components/ui/use-back-to-close";
 import { clearMediaQueue } from "@/lib/crew/use-media-queue";
 import { resetAnalytics } from "@/lib/monitoring/analytics";
 import { forgetPush } from "@/lib/push/client";
@@ -20,6 +21,7 @@ async function forgetBrowser() {
 
 /** A full page load, so nothing from the account survives in this tab. */
 function leave() {
+  releaseAllLayers();
   window.location.assign(routes.welcome);
 }
 

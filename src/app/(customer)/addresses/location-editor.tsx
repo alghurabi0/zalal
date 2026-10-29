@@ -40,8 +40,8 @@ type LocationEditorProps = {
   backHref: string;
   /** Where saving (or "بعدين") goes. */
   next: string;
-  /** settings.company_phone for N16's out-of-area screen, null while unset. */
-  supportPhone?: string | null;
+  /** The company phones for N16's out-of-area screen (companyPhones). */
+  supportPhones?: string[];
 };
 
 /** Location (Location.dc.html, spec §5.4): pin on the map, district, landmark, label. */
@@ -62,7 +62,7 @@ function Editor({
   backHref,
   next,
   withMap,
-  supportPhone = null,
+  supportPhones = [],
 }: LocationEditorProps & { withMap: boolean }) {
   const t = useTranslations("Location");
   const tSystem = useTranslations("System");
@@ -162,7 +162,7 @@ function Editor({
             title={tSystem("outOfAreaTitle")}
             titleId="out-of-area-title"
             body={tSystem("outOfAreaBody")}
-            phone={supportPhone}
+            phones={supportPhones}
             callLabel={tSystem("call")}
             action={
               <Button autoFocus onClick={() => setClosedFor(state)}>

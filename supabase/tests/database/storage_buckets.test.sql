@@ -73,9 +73,11 @@ select policies_are(
     'Customers delete ticket files until they are attached',
     'Admins upload article covers',
     'Admins read article covers',
-    'Admins delete article covers no article uses'
+    'Admins delete article covers no article uses',
+    'Admins upload the certificate stamp',
+    'Admins delete certificate stamps not in use'
   ]::name[],
-  'storage.objects has only the order-media, certificates, chat-media, ticket-media and article cover policies'
+  'storage.objects has only the order-media, certificates, chat-media, ticket-media, article cover and stamp policies'
 );
 
 -- One file in every bucket, written the way the server would write it.

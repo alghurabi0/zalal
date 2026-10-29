@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { LogoMark } from "@/components/brand/logo-mark";
 import { certificateNumber, maskPhone } from "@/lib/certificates/format";
@@ -14,9 +14,9 @@ import { TankLine } from "./tank-line";
  * The certificate as one A4 page (spec §10.1), printed to PDF by headless
  * Chromium. A company document: it must not look like a government or
  * health-authority certificate, so no seals or emblems beyond our logo and
- * the stamp box. The company name, stamp image and footer phone are still
- * open (spec §13): "شركة زلال", a dashed stamp box and settings.company_phone
- * (left out until it is set) stand in.
+ * the stamp. The issuer is "شركة زلال" (settled Oct 29, 2026); the stamp is
+ * the image uploaded in A13 (a dashed box until there is one), and the footer
+ * lists the company phones that are set.
  */
 export async function CertificateDocument({
   certificate,
@@ -152,15 +152,33 @@ export async function CertificateDocument({
             </span>
           </div>
         </div>
-        <div className="flex items-center justify-center rounded-card border-2 border-dashed border-track p-4">
-          <span className="text-14 font-bold text-muted">{t("stamp")}</span>
-        </div>
+        {certificate.stampUrl ? (
+          <div className="flex items-center justify-center p-2">
+            {/* A public file; the print waits for the network to settle. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={certificate.stampUrl}
+              alt={t("stamp")}
+              className="max-h-36 w-full object-contain"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center rounded-card border-2 border-dashed border-track p-4">
+            <span className="text-14 font-bold text-muted">{t("stamp")}</span>
+          </div>
+        )}
       </div>
 
       <footer className="mt-auto flex flex-col gap-1 border-t border-border pt-3 text-12 text-muted">
-        {certificate.companyPhone && (
+        {certificate.companyPhones.length > 0 && (
           <span>
-            {t("companyPhone")}: {ltr(formatPhone(certificate.companyPhone))}
+            {t("companyPhone")}:{" "}
+            {certificate.companyPhones.map((phone, index) => (
+              <Fragment key={phone}>
+                {index > 0 && "، "}
+                {ltr(formatPhone(phone))}
+              </Fragment>
+            ))}
           </span>
         )}
         <span>{t("disclaimer")}</span>
