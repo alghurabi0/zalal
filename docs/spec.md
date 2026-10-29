@@ -329,7 +329,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - **Add:** an address row at the top with "تغيير", which opens N2.
 - **Change (mixed tanks):** the order holds a list of tank lines. Saved tanks at the address appear as selectable cards. The design's type + size picker becomes the "أضف خزان" form, and each line has its own quantity stepper. Maximum 6 tanks per order. New tanks are saved to the address.
 - Dates: the next 14 days in a horizontal scroll. Blocked dates are hidden; full days are disabled and marked "ممتلئ".
-- Slots: admin-defined, each showing remaining capacity. A full slot is disabled.
+- Slots: admin-defined. A full slot is disabled and marked "ممتلئ". Customers don't see the places left (settled Oct 29, 2026; the canvas showed none either); the admin's reschedule picker in A2 does.
 - **Change:** the price label "السعر التقريبي" becomes "السعر"; prices are fixed. Total = Σ line price × qty, using the price table from the database.
 - A guest tapping Book goes through login, then returns here.
 - Built (Phase 2): `/book`, `/book/photos`, `/book/confirm` share one layout that loads the address (Home's choice, else the default), its saved tanks, the price list, `booking_availability()` and the tank limit once. The booking in progress is kept per user in `sessionStorage`, so a reload or a trip to Location keeps it; uploads still running are lost on a reload.

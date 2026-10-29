@@ -356,6 +356,7 @@ function Reschedule({
         }}
         onSlotChange={setSlotId}
         current={current}
+        showRemaining
       />
       <Button
         size="card"
