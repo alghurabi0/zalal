@@ -16,12 +16,14 @@ type DaySlotPickerProps = {
   onSlotChange: (slotId: number) => void;
   /** The order's current slot when rescheduling (N7): shown, not choosable. */
   current?: { serviceDate: string; slotId: number };
+  /** Each open slot's places left; only admins see them (settled Oct 29, 2026). */
+  showRemaining?: boolean;
 };
 
 /**
  * The day and slot chips of Booking step 1 (Booking.dc.html, spec §5.9),
- * also used by Reschedule (N7): a scrolling row of days ("ممتلئ" when every
- * slot is taken), then that day's slots with the places left.
+ * also used by Reschedule (N7) and the admin's reschedule: a scrolling row of
+ * days ("ممتلئ" when every slot is taken), then that day's slots.
  */
 export function DaySlotPicker({
   days,
@@ -30,6 +32,7 @@ export function DaySlotPicker({
   onDayChange,
   onSlotChange,
   current,
+  showRemaining = false,
 }: DaySlotPickerProps) {
   const t = useTranslations("Booking");
   // Radios outside a form group by name across the whole document, and Next
@@ -89,6 +92,13 @@ export function DaySlotPicker({
         >
           {day.slots.map((slot) => {
             const currentSlot = isCurrent(day.date, slot);
+            const note = currentSlot
+              ? t("currentSlot")
+              : !slot.bookable
+                ? t("slotFull")
+                : showRemaining
+                  ? t("remaining", { count: slot.remaining })
+                  : null;
             return (
               <Chip
                 key={slot.slotId}
@@ -101,13 +111,7 @@ export function DaySlotPicker({
                 className="gap-0 leading-snug"
               >
                 <span>{t("slot", slotParts(slot.startAt, slot.endAt))}</span>
-                <span className="text-11 font-semibold">
-                  {currentSlot
-                    ? t("currentSlot")
-                    : slot.bookable
-                      ? t("remaining", { count: slot.remaining })
-                      : t("slotFull")}
-                </span>
+                {note && <span className="text-11 font-semibold">{note}</span>}
               </Chip>
             );
           })}
