@@ -47,7 +47,7 @@ Keep this list in sync with package.json.
 - `cacheComponents` and `partialPrefetching` are on (the Next 16.4 defaults). Uncached request data (`cookies()`, `headers()`, `searchParams`) must sit under a `<Suspense>` boundary; see `node_modules/next/dist/docs/01-app/02-guides/migrating-to-cache-components.md`.
 - Default to Server Components. Add `"use client"` only for interactivity, and keep client components small.
 - Code that reads the clock in a page (the Supabase auth client does) must run at request time: `createClient()` in `src/lib/supabase/server.ts` calls `connection()` first, so use it rather than a client of your own.
-- Next keeps recently visited pages alive (hidden, with their state). A form that must start fresh gets a `key` from its data (see Location and OTP), and a sheet closes before a link inside it navigates away. In e2e tests, hidden copies of a page can match a locator; use `.filter({ visible: true })`.
+- Next keeps recently visited pages alive (hidden, with their state). A form that must start fresh gets a `key` from its data (see Location and OTP), and a sheet closes before a link inside it navigates away (the kit's `Sheet` does this itself, replacing its own history entry; pass `busy` while a sheet saves). In e2e tests, hidden copies of a page can match a locator; use `.filter({ visible: true })`.
 - Sessions and routing: `src/proxy.ts` refreshes the session and sends guests on login-only pages (`loginRequiredPrefixes` in `src/lib/routes.ts`) to Login with `?next=`. Add new login-only routes there, and still check on the server with `requireViewer()` (`src/lib/auth/viewer.ts`). Read `next` only through `safeNext()`.
 
 ## UI rules

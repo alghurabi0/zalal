@@ -218,7 +218,7 @@ function FinishSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent title={t("title")} description={t("description")}>
+      <SheetContent title={t("title")} description={t("description")} busy={pending}>
         <Field
           variant="compact"
           label={t("sterilant")}
@@ -337,7 +337,7 @@ function NoShowSheet({ orderId, children }: { orderId: string; children: ReactNo
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent title={t("title")} description={t("description")}>
+      <SheetContent title={t("title")} description={t("description")} busy={pending}>
         <Field
           label={t("label")}
           error={error === "reason_required" ? tErrors("reason_required") : undefined}

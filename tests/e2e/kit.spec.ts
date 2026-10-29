@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import messages from "../../messages/ar.json" with { type: "json" };
 
@@ -32,13 +32,59 @@ test("the sheet traps focus, closes on Esc and returns focus", async ({ page }) 
   await expect(trigger).toBeFocused();
 });
 
-test("tapping above the sheet closes it", async ({ page }) => {
-  await page.getByRole("button", { name: kit.openSheet }).click();
+test("tapping outside the sheet closes it", async ({ page }) => {
   const sheet = page.getByRole("dialog", { name: kit.sheetTitle });
-  await expect(sheet).toBeVisible();
+  const panel = sheet.locator(":scope > div");
 
+  // At the very top, and on the dimmed page just above the sheet.
+  await page.getByRole("button", { name: kit.openSheet }).click();
+  await expect(sheet).toBeVisible();
   await page.mouse.click(195, 20);
   await expect(sheet).toBeHidden();
+
+  await page.getByRole("button", { name: kit.openSheet }).click();
+  await settled(sheet);
+  const top = (await panel.boundingBox())!.y;
+  expect(top).toBeGreaterThan(100);
+  await page.touchscreen.tap(195, top - 40);
+  await expect(sheet).toBeHidden();
+});
+
+test("pulling the sheet down closes it; a short pull springs back", async ({ page }) => {
+  const sheet = page.getByRole("dialog", { name: kit.sheetTitle });
+  const panel = sheet.locator(":scope > div");
+  await page.getByRole("button", { name: kit.openSheet }).click();
+  await settled(sheet);
+  const box = (await panel.boundingBox())!;
+  const title = page.getByRole("heading", { name: kit.sheetTitle });
+  const start = (await title.boundingBox())!;
+
+  await drag(page, start.x + 20, start.y + 5, 40);
+  await expect(sheet).toBeVisible();
+  await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(box.y, 0);
+
+  await drag(page, start.x + 20, start.y + 5, box.height / 2);
+  await expect(sheet).toBeHidden();
+});
+
+test("back closes the sheet and stays on the page; closed, back leaves", async ({ page }) => {
+  const sheet = page.getByRole("dialog", { name: kit.sheetTitle });
+  await page.goto("/terms");
+  await page.goto("/kit");
+
+  await page.getByRole("button", { name: kit.openSheet }).click();
+  await expect(sheet).toBeVisible();
+  await page.evaluate(() => history.back());
+  await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(/\/kit$/);
+
+  // Closed another way, the sheet's history entry goes with it.
+  await page.getByRole("button", { name: kit.openSheet }).click();
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await page.evaluate(() => history.back());
+  await expect(page).toHaveURL(/\/terms$/);
 });
 
 test("the stepper stays between its limits", async ({ page }) => {
@@ -103,3 +149,26 @@ test("shows the offline banner while offline", async ({ page, context }) => {
   await context.setOffline(false);
   await expect(banner).toHaveCount(0);
 });
+
+/** A one-finger pull straight down by `distance` px, in small steps. */
+async function drag(page: Page, x: number, y: number, distance: number) {
+  const cdp = await page.context().newCDPSession(page);
+  const point = (dy: number) => [{ x, y: y + dy }];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(0) });
+  const steps = 10;
+  for (let i = 1; i <= steps; i++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: point((distance * i) / steps),
+    });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+}
+
+/** Waits for the sheet's opening animation to end, so boxes are final. */
+async function settled(sheet: Locator) {
+  await expect(sheet).toBeVisible();
+  await expect.poll(() => sheet.evaluate((el) => el.getAnimations().length)).toBe(0);
+}

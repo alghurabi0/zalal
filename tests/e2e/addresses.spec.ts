@@ -68,6 +68,23 @@ test.describe("inside Karbala", () => {
   });
 });
 
+test("a link in the picker takes the sheet's place in history", async ({ page }) => {
+  await signUp(page);
+  const before = await page.evaluate(() => history.length);
+
+  await page.getByRole("button", { name: new RegExp(Home.deliverTo) }).click();
+  const picker = page.getByRole("dialog", { name: Addresses.pickTitle });
+  await expect(picker).toBeVisible();
+  await picker.getByRole("link", { name: Addresses.add }).click();
+  await page.waitForURL("**/addresses/new");
+  // One entry for the new page, none left over for the sheet.
+  expect(await page.evaluate(() => history.length)).toBe(before + 1);
+
+  await page.goBack();
+  await expect(page).toHaveURL((url) => url.pathname === "/");
+  await expect(picker).toBeHidden();
+});
+
 test("the picker selects, marks default, edits and deletes addresses", async ({ page }) => {
   const phone = await signUp(page);
 

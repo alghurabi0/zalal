@@ -36,7 +36,7 @@ export function LogoutButton({ children, warning }: { children: ReactNode; warni
   return (
     <Sheet>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent title={t("logoutTitle")} description={t("logoutBody")}>
+      <SheetContent title={t("logoutTitle")} description={t("logoutBody")} busy={pending}>
         {warning}
         <form ref={formRef} method="post" action={routes.logout} className="flex flex-col gap-2">
           <Button onClick={() => void confirm()} loading={pending} className="bg-danger">
