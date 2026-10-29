@@ -54,8 +54,9 @@ test("Login hides SMS while sms_enabled is off", async ({ page }) => {
   await admin.from("settings").update({ sms_enabled: false }).eq("id", true).throwOnError();
   try {
     await page.goto("/login");
-    await expect(page.getByRole("radio", { name: Login.whatsapp })).toBeChecked();
-    await expect(page.getByRole("radio", { name: Login.sms })).toHaveCount(0);
+    // One channel left: no picker, the intro names WhatsApp, and the code goes there.
+    await expect(page.getByRole("group", { name: Login.channelLegend })).toHaveCount(0);
+    await expect(page.getByRole("radio")).toHaveCount(0);
     await expect(page.getByText(Login.introWhatsapp)).toBeVisible();
   } finally {
     await admin.from("settings").update({ sms_enabled: true }).eq("id", true).throwOnError();
