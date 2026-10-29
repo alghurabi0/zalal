@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { otpCodeSchema, requestOtpInputSchema } from "@/lib/otp/schemas";
-import { formatPhone, IRAQI_MOBILE_E164, normalizeIraqiMobile, toWesternDigits } from "@/lib/phone";
+import {
+  companyPhones,
+  formatPhone,
+  IRAQI_MOBILE_E164,
+  normalizeIraqiMobile,
+  toWesternDigits,
+} from "@/lib/phone";
 
 // Arabic-Indic and Persian digits, built from code points so the test reads
 // the same in any editor.
@@ -89,5 +95,20 @@ describe("formatPhone", () => {
 
   it("leaves anything else as it is", () => {
     expect(formatPhone("+12025550123")).toBe("+12025550123");
+  });
+});
+
+describe("companyPhones", () => {
+  it("lists the phones that are set, the first one first", () => {
+    expect(companyPhones({ company_phone: null, company_phone_2: null })).toEqual([]);
+    expect(companyPhones({ company_phone: "+9647764349984", company_phone_2: null })).toEqual([
+      "+9647764349984",
+    ]);
+    expect(companyPhones({ company_phone: null, company_phone_2: "+9647867903703" })).toEqual([
+      "+9647867903703",
+    ]);
+    expect(
+      companyPhones({ company_phone: "+9647764349984", company_phone_2: "+9647867903703" }),
+    ).toEqual(["+9647764349984", "+9647867903703"]);
   });
 });

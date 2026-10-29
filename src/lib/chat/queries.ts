@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { bookingDays, type DayOption } from "@/lib/booking/availability";
 import type { Database } from "@/lib/database.types";
 import { changeState, type OrderStatus } from "@/lib/orders/status";
+import { companyPhones } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 
 import { fetchMessages } from "./load";
@@ -34,7 +35,8 @@ export type SupportInfo = {
   /** "09:00:00" */
   hoursStart: string;
   hoursEnd: string;
-  companyPhone: string | null;
+  /** The company phones (companyPhones), none while unset. */
+  companyPhones: string[];
   cutoffHours: number;
 };
 
@@ -43,7 +45,9 @@ export async function getSupportInfo(client?: Client): Promise<SupportInfo> {
   const [{ data: settings, error }, { data: open, error: openError }] = await Promise.all([
     supabase
       .from("settings")
-      .select("working_hours_start, working_hours_end, company_phone, cancel_cutoff_hours")
+      .select(
+        "working_hours_start, working_hours_end, company_phone, company_phone_2, cancel_cutoff_hours",
+      )
       .single(),
     supabase.rpc("support_is_open"),
   ]);
@@ -53,7 +57,7 @@ export async function getSupportInfo(client?: Client): Promise<SupportInfo> {
     open: open === true,
     hoursStart: settings.working_hours_start,
     hoursEnd: settings.working_hours_end,
-    companyPhone: settings.company_phone,
+    companyPhones: companyPhones(settings),
     cutoffHours: settings.cancel_cutoff_hours,
   };
 }

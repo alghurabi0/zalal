@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Database } from "@/lib/database.types";
 import type { OrderStatus } from "@/lib/orders/status";
+import { companyPhones } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 
 // Tracking (spec §5.13) and Job progress (§5.14), read as the customer: RLS
@@ -24,8 +25,8 @@ export type TrackingData = {
   home: { lat: number; lng: number };
   crewId: string | null;
   position: CrewPosition | null;
-  /** settings.company_phone; null until the owner sets it (A13). */
-  companyPhone: string | null;
+  /** The company phones (companyPhones); none until the owner sets one (A13). */
+  companyPhones: string[];
   /** The server's clock when this was read (ms), for the position's age. */
   readAt: number;
 };
@@ -41,7 +42,7 @@ export async function getTracking(id: string): Promise<TrackingData | null> {
       )
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("settings").select("company_phone").single(),
+    supabase.from("settings").select("company_phone, company_phone_2").single(),
   ]);
   if (order.error) throw new Error(`Order read failed: ${order.error.message}`);
   if (settings.error) throw new Error(`Settings read failed: ${settings.error.message}`);
@@ -64,7 +65,7 @@ export async function getTracking(id: string): Promise<TrackingData | null> {
     home: { lat, lng },
     crewId: crew_id,
     position,
-    companyPhone: settings.data.company_phone,
+    companyPhones: companyPhones(settings.data),
     readAt: Date.now(),
   };
 }

@@ -225,6 +225,7 @@ describe("admin form schemas", () => {
         section: "support",
         values: {
           company_phone: "0780 123 4567",
+          company_phone_2: "07867903703",
           working_hours_start: "09:00",
           working_hours_end: "21:00",
           working_days: [6, 0, 1],
@@ -234,6 +235,7 @@ describe("admin form schemas", () => {
       section: "support",
       values: {
         company_phone: "+9647801234567",
+        company_phone_2: "+9647867903703",
         working_hours_start: "09:00",
         working_hours_end: "21:00",
         working_days: [0, 1, 6],
@@ -244,14 +246,21 @@ describe("admin form schemas", () => {
         section: "support",
         values: {
           company_phone: "",
+          company_phone_2: "",
           working_hours_start: "09:00",
           working_hours_end: "21:00",
           working_days: [],
           ...patch,
         },
       });
-    expect(support({}).data?.values).toMatchObject({ company_phone: null });
+    expect(support({}).data?.values).toMatchObject({ company_phone: null, company_phone_2: null });
     expect(support({ company_phone: "12" }).success).toBe(false);
+    expect(support({ company_phone_2: "12" }).success).toBe(false);
+    // The second number only alone, or different from the first.
+    expect(support({ company_phone_2: "07867903703" }).success).toBe(true);
+    expect(
+      support({ company_phone: "07867903703", company_phone_2: "+964 786 790 3703" }).error?.issues,
+    ).toMatchObject([{ message: "same_phone", path: ["values", "company_phone_2"] }]);
     expect(support({ working_hours_end: "08:00" }).success).toBe(false);
     expect(
       settingsSectionSchema.safeParse({

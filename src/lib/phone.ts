@@ -77,3 +77,13 @@ export function formatPhone(e164: string | null): string {
   const match = /^\+964(\d{3})(\d{3})(\d{4})$/.exec(e164);
   return match ? `+964 ${match[1]} ${match[2]} ${match[3]}` : e164;
 }
+
+/** settings.company_phone and company_phone_2 (A13), the ones set, first first. */
+export function companyPhones(settings: {
+  company_phone: string | null;
+  company_phone_2: string | null;
+}): string[] {
+  return [settings.company_phone, settings.company_phone_2].filter(
+    (phone): phone is string => phone !== null,
+  );
+}

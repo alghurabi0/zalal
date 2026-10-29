@@ -1,12 +1,11 @@
-import { Phone } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { z } from "zod";
 
 import { LogoMark } from "@/components/brand/logo-mark";
+import { CallCompany } from "@/components/layout/call-company";
 import { Screen } from "@/components/layout/screen";
 import { BackButton } from "@/components/ui/back-button";
-import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { requireViewer } from "@/lib/auth/viewer";
 import { clockLabel } from "@/lib/chat/hours";
@@ -104,14 +103,7 @@ async function ChatHeader({ support, back }: { support: SupportInfo; back: strin
             : t("closed", { from: hour(support.hoursStart), to: hour(support.hoursEnd) })}
         </span>
       </div>
-      {support.companyPhone && (
-        <IconButton
-          href={`tel:${support.companyPhone}`}
-          label={t("call")}
-          icon={Phone}
-          variant="soft"
-        />
-      )}
+      <CallCompany phones={support.companyPhones} label={t("call")} variant="soft" />
     </header>
   );
 }

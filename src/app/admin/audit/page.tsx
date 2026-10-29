@@ -343,6 +343,8 @@ const KNOWN_FIELDS = [
   "end_time",
   "sms_enabled",
   "company_phone",
+  "company_phone_2",
+  "certificate_stamp_path",
   "working_hours_start",
   "working_hours_end",
   "working_days",
