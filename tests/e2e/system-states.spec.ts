@@ -95,6 +95,8 @@ test("A13 saves a second phone; Chat's call button offers both numbers", async (
   page,
   browser,
 }) => {
+  // An admin and a customer each log in with a code: slower than 30 s on CI.
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await logInAsAdmin(page);
   await page.goto("/admin/settings");
@@ -137,6 +139,7 @@ test("A13 uploads the certificate stamp, the certificate prints it, and removing
   page,
   browser,
 }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await logInAsAdmin(page);
   await page.goto("/admin/settings");
