@@ -38,6 +38,7 @@ Keep the docs true, in the same PR:
 - spec §7: update it for every schema departure, and explain the departure in the migration.
 - spec §1 (decisions log) for a changed decision; §13 for an open question.
 - CLAUDE.md for a new command or convention.
+- docs/business-rules.md (Arabic, for the owner) for a new or changed business rule: a limit, a time, a price, who may do what, or a setting's default.
 
 ## 5. Commit and push
 
