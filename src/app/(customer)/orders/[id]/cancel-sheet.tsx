@@ -68,7 +68,11 @@ export function CancelSheet({
           <BlockedChange orderId={orderId} />
         </SheetContent>
       ) : (
-        <SheetContent title={t("cancelSheet.title")} description={t("cancelSheet.description")}>
+        <SheetContent
+          title={t("cancelSheet.title")}
+          description={t("cancelSheet.description")}
+          busy={pending}
+        >
           <ChipGroup
             legend={t("cancelSheet.legend")}
             legendClassName="sr-only"

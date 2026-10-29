@@ -86,6 +86,7 @@ export function RescheduleSheet({
         <SheetContent
           title={t("rescheduleSheet.title")}
           description={t("rescheduleSheet.description")}
+          busy={pending}
         >
           <p className="text-14 text-muted">
             {t.rich("rescheduleSheet.current", {

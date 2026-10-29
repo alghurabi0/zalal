@@ -88,7 +88,7 @@ export function AddressPicker({
       }}
     >
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent title={mode === "select" ? t("pickTitle") : t("title")}>
+      <SheetContent title={mode === "select" ? t("pickTitle") : t("title")} busy={pending}>
         {addresses.length === 0 ? (
           <EmptyState
             icon={MapPin}

@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { Dialog } from "radix-ui";
 import type { KeyboardEvent } from "react";
 
+import { useBackToClose } from "./use-back-to-close";
+
 export type LightboxPhoto = { id: string; url: string; label: string };
 
 type LightboxProps = {
@@ -17,12 +19,14 @@ type LightboxProps = {
 /**
  * Photos full screen over a dark overlay (Job progress, Report), with
  * previous/next when there are several. Arrow keys move too; in RTL the
- * left arrow goes forward. Signed links expire, so a plain <img>.
+ * left arrow goes forward. The back button closes it. Signed links expire,
+ * so a plain <img>.
  */
 export function Lightbox({ photos, index, onIndexChange }: LightboxProps) {
   const t = useTranslations("UI");
   const photo = index === null ? null : (photos[index] ?? null);
   const many = photos.length > 1;
+  useBackToClose(photo !== null, () => onIndexChange(null));
   const go = (step: number) => {
     if (index === null) return;
     onIndexChange((index + step + photos.length) % photos.length);
