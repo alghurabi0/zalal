@@ -10,6 +10,7 @@ import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
+import { articleDescription } from "@/lib/articles/highlights";
 import { publishedArticle } from "@/lib/articles/queries";
 import { formatDate } from "@/lib/dates";
 import { routes } from "@/lib/routes";
@@ -17,7 +18,10 @@ import { routes } from "@/lib/routes";
 export async function generateMetadata({ params }: PageProps<"/tips/[slug]">): Promise<Metadata> {
   const article = await publishedArticle((await params).slug);
   const t = await getTranslations("Tips");
-  return { title: article?.title ?? t("metaTitle") };
+  return {
+    title: article?.title ?? t("metaTitle"),
+    description: article ? articleDescription(article.bodyMd) : undefined,
+  };
 }
 
 /**

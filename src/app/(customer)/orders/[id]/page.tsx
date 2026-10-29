@@ -17,6 +17,7 @@ import { cn } from "@/lib/cn";
 import { formatDayTime, serviceDayParts, slotParts } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { getOrder, type OrderDetails } from "@/lib/orders/queries";
+import { VIDEO_RETENTION_DAYS, videosExpired } from "@/lib/orders/retention";
 import { actionHref, canFollowJob, changeState, primaryAction } from "@/lib/orders/status";
 import { buildTimeline, type TimelineEntry } from "@/lib/orders/timeline";
 import { routes } from "@/lib/routes";
@@ -71,6 +72,9 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
     );
   }
 
+  // After the read: the page is already dynamic, so reading the clock is fine.
+  const videosGone = videosExpired(order.status, order.events, new Date());
+
   return (
     <>
       <LiveOrders customerId={viewer.id} />
@@ -90,7 +94,7 @@ async function OrderContent({ params }: PageProps<"/orders/[id]">) {
             <p className="text-15 whitespace-pre-line text-body-2">{order.customer_note}</p>
           </Section>
         )}
-        {order.media.length > 0 && <Files order={order} />}
+        {order.media.length > 0 && <Files order={order} videosGone={videosGone} />}
         <Timeline entries={buildTimeline(order.events)} />
         <Help orderId={order.id} />
       </div>
@@ -214,12 +218,15 @@ async function Summary({ order }: { order: OrderDetails }) {
   );
 }
 
-async function Files({ order }: { order: OrderDetails }) {
+async function Files({ order, videosGone }: { order: OrderDetails; videosGone: boolean }) {
   const t = await getTranslations("Order");
   let photos = 0;
   let videos = 0;
   return (
     <Section title={t("files")}>
+      {videosGone && (
+        <p className="text-13 text-muted">{t("videosDeleted", { days: VIDEO_RETENTION_DAYS })}</p>
+      )}
       <ul className="grid grid-cols-3 gap-2">
         {order.media.map((file) => {
           const label =

@@ -3,7 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { MarkdownText, safeHref } from "@/components/articles/markdown";
-import { articleHighlights, plainText } from "@/lib/articles/highlights";
+import {
+  articleDescription,
+  articleHighlights,
+  MAX_DESCRIPTION,
+  plainText,
+} from "@/lib/articles/highlights";
 import { adminEditErrorFor } from "@/lib/admin/edit-errors";
 import { readMinutes } from "@/lib/articles/read-time";
 import { saveArticleSchema, saveCategorySchema, slugSchema } from "@/lib/schemas/article";
@@ -67,6 +72,22 @@ describe("articleHighlights", () => {
     expect(plainText("**غامق** و _مائل_ و `كود` <b>x</b> [رابط](/x) ![صورة](/y.png)")).toBe(
       "غامق و مائل و كود x رابط صورة",
     );
+  });
+});
+
+describe("articleDescription", () => {
+  it("is the first paragraph, even when a numbered list comes first", () => {
+    expect(
+      articleDescription("1. أول\n2. ثاني\n\nفقرة **مهمة** عن [الخزان](https://x.iq)\n\nثانية"),
+    ).toBe("فقرة مهمة عن الخزان");
+  });
+  it("cuts a long paragraph at a word, with an ellipsis", () => {
+    const text = articleDescription(Array.from({ length: 60 }, () => "كلمة").join(" "))!;
+    expect(text.length).toBeLessThanOrEqual(MAX_DESCRIPTION);
+    expect(text.endsWith("كلمة…")).toBe(true);
+  });
+  it("is null without a paragraph", () => {
+    expect(articleDescription("## عنوان\n\n- نقطة")).toBeNull();
   });
 });
 

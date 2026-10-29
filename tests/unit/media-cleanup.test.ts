@@ -130,6 +130,17 @@ describe("cleanUp", () => {
     expect(fake.rpcCalls[0]?.args).toMatchObject({ p_folder: "content" });
   });
 
+  it("deletes unrecorded certificate PDFs from certificates", async () => {
+    const fake = fakeClient(names(2, "u"), { bucket: "certificates" });
+    expect(await cleanUp(fake.client, "certificate", small)).toEqual({
+      folder: "certificate",
+      deleted: 2,
+      failed: 0,
+      more: false,
+    });
+    expect(fake.rpcCalls[0]?.args).toMatchObject({ p_folder: "certificate" });
+  });
+
   it("does nothing when nothing is unattached", async () => {
     const fake = fakeClient([]);
     expect(await cleanUp(fake.client, "crew", small)).toEqual({

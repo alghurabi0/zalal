@@ -142,7 +142,7 @@ async function Details({ ticket }: { ticket: AdminTicketDetails }) {
             tIssue(`categories.${ticket.category}`)
           ) : (
             <span className="flex flex-col gap-1">
-              <span className="flex items-center gap-1 text-star">
+              <span className="flex items-center gap-1 text-warn-icon">
                 <Star aria-hidden className="size-4" fill="currentColor" />
                 {t("drawer.stars", { n: ticket.rating?.stars ?? ticket.stars ?? 0 })}
               </span>

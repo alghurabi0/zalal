@@ -129,7 +129,9 @@ test("switching off a crew warns about its open orders and leaves them assigned"
     await logInAsAdmin(page);
     await page.goto("/admin/crews");
     const row = crewRow(page, crew.name);
-    await expect(row.getByRole("link", { name: fill(Crews.openOrdersLink, crew) })).toHaveText("1");
+    await expect(
+      row.getByRole("link", { name: fill(Crews.openOrdersLink, crew) }),
+    ).toHaveAccessibleName(`1 ${fill(Crews.openOrdersLink, crew)}`);
     await row.getByRole("button", { name: fill(Crews.editLabel, crew) }).click();
     const form = page.getByRole("form", { name: fill(Crews.editLabel, crew) });
     await form.getByLabel(Crews.activeLabel).uncheck();

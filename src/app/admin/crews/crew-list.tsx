@@ -90,10 +90,13 @@ export function CrewList({ crews }: { crews: AdminCrew[] }) {
                       {crew.openOrders > 0 ? (
                         <Link
                           href={adminOrdersHref({ crew: crew.id })}
-                          aria-label={t("openOrdersLink", { name: crew.name })}
                           className="inline-flex min-h-11 min-w-11 items-center font-extrabold text-teal underline-offset-2 hover:underline"
                         >
                           {crew.openOrders}
+                          <span className="sr-only">
+                            {" "}
+                            {t("openOrdersLink", { name: crew.name })}
+                          </span>
                         </Link>
                       ) : (
                         0

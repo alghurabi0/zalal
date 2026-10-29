@@ -34,8 +34,11 @@ export function TrackingView({ order }: { order: TrackingData }) {
   return (
     <div className="flex h-full flex-col">
       <h1 className="sr-only">{t("title")}</h1>
-      <div className="relative min-h-50 flex-1" role="img" aria-label={t("map")}>
-        <TrackingMap home={order.home} crew={position} stale={stale} />
+      <div className="relative min-h-50 flex-1">
+        {/* Only the map is an image: the back button over it stays a button. */}
+        <div className="absolute inset-0" role="img" aria-label={t("map")}>
+          <TrackingMap home={order.home} crew={position} stale={stale} />
+        </div>
         <div className="absolute inset-x-5 top-5 z-10 flex items-center justify-between">
           <BackButton href={routes.order(order.id)} variant="floating" />
           {onTheWay && (

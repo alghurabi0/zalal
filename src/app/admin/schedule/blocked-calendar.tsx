@@ -101,14 +101,17 @@ export function BlockedCalendar({
                           day.blocked
                             ? "border-danger bg-danger/10 text-danger"
                             : "border-transparent bg-bg",
-                          past && "text-control-off",
+                          past && "text-muted",
                           date === today && "ring-2 ring-teal",
                           selected === date && "border-navy bg-selected",
                         )}
                       >
                         <span>{Number(date.slice(8))}</span>
                         {day.booked > 0 && (
-                          <span className="text-11 font-extrabold text-teal">{day.booked}</span>
+                          // In the name already, in words.
+                          <span aria-hidden className="text-11 font-extrabold text-teal">
+                            {day.booked}
+                          </span>
                         )}
                       </button>
                     </td>

@@ -140,11 +140,6 @@ async function Board({ searchParams }: PageProps<"/admin/orders/board">) {
                       <td key={date} className="p-1">
                         <Link
                           href={adminOrdersHref({ status: "booked", date, slot: slot.slotId })}
-                          aria-label={t("cellLabel", {
-                            taken: cell.taken,
-                            capacity: cell.capacity,
-                            date: t("dayDate", serviceDayParts(date)),
-                          })}
                           className={cn(
                             "flex min-h-11 flex-col items-center justify-center rounded-chip text-15 font-extrabold",
                             cell.blocked
@@ -156,8 +151,12 @@ async function Board({ searchParams }: PageProps<"/admin/orders/board">) {
                                   : "bg-bg text-muted",
                           )}
                         >
+                          {/* The visible count leads the name (WCAG 2.5.3). */}
                           <span dir="ltr">
                             {cell.taken}/{cell.capacity}
+                          </span>
+                          <span className="sr-only">
+                            {t("cellContext", { date: t("dayDate", serviceDayParts(date)) })}
                           </span>
                           {full && !cell.blocked && <span className="text-11">{t("full")}</span>}
                         </Link>

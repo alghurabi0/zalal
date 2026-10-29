@@ -37,6 +37,12 @@ export function articleHighlights(body: string): ArticleHighlights {
     if (texts.length > 0) return { kind: "list", items: texts };
   }
 
+  const text = firstParagraph(lines);
+  return text ? { kind: "text", text } : null;
+}
+
+/** The body's first paragraph as plain text ("" when there is none). */
+function firstParagraph(lines: string[]): string {
   const paragraph: string[] = [];
   for (const line of lines) {
     if (!line.trim()) {
@@ -49,8 +55,22 @@ export function articleHighlights(body: string): ArticleHighlights {
     }
     paragraph.push(line.trim());
   }
-  const text = plainText(paragraph.join(" "));
-  return text ? { kind: "text", text } : null;
+  return plainText(paragraph.join(" "));
+}
+
+export const MAX_DESCRIPTION = 160;
+
+/**
+ * Article's meta description (N9): the body's first paragraph, cut at a
+ * word to 160 characters. Null when the body has no paragraph.
+ */
+export function articleDescription(body: string): string | null {
+  const text = firstParagraph(body.split(/\r?\n/));
+  if (!text) return null;
+  if (text.length <= MAX_DESCRIPTION) return text;
+  const cut = text.slice(0, MAX_DESCRIPTION - 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > 80 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
 
 /**

@@ -94,3 +94,65 @@ describe("theme tokens (spec §4)", () => {
     expect(outsideTheme).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   });
 });
+
+/** WCAG 2.x contrast ratio of two #RRGGBB colors. */
+function contrast(a: string, b: string): number {
+  const luminance = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi! + 0.05) / (lo! + 0.05);
+}
+
+// Text on background pairs the screens use (Phase 6, task 4 audit). Each
+// must reach WCAG AA for normal text, 4.5:1, so a token change can't break
+// it silently. Below 3:1 and kept as drawn in the canvas (non-text only):
+// `border` around inputs and cards, `dashed`, `otp-filled`, `control-off`
+// chevrons and `star` icons (spec §4 "Contrast").
+const TEXT_PAIRS: [text: string, background: string][] = [
+  ["navy", "bg"],
+  ["navy", "surface"],
+  ["navy", "selected"],
+  ["navy", "aqua"],
+  ["navy", "warn"],
+  ["muted", "bg"],
+  ["muted", "surface"],
+  ["muted", "selected"],
+  ["muted", "well"],
+  ["muted", "map-bg"],
+  ["body-2", "bg"],
+  ["body-2", "surface"],
+  ["teal", "bg"],
+  ["teal", "surface"],
+  ["teal", "selected"],
+  ["ok-fg", "ok-bg"],
+  ["ok-fg", "surface"],
+  ["warn-fg", "warn-bg"],
+  ["warn-icon", "warn-bg"],
+  ["warn-icon", "surface"],
+  ["warn-strong", "warn-bg"],
+  ["danger", "surface"],
+  ["danger", "bg"],
+  ["live", "surface"],
+  ["aqua", "navy"],
+  ["aqua", "navy-2"],
+  ["on-dark-muted", "navy"],
+  ["on-dark-muted", "navy-2"],
+  ["on-dark-body", "navy"],
+  ["on-dark-body", "navy-2"],
+  ["white", "navy"],
+  ["white", "navy-3"],
+  ["white", "teal"],
+  ["white", "danger"],
+];
+
+describe("text contrast (WCAG AA)", () => {
+  const hex = (name: string) => (name === "white" ? "#FFFFFF" : SPEC_COLORS[name]!);
+  it.each(TEXT_PAIRS)("%s on %s reaches 4.5:1", (text, background) => {
+    expect(contrast(hex(text), hex(background))).toBeGreaterThanOrEqual(4.5);
+  });
+});
