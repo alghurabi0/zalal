@@ -4,6 +4,7 @@ Arabic (Iraqi dialect), RTL, mobile-first PWA for booking water-tank cleaning in
 
 ## Sources of truth
 - Spec: docs/spec.md. Read the sections your task needs; section numbers are stable (§5 screens, §6 order lifecycle, §7 data model, §12 phases).
+- Business rules: docs/business-rules.md, the spec's business rules in plain Arabic for the owner and manager (no code terms). The spec is the source; this file follows it.
 - Designs: design/*.dc.html. These are read-only, so never edit them. Read the screen's design file before building it, and match layout, copy and tokens exactly unless the spec lists a change. Where the spec and a design disagree, the spec wins.
 - The design files are canvas exports. `{{…}}` are template slots filled by the inline script, and `[brackets]` are sample data that comes from the database. They load a `support.js` that is not in the repo, so read them as source code; they won't render on their own. For how a screen looks, use `design/png/<Name>.png`, the exported image of the same artboard (2×, 780×1688). The PNGs show only the first screen (844px tall); for content below the fold, the `.dc.html` is the source.
 - The spec §7 schema is a starting point, not a contract. Design the real schema yourself and improve it where you can, as long as the behavior and rules in the spec still hold. Explain each departure in the migration and the PR, and update §7 to match.
@@ -82,4 +83,4 @@ Keep this list in sync with package.json.
 - Before you call a task done, run `pnpm lint && pnpm typecheck && pnpm test`, plus `pnpm db:test` if SQL changed. For UI work, screenshot the screen at 390×844 (Playwright) and compare it with `design/png/<Name>.png`.
 - Commit each logical change with a clear message.
 - Don't add libraries without saying why in the PR description. Use current stable versions, and check the library's current docs rather than memory (Next.js, Supabase, Tailwind v4 and Serwist change fast).
-- Keep the docs true. If you change a decision, update docs/spec.md. If you add a command or convention, update this file.
+- Keep the docs true. If you change a decision, update docs/spec.md. If you add a command or convention, update this file. If the change touches a business rule (a limit, a time, a price, who may do what, a setting's default), also update docs/business-rules.md in the same PR.
