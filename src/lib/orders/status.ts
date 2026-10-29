@@ -15,10 +15,11 @@ export const CANCEL_REASONS = [
   "other",
 ] as const satisfies readonly CancelReason[];
 
-/** الحالية: from booking until the work is done. */
+/** الحالية: from booking until the work is done; a postponed order is still open. */
 export const CURRENT_STATUSES = [
   "pending_confirmation",
   "confirmed",
+  "postponed",
   "on_the_way",
   "arrived",
   "in_progress",
@@ -42,6 +43,7 @@ export type BadgeTone = "info" | "warn" | "ok" | "neutral";
 
 export function badgeTone(status: OrderStatus): BadgeTone {
   switch (status) {
+    case "postponed":
     case "on_the_way":
     case "arrived":
     case "in_progress":
@@ -107,29 +109,30 @@ export function canFollowJob(status: OrderStatus): boolean {
 }
 
 /**
- * Whether the customer can still cancel or reschedule (spec §6, N6, N7):
- * only while pending or confirmed, and until `cutoffHours` before the slot
- * starts. At exactly the cutoff it is still allowed, as in transition_order.
- * `now` is the server's clock; the database checks again.
+ * What the customer can still change (spec §6, N6, N7): a pending or
+ * confirmed order can be rescheduled, postponed or cancelled until its slot
+ * starts (no 2-hour rule since Oct 29, 2026); a postponed order can only be
+ * cancelled, at any time, since staff give it its date back. `now` is the
+ * server's clock; the database checks again.
  */
-export type ChangeState = "allowed" | "too_late" | "closed";
+export type ChangeState = "allowed" | "too_late" | "postponed" | "closed";
 
 export function changeState(
   status: OrderStatus,
   slotStartAt: string | Date,
   now: Date,
-  cutoffHours: number,
 ): ChangeState {
+  if (status === "postponed") return "postponed";
   if (status !== "pending_confirmation" && status !== "confirmed") return "closed";
-  const deadline = new Date(slotStartAt).getTime() - cutoffHours * 60 * 60 * 1000;
-  return now.getTime() > deadline ? "too_late" : "allowed";
+  return now.getTime() >= new Date(slotStartAt).getTime() ? "too_late" : "allowed";
 }
 
 /**
  * Home's active-order card (spec §5.5): the soonest order from pending to
  * in progress. An order the crew is working on comes first, and a pending
  * or confirmed one whose slot has already ended (staff haven't acted on it
- * yet) only shows when there is nothing else. `orders` are soonest first.
+ * yet) or a postponed one (no date) only shows when there is nothing else.
+ * `orders` are soonest first.
  */
 export function pickActiveOrder<T extends { status: OrderStatus; slot_end_at: string }>(
   orders: T[],
@@ -139,5 +142,12 @@ export function pickActiveOrder<T extends { status: OrderStatus; slot_end_at: st
     (o) => o.status === "on_the_way" || o.status === "arrived" || o.status === "in_progress",
   );
   if (live) return live;
-  return orders.find((o) => new Date(o.slot_end_at).getTime() > now.getTime()) ?? orders[0] ?? null;
+  return (
+    orders.find(
+      (o) => o.status !== "postponed" && new Date(o.slot_end_at).getTime() > now.getTime(),
+    ) ??
+    orders.find((o) => o.status !== "postponed") ??
+    orders[0] ??
+    null
+  );
 }

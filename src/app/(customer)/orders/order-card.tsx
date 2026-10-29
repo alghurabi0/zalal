@@ -28,13 +28,15 @@ export function OrderCard({ order }: { order: OrderSummary }) {
 
   const { weekday, day } = serviceDayParts(order.service_date);
   const date =
-    ordersTab(order.status) === "current"
-      ? t("when", {
-          weekday,
-          day,
-          slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
-        })
-      : formatDate(order.slot_start_at);
+    order.status === "postponed"
+      ? t("whenPostponed")
+      : ordersTab(order.status) === "current"
+        ? t("when", {
+            weekday,
+            day,
+            slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
+          })
+        : formatDate(order.slot_start_at);
 
   return (
     <Card className="relative flex flex-col gap-2.5 p-3.5">

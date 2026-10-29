@@ -51,6 +51,7 @@ test("customer screens, sheets and focus", async ({ page }) => {
   const crew = await createCrew();
   const date = baghdadDate(1);
   const pending = await createOrder(phone, { slot, date });
+  const postponed = await createOrder(phone, { slot, date, status: "postponed" });
   const onTheWay = await createOrder(phone, { slot, date, status: "on_the_way", crewId: crew.id });
   const working = await createOrder(phone, { slot, date, status: "in_progress", crewId: crew.id });
   const done = await createOrder(phone, {
@@ -66,6 +67,7 @@ test("customer screens, sheets and focus", async ({ page }) => {
     "/orders",
     "/orders?tab=past",
     `/orders/${pending.id}`,
+    `/orders/${postponed.id}`,
     `/orders/${onTheWay.id}/track`,
     `/orders/${working.id}/live`,
     `/orders/${done.id}/certificate`,
@@ -103,6 +105,23 @@ test("customer screens, sheets and focus", async ({ page }) => {
     .click();
   await expect(page.getByRole("dialog", { name: Order.cancelSheet.title })).toBeVisible();
   await expectNoAxeViolations(page, "N6 cancel sheet", '[role="dialog"]');
+  expect(await smallTargets(page)).toEqual([]);
+  await page.keyboard.press("Escape");
+
+  // N7 and its postpone step.
+  await page.goto(`/orders/${pending.id}`);
+  await page
+    .locator("main")
+    .filter({ visible: true })
+    .getByRole("button", { name: Order.reschedule })
+    .click();
+  const reschedule = page.getByRole("dialog", { name: Order.rescheduleSheet.title });
+  await expect(reschedule).toBeVisible();
+  await expectNoAxeViolations(page, "N7 reschedule sheet", '[role="dialog"]');
+  expect(await smallTargets(page)).toEqual([]);
+  await reschedule.getByRole("button", { name: Order.rescheduleSheet.postpone }).click();
+  await expect(page.getByRole("dialog", { name: Order.postponeSheet.title })).toBeVisible();
+  await expectNoAxeViolations(page, "N7 postpone step", '[role="dialog"]');
   expect(await smallTargets(page)).toEqual([]);
   await page.keyboard.press("Escape");
 

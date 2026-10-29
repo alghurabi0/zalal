@@ -158,6 +158,60 @@ test("rescheduling keeps the crew and sends the order back to pending", async ({
   });
 });
 
+test("postponing frees the place and the crew; rescheduling gives the date back", async ({
+  page,
+}) => {
+  slot = await createSlot();
+  const customer = await createCustomer();
+  const crew = await createCrew();
+  const date = baghdadDate(2);
+  const order = await createOrder(customer.phone, { slot, date, status: "confirmed" });
+  await admin.from("orders").update({ crew_id: crew.id }).eq("id", order.id).throwOnError();
+  await logInAsAdmin(page);
+
+  const dialog = await openOrder(page, slot, order.number);
+  await dialog.getByRole("button", { name: Actions.modes.postpone, exact: true }).click();
+  await expect(dialog.getByText(Actions.postponeHint)).toBeVisible();
+  // The note is optional.
+  await dialog.getByRole("button", { name: Actions.postpone }).click();
+  await expect(dialog.getByRole("status")).toContainText(Actions.saved);
+  await expectStatus(page, "postponed");
+  await expect(dialog.getByText(Drawer.postponed.replace(/ \(.*$/, ""))).toBeVisible();
+  expect(await orderRow(order.id)).toMatchObject({ status: "postponed", crew_id: null });
+  const { data: seat } = await admin
+    .from("slot_bookings")
+    .select("seat")
+    .eq("order_id", order.id)
+    .maybeSingle();
+  expect(seat).toBeNull();
+
+  // Day filters leave it out; the status filter and the Overview card find it.
+  await page.goto(`/admin/orders?status=all&date=${date}&slot=${slot.id}`);
+  await expect(page.getByRole("heading", { name: Admin.orders.emptyFiltered })).toBeVisible();
+  await page.goto("/admin");
+  await expect(
+    page.getByRole("link", { name: new RegExp(Admin.overview.postponedCard) }),
+  ).toHaveAttribute("href", "/admin/orders?status=postponed");
+
+  // Only reschedule, cancel and override; the old slot can be picked again.
+  await page.goto(`/admin/orders?status=postponed&order=${order.id}`);
+  const again = page.getByRole("dialog");
+  await expect(again.getByRole("button", { name: Actions.modes.confirm, exact: true })).toHaveCount(
+    0,
+  );
+  await again.getByRole("button", { name: Actions.modes.reschedule, exact: true }).click();
+  await expect(again.getByText(Actions.reschedulePostponedHint)).toBeVisible();
+  await pickSlot(page, date, slot.label);
+  await again.getByRole("button", { name: Actions.reschedule }).click();
+  await expect(again.getByRole("status")).toContainText(Actions.saved);
+  await expectStatus(page, "pending_confirmation");
+  expect(await orderRow(order.id)).toMatchObject({
+    status: "pending_confirmation",
+    service_date: date,
+    crew_id: null,
+  });
+});
+
 test("an override needs a reason and is marked in the timeline", async ({ page }) => {
   slot = await createSlot();
   const customer = await createCustomer();

@@ -54,7 +54,7 @@ async function ChatContent({ searchParams }: PageProps<"/chat">) {
   const context = await getThreadContext(
     thread.data,
     viewer.id,
-    { now, cutoffHours: support.cutoffHours, extraOrderId: tagId },
+    { now, extraOrderId: tagId },
     supabase,
   );
   const days = await rescheduleDays(context, { now, cutoffHours: support.cutoffHours }, supabase);
