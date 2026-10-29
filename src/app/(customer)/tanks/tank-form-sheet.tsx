@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Chip, ChipGroup } from "@/components/ui/chip";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, useSheetBusy } from "@/components/ui/sheet";
 import type { AddressLabel } from "@/lib/schemas/address";
 import { type TankSize, tankSizes, type TankType, tankTypes } from "@/lib/schemas/tank";
 
@@ -90,6 +90,7 @@ function TankForm({
     { status: "idle" },
   );
   const error = state.status === "error" ? state.error : null;
+  useSheetBusy(pending);
 
   return (
     <form action={action} className="flex flex-col gap-4">

@@ -53,7 +53,11 @@ export function LogoutEverywhere() {
           {t("logoutEverywhere")}
         </button>
       </SheetTrigger>
-      <SheetContent title={t("logoutEverywhereTitle")} description={t("logoutEverywhereBody")}>
+      <SheetContent
+        title={t("logoutEverywhereTitle")}
+        description={t("logoutEverywhereBody")}
+        busy={pending}
+      >
         <div className="flex flex-col gap-2">
           {failed && (
             <p role="alert" className="text-center text-14 font-bold text-danger">
@@ -113,7 +117,7 @@ export function DeleteAccount({ hasOpenOrders }: { hasOpenOrders: boolean }) {
           {t("deleteAccount")}
         </button>
       </SheetTrigger>
-      <SheetContent title={t("deleteTitle")} description={t("deleteBody")}>
+      <SheetContent title={t("deleteTitle")} description={t("deleteBody")} busy={pending}>
         <div className="flex flex-col gap-2">
           {error === "open_orders" ? (
             <>

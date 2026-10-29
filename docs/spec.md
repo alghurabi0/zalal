@@ -218,7 +218,7 @@ Built in Phase 0 from the canvas. Screens compose these before writing new marku
 | `Chip`, `ChipGroup`, `ChipButton` | `option` (tile), `pill` (filter), `tag` (rating); real radio/checkbox inputs in a `<fieldset>`. `ChipButton` = chat quick reply |
 | `Card` | `outline`, `raised` (shadow), `dark` (navy); `href` renders a link |
 | `Input`, `Textarea`, `Select`, `Field` | `default` 56px, `compact` 46px (sheet forms, admin forms); `Select` is a native select with the inputs' look (Phase 3, admin); `Field` wires label, hint and error |
-| `Sheet` (modal), `SheetPanel` (in-page, under a map) | 26px top corners, handle, safe-area padding. No drag-to-dismiss |
+| `Sheet` (modal), `SheetPanel` (in-page, under a map) | 26px top corners, handle, safe-area padding. The modal closes, cancelling, on a tap outside it, a pull down (touch, from the top of its content), Esc and the phone's back button, which pops a history entry the open sheet adds instead of leaving the page; a link inside it takes that entry's place. `busy` (or `useSheetBusy`) keeps it open while saving. `Lightbox` closes on back too |
 | `TabBar` | 4 tabs + raised احجز; `active`, `chatUnread` |
 | `Stepper` | Quantity − / + with min/max |
 | `Switch` | On/off row from Profile's reminder toggle: a 48×28 teal track, a real checkbox with `role="switch"` (Phase 6, task 2: Checkout's subscription toggle) |
