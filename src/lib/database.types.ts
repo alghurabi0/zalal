@@ -1165,9 +1165,11 @@ export type Database = {
         Row: {
           booking_window_days: number;
           cancel_cutoff_hours: number;
+          certificate_stamp_path: string | null;
           certificate_text: string;
           cleaning_interval_months: number;
           company_phone: string | null;
+          company_phone_2: string | null;
           id: boolean;
           maintenance_mode: boolean;
           max_tanks_per_order: number;
@@ -1190,9 +1192,11 @@ export type Database = {
         Insert: {
           booking_window_days?: number;
           cancel_cutoff_hours?: number;
+          certificate_stamp_path?: string | null;
           certificate_text?: string;
           cleaning_interval_months?: number;
           company_phone?: string | null;
+          company_phone_2?: string | null;
           id?: boolean;
           maintenance_mode?: boolean;
           max_tanks_per_order?: number;
@@ -1214,9 +1218,11 @@ export type Database = {
         Update: {
           booking_window_days?: number;
           cancel_cutoff_hours?: number;
+          certificate_stamp_path?: string | null;
           certificate_text?: string;
           cleaning_interval_months?: number;
           company_phone?: string | null;
+          company_phone_2?: string | null;
           id?: boolean;
           maintenance_mode?: boolean;
           max_tanks_per_order?: number;
@@ -1794,6 +1800,7 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      admin_set_certificate_stamp: { Args: { p_path?: string }; Returns: string };
       admin_set_crew_phone: { Args: { p_crew_id: string; p_phone: string }; Returns: undefined };
       admin_set_order_subscription: {
         Args: { p_order_id: string; p_use: boolean };
