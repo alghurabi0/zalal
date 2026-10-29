@@ -75,6 +75,10 @@ test("maintenance from A13 stops customers and guests, not admins", async ({ pag
     });
   }).toPass({ timeout: 30_000 });
   await guest.close();
+  // Each server instance keeps the switch up to 10 s (src/proxy.ts), so one
+  // may still say "on" after the guest's reload saw "off": wait it out, or
+  // the next test's customer lands on the maintenance screen.
+  await page.waitForTimeout(11_000);
 });
 
 test("A13 refuses a minimum version that isn't x.y.z or is above this build", async ({ page }) => {
@@ -95,8 +99,6 @@ test("A13 saves a second phone; Chat's call button offers both numbers", async (
   page,
   browser,
 }) => {
-  // An admin and a customer each log in with a code: slower than 30 s on CI.
-  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await logInAsAdmin(page);
   await page.goto("/admin/settings");
@@ -139,7 +141,6 @@ test("A13 uploads the certificate stamp, the certificate prints it, and removing
   page,
   browser,
 }) => {
-  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await logInAsAdmin(page);
   await page.goto("/admin/settings");
