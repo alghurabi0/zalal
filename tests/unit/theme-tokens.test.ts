@@ -41,6 +41,8 @@ const SPEC_COLORS: Record<string, string> = {
   "otp-filled": "#9FB3C8",
   well: "#F1F5F9",
   "on-dark-body": "#C9D8EA",
+  // WhatsApp's teal green, for its glyph on the support buttons (Oct 30, 2026).
+  whatsapp: "#128C7E",
 };
 
 const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
@@ -153,9 +155,18 @@ const TEXT_PAIRS: [text: string, background: string][] = [
   ["white", "danger"],
 ];
 
+// Icons the screens draw in a color no text uses: WCAG 1.4.11, 3:1.
+const ICON_PAIRS: [icon: string, background: string][] = [
+  ["whatsapp", "bg"],
+  ["whatsapp", "surface"],
+];
+
 describe("text contrast (WCAG AA)", () => {
   const hex = (name: string) => (name === "white" ? "#FFFFFF" : SPEC_COLORS[name]!);
   it.each(TEXT_PAIRS)("%s on %s reaches 4.5:1", (text, background) => {
     expect(contrast(hex(text), hex(background))).toBeGreaterThanOrEqual(4.5);
+  });
+  it.each(ICON_PAIRS)("%s icons on %s reach 3:1", (icon, background) => {
+    expect(contrast(hex(icon), hex(background))).toBeGreaterThanOrEqual(3);
   });
 });

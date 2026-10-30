@@ -52,6 +52,7 @@
   --color-danger: #b42318; /* logout, "live" label, error text */
   --color-live: #dc2626; /* live dot */
   --color-star: #d97706; /* rating stars */
+  --color-whatsapp: #128c7e; /* WhatsApp glyph (Chat, Profile); icons only, 3:1 */
 
   /* Radii. Role names for the spec's shapes; pixel names for one-offs.
      Circles and pills use rounded-full. */

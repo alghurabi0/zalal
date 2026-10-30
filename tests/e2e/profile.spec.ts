@@ -79,6 +79,20 @@ test("Profile shows the canvas rows and saves the reminder toggle", async ({ pag
   await expect(page.getByRole("switch", { name: Profile.reminders })).not.toBeChecked();
 });
 
+test("Profile's WhatsApp row opens a chat with the company number", async ({ page }) => {
+  // The same single number chat.spec.ts sets, so parallel tests agree.
+  await admin
+    .from("settings")
+    .update({ company_phone: "+9647801234567", company_phone_2: null })
+    .eq("id", true)
+    .throwOnError();
+  await signUp(page);
+  await page.goto("/profile");
+  const row = page.getByRole("link", { name: Profile.whatsapp });
+  await expect(row).toHaveAttribute("href", "https://wa.me/9647801234567");
+  await expect(row).toHaveAttribute("target", "_blank");
+});
+
 test("Edit profile saves the name", async ({ page }) => {
   await signUp(page, { name: "أحمد علي" });
   await page.goto("/profile");

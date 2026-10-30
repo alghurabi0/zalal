@@ -127,6 +127,10 @@ test("a customer writes to support, gets the answer live, and sees it was read",
     "href",
     "tel:+9647801234567",
   );
+  await expect(chat.getByRole("link", { name: Chat.whatsapp })).toHaveAttribute(
+    "href",
+    "https://wa.me/9647801234567",
+  );
   expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
 
   const box = chat.getByLabel(Chat.composer.label);

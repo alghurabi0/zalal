@@ -23,7 +23,7 @@ import { SubscriptionCard } from "@/components/subscriptions/subscription-card";
 import { chosenAddress, listAddresses } from "@/lib/addresses";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
-import { formatPhone } from "@/lib/phone";
+import { companyPhones, formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import { listSubscriptions, subscriptionPlan } from "@/lib/subscriptions/queries";
@@ -31,13 +31,15 @@ import { currentFor, type Subscription } from "@/lib/subscriptions/state";
 
 import { AddressPicker, type AddressSummary } from "../addresses/address-picker";
 import { RemindersSwitch } from "./reminders-switch";
+import { WhatsAppRow } from "./whatsapp-row";
 
 /**
  * Profile (Profile.dc.html, spec §5.8): name and phone with "تعديل" (N10),
  * the subscription card (one per address with a subscription, else one for
  * the chosen address), then the rows: My addresses (N2), My tanks (N3), the
  * read-only payment row, Certificates (N12), My reports (N11), Settings
- * (N13) and the reminder toggle; then help (Chat) and logout.
+ * (N13) and the reminder toggle; then help (Chat), WhatsApp (when a company
+ * phone is set) and logout.
  */
 export default function ProfilePage() {
   return (
@@ -57,7 +59,7 @@ async function ProfileContent() {
   const tLabels = await getTranslations("Location.labels");
   const viewer = await requireViewer(routes.profile);
   const supabase = await createClient();
-  const [addresses, tanks, openTickets, certificates, profile, subscriptions, plan] =
+  const [addresses, tanks, openTickets, certificates, profile, subscriptions, plan, settings] =
     await Promise.all([
       listAddresses(),
       supabase.from("tanks").select("id", { count: "exact", head: true }),
@@ -67,6 +69,7 @@ async function ProfileContent() {
       supabase.from("profiles").select("reminders_enabled").eq("id", viewer.id).single(),
       listSubscriptions(),
       subscriptionPlan(),
+      supabase.from("settings").select("company_phone, company_phone_2").single(),
     ]);
   if (tanks.error) throw new Error(`Tanks count failed: ${tanks.error.message}`);
   if (openTickets.error) throw new Error(`Tickets count failed: ${openTickets.error.message}`);
@@ -74,6 +77,7 @@ async function ProfileContent() {
     throw new Error(`Certificates count failed: ${certificates.error.message}`);
   }
   if (profile.error) throw new Error(`Profile read failed: ${profile.error.message}`);
+  if (settings.error) throw new Error(`Settings read failed: ${settings.error.message}`);
   const tankCount = tanks.count ?? 0;
   const name = viewer.fullName ?? "";
 
@@ -193,6 +197,7 @@ async function ProfileContent() {
         >
           {t("help")}
         </Link>
+        <WhatsAppRow phones={companyPhones(settings.data)} />
         <LogoutButton>
           <button
             type="button"
