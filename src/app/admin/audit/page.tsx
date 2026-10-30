@@ -16,7 +16,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/input";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from "@/lib/admin/audit";
-import { adminBoxesHref, adminExpensesHref } from "@/lib/admin/finance-query";
+import { adminBoxesHref, adminRevenueHref, adminExpensesHref } from "@/lib/admin/finance-query";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
 import { CATEGORY_ICONS, type CategoryIcon } from "@/lib/articles/category-icons";
 import { ticketNumber } from "@/lib/certificates/format";
@@ -349,6 +349,26 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
           {t("entities.finance_transfers")}
         </Link>
       );
+    case "finance_payments":
+      return (
+        <Link
+          href={adminRevenueHref({ payment: entry.entityId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {t("entities.finance_payments")}
+        </Link>
+      );
+    case "manual_sales":
+      return (
+        <Link
+          href={adminRevenueHref({ sale: entry.entityId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {diffString(entry.diff, "customer_name") ?? t("entities.manual_sales")}
+        </Link>
+      );
+    case "finance_discounts":
+      return <>{t("entities.finance_discounts")}</>;
     case "subscriptions":
       return (
         <Link
@@ -434,6 +454,16 @@ const KNOWN_FIELDS = [
   "from_account_id",
   "to_account_id",
   "amount_iqd",
+  "paid_on",
+  "sold_on",
+  "order_id",
+  "subscription_id",
+  "sale_id",
+  "customer_name",
+  "customer_phone",
+  "service",
+  "place",
+  "crew_id",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -537,8 +567,24 @@ async function Value({
       return <>{tFinance(`categoryKinds.${value}`)}</>;
     }
   }
+  if (field === "crew_id" && typeof value === "string") {
+    return <>{names.crews.get(value) ?? t("unknownCrew")}</>;
+  }
+  if (field === "customer_phone" && typeof value === "string") {
+    return <span dir="ltr">{formatPhone(value)}</span>;
+  }
   if (
-    (field === "spent_on" || field === "moved_on" || field === "start_on") &&
+    (field === "order_id" || field === "subscription_id" || field === "sale_id") &&
+    typeof value === "string"
+  ) {
+    return <bdi dir="ltr">{value.slice(0, 8)}</bdi>;
+  }
+  if (
+    (field === "spent_on" ||
+      field === "moved_on" ||
+      field === "start_on" ||
+      field === "paid_on" ||
+      field === "sold_on") &&
     typeof value === "string"
   ) {
     return <>{formatDay(value)}</>;

@@ -55,6 +55,15 @@ export const AUDIT_ACTIONS = [
   "transfer.create",
   "transfer.update",
   "transfer.void",
+  "payment.create",
+  "payment.update",
+  "payment.void",
+  "discount.create",
+  "discount.update",
+  "discount.void",
+  "sale.create",
+  "sale.update",
+  "sale.void",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

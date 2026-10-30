@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { monthRange } from "./calendar";
 import type { AdminExpensesQuery } from "./finance-query";
 
-// Reads for the accounting screens (spec §8.3 A15–A17), made as the admin:
+// Reads for the accounting screens (spec §8.3 A15–A17; A18 in revenue-queries.ts), made as the admin:
 // RLS lets admins read every box, category, expense and transfer, and nobody
 // else any. Pages call requireViewer(…, "admin") first.
 
@@ -130,13 +130,10 @@ const toExpense = (row: ExpenseRow): Expense => ({
   voidedBy: row.voider?.full_name ?? null,
 });
 
-// PostgREST returns at most 1,000 rows a request; totals read the amounts
-// in pages of this size.
-const SUM_PAGE = 1000;
-
 /**
  * The month's expenses for A16, newest day first: the first `n` (and
- * whether there are more) and the total of every one the filters match.
+ * whether there are more) and the count and total of every one the filters
+ * match (admin_expense_summary, in SQL).
  */
 export async function listExpenses(
   query: AdminExpensesQuery,
@@ -144,47 +141,43 @@ export async function listExpenses(
 ): Promise<{ expenses: Expense[]; more: boolean; total: number; count: number }> {
   const supabase = await createClient();
   const { from, to } = monthRange(month);
-  // The same filters for the page and for the total.
-  const select = (columns: string) => {
-    let builder = supabase
-      .from("expenses")
-      .select(columns)
-      .gte("spent_on", from)
-      .lte("spent_on", to);
-    builder = query.voided ? builder.not("voided_at", "is", null) : builder.is("voided_at", null);
-    if (query.category) builder = builder.eq("category_id", query.category);
-    if (query.account) builder = builder.eq("account_id", query.account);
-    // PostgREST reads * as %, so it goes too.
-    const words = query.q?.replace(/\*/g, "").replace(/[%_\\]/g, "\\$&");
-    if (words) builder = builder.ilike("note", `%${words}%`);
-    return builder;
-  };
+  // PostgREST reads * as %, so it goes too; the summary takes the words as typed.
+  const words = query.q?.replace(/\*/g, "");
+  let builder = supabase
+    .from("expenses")
+    .select(EXPENSE_COLUMNS)
+    .gte("spent_on", from)
+    .lte("spent_on", to);
+  builder = query.voided ? builder.not("voided_at", "is", null) : builder.is("voided_at", null);
+  if (query.category) builder = builder.eq("category_id", query.category);
+  if (query.account) builder = builder.eq("account_id", query.account);
+  if (words) builder = builder.ilike("note", `%${words.replace(/[%_\\]/g, "\\$&")}%`);
 
-  const { data, error } = await select(EXPENSE_COLUMNS)
-    .order("spent_on", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(query.n + 1);
-  if (error) throw new Error(`Expenses read failed: ${error.message}`);
-  const rows = data as unknown as ExpenseRow[];
-
-  let total = 0;
-  let count = 0;
-  for (let start = 0; ; start += SUM_PAGE) {
-    const amounts = await select("amount_iqd")
-      .order("id")
-      .range(start, start + SUM_PAGE - 1);
-    if (amounts.error) throw new Error(`Expense totals read failed: ${amounts.error.message}`);
-    const page = amounts.data as unknown as { amount_iqd: number }[];
-    for (const row of page) total += row.amount_iqd;
-    count += page.length;
-    if (page.length < SUM_PAGE) break;
-  }
+  const [page, summary] = await Promise.all([
+    builder
+      .order("spent_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(query.n + 1),
+    supabase
+      .rpc("admin_expense_summary", {
+        p_from: from,
+        p_to: to,
+        p_voided: query.voided,
+        p_category_id: query.category,
+        p_account_id: query.account,
+        p_words: words || undefined,
+      })
+      .single(),
+  ]);
+  if (page.error) throw new Error(`Expenses read failed: ${page.error.message}`);
+  if (summary.error) throw new Error(`Expense totals read failed: ${summary.error.message}`);
+  const rows = page.data as unknown as ExpenseRow[];
 
   return {
     expenses: rows.slice(0, query.n).map(toExpense),
     more: rows.length > query.n,
-    total,
-    count,
+    total: Number(summary.data.total),
+    count: Number(summary.data.count),
   };
 }
 

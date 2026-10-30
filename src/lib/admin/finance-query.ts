@@ -91,3 +91,37 @@ export function adminBoxesHref(query: Partial<AdminBoxesQuery>): string {
   const search = params.toString();
   return search ? `${routes.adminFinance}?${search}` : routes.adminFinance;
 }
+
+export const ADMIN_REVENUE_PAGE = ADMIN_ORDERS_PAGE;
+
+export const adminRevenueQuerySchema = z.object({
+  /** The month of the summary, the payments and the manual sales. */
+  month: monthSchema,
+  /** How many rows each list shows. */
+  n: pageSizeSchema(ADMIN_REVENUE_PAGE, ADMIN_ORDERS_MAX),
+  /** A customer's account: their items with a balance. */
+  customer: z.uuid().optional().catch(undefined),
+  /** A payment to edit or void. */
+  payment: z.uuid().optional().catch(undefined),
+  /** A manual sale: "new", or one to edit, void or take payments. */
+  sale: drawerSchema,
+});
+
+export type AdminRevenueQuery = z.output<typeof adminRevenueQuerySchema>;
+
+export function parseAdminRevenueQuery(
+  params: Record<string, string | string[] | undefined>,
+): AdminRevenueQuery {
+  return adminRevenueQuerySchema.parse(firstValues(params));
+}
+
+export function adminRevenueHref(query: Partial<AdminRevenueQuery>): string {
+  const params = new URLSearchParams();
+  if (query.month) params.set("month", query.month);
+  if (query.n && query.n !== ADMIN_REVENUE_PAGE) params.set("n", String(query.n));
+  if (query.customer) params.set("customer", query.customer);
+  if (query.payment) params.set("payment", query.payment);
+  if (query.sale) params.set("sale", query.sale);
+  const search = params.toString();
+  return search ? `${routes.adminRevenue}?${search}` : routes.adminRevenue;
+}

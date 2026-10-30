@@ -6,22 +6,27 @@ import {
   ADMIN_EXPENSES_PAGE,
   adminBoxesHref,
   adminExpensesHref,
+  adminRevenueHref,
   parseAdminBoxesQuery,
   parseAdminExpensesQuery,
+  parseAdminRevenueQuery,
 } from "@/lib/admin/finance-query";
 import {
+  discountSchema,
   expenseCategorySchema,
   expenseSchema,
   financeAccountSchema,
+  manualSaleSchema,
   parseAmount,
+  paymentSchema,
   transferSchema,
   voidSchema,
 } from "@/lib/schemas/finance";
 
 import ar from "../../messages/ar.json";
 
-// Accounting (spec §8.3 A15–A17; Phase 7, task 1): the inputs, the URL
-// state and the database errors the screens show.
+// Accounting (spec §8.3 A15–A18; Phase 7, tasks 1 and 2): the inputs, the
+// URL state and the database errors the screens show.
 
 const uuid = "8a6e0804-2bd0-4a3d-9f1c-2f3b1b6a9c11";
 const other = "0f2b6c34-9e8d-4c55-8a1e-7d2f3e4a5b6c";
@@ -176,6 +181,11 @@ describe("adminEditErrorFor (accounting)", () => {
     ["ZL046", "records_before_start", "records_before_start"],
     ["ZL047", "record_voided", "record_voided"],
     ["ZL048", "name_taken", "name_taken"],
+    ["ZL049", "payment_not_allowed", "payment_not_allowed"],
+    ["ZL050", "refund_too_large", "refund_too_large"],
+    ["ZL051", "discount_not_allowed", "discount_not_allowed"],
+    ["ZL052", "discount_exists", "discount_exists"],
+    ["ZL053", "paid_set_by_finance", "paid_set_by_finance"],
     ["22023", "same_account", "same_account"],
     ["ZL011", "reason_required", "reason_required"],
   ])("%s %s → %s", (code, message, expected) => {
@@ -196,9 +206,99 @@ describe("audit log labels", () => {
       "expense_categories",
       "expenses",
       "finance_transfers",
+      "finance_payments",
+      "finance_discounts",
+      "manual_sales",
     ];
     for (const entity of entities) {
       expect((audit.entities as Record<string, string>)[entity]).toBeTruthy();
     }
+  });
+});
+
+describe("paymentSchema", () => {
+  const payment = {
+    id: null,
+    orderId: uuid,
+    subscriptionId: null,
+    saleId: null,
+    paidOn: "2026-10-30",
+    accountId: other,
+    amountIqd: 35000,
+    note: "  الباقي ",
+  };
+  it("takes a payment for one item, and a refund as a negative amount", () => {
+    expect(paymentSchema.parse(payment).note).toBe("الباقي");
+    expect(paymentSchema.safeParse({ ...payment, amountIqd: -5000 }).success).toBe(true);
+  });
+  it("refuses zero, no item or two items", () => {
+    expect(paymentSchema.safeParse({ ...payment, amountIqd: 0 }).success).toBe(false);
+    expect(paymentSchema.safeParse({ ...payment, orderId: null }).success).toBe(false);
+    expect(paymentSchema.safeParse({ ...payment, saleId: other }).success).toBe(false);
+  });
+  it("lets an edit leave the item out", () => {
+    expect(paymentSchema.safeParse({ ...payment, id: uuid, orderId: null }).success).toBe(true);
+  });
+});
+
+describe("discountSchema", () => {
+  const discount = {
+    id: null,
+    orderId: uuid,
+    subscriptionId: null,
+    amountIqd: 5000,
+    reason: "زبون دائم",
+  };
+  it("needs a positive amount and a reason", () => {
+    expect(discountSchema.safeParse(discount).success).toBe(true);
+    expect(discountSchema.safeParse({ ...discount, amountIqd: 0 }).success).toBe(false);
+    expect(discountSchema.safeParse({ ...discount, reason: "  " }).success).toBe(false);
+  });
+  it("is for an order or a subscription, not both", () => {
+    expect(discountSchema.safeParse({ ...discount, subscriptionId: other }).success).toBe(false);
+  });
+});
+
+describe("manualSaleSchema", () => {
+  const sale = {
+    id: null,
+    soldOn: "2026-10-30",
+    customerName: " موكب أبو الفضل ",
+    customerPhone: "",
+    service: "تنظيف 4 خزانات",
+    place: "",
+    amountIqd: 120000,
+    crewId: null,
+    note: "",
+    paidAccountId: other,
+  };
+  it("takes a sale with an optional E.164 phone, marked paid into a box", () => {
+    expect(manualSaleSchema.parse(sale).customerName).toBe("موكب أبو الفضل");
+    expect(manualSaleSchema.safeParse({ ...sale, customerPhone: "+9647801234567" }).success).toBe(
+      true,
+    );
+    expect(manualSaleSchema.safeParse({ ...sale, customerPhone: "07801234567" }).success).toBe(
+      false,
+    );
+  });
+  it("marks paid only a new sale", () => {
+    expect(manualSaleSchema.safeParse({ ...sale, id: uuid }).success).toBe(false);
+    expect(manualSaleSchema.safeParse({ ...sale, id: uuid, paidAccountId: null }).success).toBe(
+      true,
+    );
+  });
+});
+
+describe("revenue URL", () => {
+  it("keeps the month and the open drawer", () => {
+    const query = parseAdminRevenueQuery({ month: "2026-10", payment: uuid });
+    expect(adminRevenueHref(query)).toBe(`/admin/finance/revenue?month=2026-10&payment=${uuid}`);
+    expect(adminRevenueHref({ sale: "new" })).toBe("/admin/finance/revenue?sale=new");
+  });
+  it("drops bad values", () => {
+    expect(parseAdminRevenueQuery({ customer: "x", sale: "1" })).toMatchObject({
+      customer: undefined,
+      sale: undefined,
+    });
   });
 });

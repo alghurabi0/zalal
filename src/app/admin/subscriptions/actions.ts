@@ -30,7 +30,7 @@ export async function activateSubscription(
 ): Promise<AdminEditResult> {
   const parsed = activateSubscriptionSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: "invalid" };
-  const { subscriptionId, startsOn, visits, tanks, priceIqd, paid, note } = parsed.data;
+  const { subscriptionId, startsOn, visits, tanks, priceIqd, note } = parsed.data;
   await requireViewer(routes.adminSubscription(subscriptionId), "admin");
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_activate_subscription", {
@@ -39,7 +39,8 @@ export async function activateSubscription(
     p_visits: visits,
     p_tanks: tanks,
     p_price_iqd: priceIqd,
-    p_paid: paid,
+    // Payments tick "paid" now (spec §8.3); the database ignores this.
+    p_paid: false,
     p_note: note === "" ? undefined : note,
   });
   return error ? editFailure("admin_activate_subscription", error, report) : { status: "done" };
