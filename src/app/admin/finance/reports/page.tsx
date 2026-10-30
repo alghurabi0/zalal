@@ -185,7 +185,11 @@ async function ReportTable({
   const sections = ["revenue", "expenses", "profit", "cash"] as const;
   const width = columns ? columns.length + 2 : 2;
   return (
-    <div className="overflow-x-auto">
+    <div
+      // A year scrolls sideways: a named, focusable region, so the keyboard can scroll it.
+      {...(columns ? { role: "region", "aria-label": caption, tabIndex: 0 } : {})}
+      className="overflow-x-auto rounded-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+    >
       <table className={cn("w-full text-14", columns && "min-w-5xl text-13")}>
         <caption className="sr-only">{caption}</caption>
         <thead className="bg-well text-muted print:bg-surface">
