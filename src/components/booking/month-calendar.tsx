@@ -64,9 +64,9 @@ export function MonthCalendar({
     <section
       id={id}
       aria-label={t("title")}
-      className="flex flex-col gap-2 rounded-input border border-border bg-surface p-3"
+      className="flex flex-col gap-2 rounded-input border border-border bg-surface px-0.5 py-2"
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 px-2">
         <IconButton
           label={t("previous")}
           icon={ChevronRight}
@@ -89,13 +89,13 @@ export function MonthCalendar({
       {state.status === "error" ? (
         <ErrorState titleAs="h2" onRetry={retry} className="py-4" />
       ) : state.status === "loading" ? (
-        <SkeletonGroup className="grid grid-cols-7 gap-1">
+        <SkeletonGroup className="grid grid-cols-7 gap-0.5 px-0.5">
           {Array.from({ length: 35 }, (_, i) => (
             <Skeleton key={i} className="h-11" />
           ))}
         </SkeletonGroup>
       ) : (
-        <table className="w-full table-fixed border-separate border-spacing-1">
+        <table className="w-full table-fixed border-separate border-spacing-0.5">
           <thead>
             <tr>
               {WEEKDAYS.map((weekday) => (

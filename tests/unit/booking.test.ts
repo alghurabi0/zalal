@@ -306,6 +306,11 @@ describe("createBookingSchema", () => {
     expect(bad({ items: [] })).toBe(false);
     expect(bad({ items: [{ type: "roof", size: "xl", qty: 1 }] })).toBe(false);
     expect(bad({ items: [{ tankId: TANK, qty: 0 }] })).toBe(false);
+    // Any quantity, but at most 50 lines (create_order(), RLS audit of no_booking_limits).
+    expect(bad({ items: [{ tankId: TANK, qty: 500 }] })).toBe(true);
+    expect(
+      bad({ items: Array.from({ length: 51 }, () => ({ type: "roof", size: "s", qty: 1 })) }),
+    ).toBe(false);
     expect(bad({ serviceDate: "25/10/2026" })).toBe(false);
     expect(bad({ note: "x".repeat(501) })).toBe(false);
     expect(bad({ expectedTotal: 1.5 })).toBe(false);

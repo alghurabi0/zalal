@@ -4,7 +4,9 @@
 -- - Customers may book any future day. private.bookable_slot() no longer
 --   checks booking_window_days; the past, blocked dates, inactive slots,
 --   wrong weekdays, full slots and the cancel_cutoff_hours cutoff still
---   apply.
+--   apply. "Any day" still means one the app can show: infinity and years
+--   past 9999 are ZL004 for everyone (RLS audit: such a date makes the
+--   app's date formatting throw on staff and customer screens).
 -- - booking_availability(from, to) lists any range of up to 62 days (a month
 --   in Booking's calendar), never before today; 22023 invalid_range for a
 --   longer range or only one end. Without dates it lists Booking's row of
@@ -13,7 +15,10 @@
 -- - An order takes any number of tanks: create_order() drops the
 --   max_tanks_per_order check (ZL007 too_many_tanks is no longer raised),
 --   and order_items.qty loses its 1–20 cap. What a column can hold is the
---   only bound left (22023 invalid_items).
+--   only bound on quantities (22023 invalid_items, also for a line or total
+--   beyond an integer). Lines (distinct tanks) stay at most 50 per order
+--   (22023 invalid_items): the old tank limit also capped them, and each
+--   line can save a tank (RLS audit: 5,000 lines in one call).
 -- - A subscription covers any number of tanks: subscriptions.tanks_covered
 --   and settings.subscription_tanks lose their 1–6 cap, and
 --   admin_activate_subscription() no longer reads max_tanks_per_order.
@@ -66,6 +71,8 @@ begin
 
   if not found
     or p_service_date is null
+    or not isfinite(p_service_date)
+    or p_service_date > date '9999-12-31'
     or not (extract(dow from p_service_date)::smallint = any (v_slot.weekdays))
     or exists (select 1 from public.blocked_dates as b where b.date = p_service_date)
   then
@@ -115,7 +122,11 @@ declare
   v_from date := p_from;
   v_to date := p_to;
 begin
-  if (v_from is null) <> (v_to is null) or v_to - v_from >= 62 then
+  if (v_from is null) <> (v_to is null)
+    or not isfinite(v_from)
+    or not isfinite(v_to)
+    or v_to - v_from >= 62
+  then
     raise exception using errcode = '22023', message = 'invalid_range';
   end if;
   if v_from is null then
@@ -235,7 +246,10 @@ begin
   v_slot := private.bookable_slot(p_service_date, p_slot_id, true);
 
   -- Lines: checked and priced before anything is written.
-  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+  if p_items is null
+    or jsonb_typeof(p_items) <> 'array'
+    or jsonb_array_length(p_items) not between 1 and 50
+  then
     raise exception using errcode = '22023', message = 'invalid_items';
   end if;
 
@@ -284,13 +298,12 @@ begin
     v_sizes := v_sizes || v_size;
     v_qtys := v_qtys || v_qty;
     v_prices := v_prices || v_price;
-    v_total := v_total + v_qty * v_price;
+    v_total := v_total + v_qty::bigint * v_price;
+    -- orders.total_iqd is an integer.
+    if v_total > 2147483647 then
+      raise exception using errcode = '22023', message = 'invalid_items';
+    end if;
   end loop;
-
-  -- orders.total_iqd is an integer.
-  if v_total > 2147483647 then
-    raise exception using errcode = '22023', message = 'invalid_items';
-  end if;
 
   -- The total the customer saw on Checkout, when the app sends it.
   if p_expected_total is not null and p_expected_total <> v_total then

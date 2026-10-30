@@ -36,7 +36,8 @@ export const createBookingSchema = z.object({
   addressId: z.uuid(),
   serviceDate: z.iso.date(),
   slotId: z.number().int().positive(),
-  items: z.array(bookingItemSchema).min(1),
+  // Lines are distinct tanks; create_order() takes at most 50 (the quantities have no limit).
+  items: z.array(bookingItemSchema).min(1).max(50),
   note: z
     .string()
     .transform((value) => value.trim())

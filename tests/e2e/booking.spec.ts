@@ -314,7 +314,10 @@ test("books a day months ahead from the calendar, with more than 6 tanks", async
   await screenshot(page, "booking-calendar-picked");
   await pickSlot(page, date, slot.label);
   await page.getByRole("link", { name: Booking.next }).click();
-  await page.getByRole("link", { name: Upload.next }).click();
+  await expect(page).toHaveURL("/book/photos");
+  // Step 1 stays mounted (hidden) with its own "التالي".
+  await page.getByRole("link", { name: Upload.next }).filter({ visible: true }).click();
+  await expect(page).toHaveURL("/book/confirm");
   await expect(page.getByRole("definition").filter({ hasText: "10 خزانات" })).toHaveCount(1);
   await page.getByRole("button", { name: Checkout.confirm }).click();
 
