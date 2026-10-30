@@ -39,7 +39,7 @@ async function BookingData({ children }: { children: ReactNode }) {
   const shared = Promise.all([
     supabase.from("price_list").select("tank_type, size, price_iqd"),
     supabase.rpc("booking_availability"),
-    supabase.from("settings").select("max_tanks_per_order, cancel_cutoff_hours").single(),
+    supabase.from("settings").select("cancel_cutoff_hours").single(),
     listSubscriptions(),
   ]);
   const addresses = await listAddresses();
@@ -75,7 +75,6 @@ async function BookingData({ children }: { children: ReactNode }) {
         prices: priceTable,
         // Slots inside the cutoff are dropped by the server's clock, never the device's.
         days: bookingDays(availability.data, new Date(), settings.data.cancel_cutoff_hours),
-        maxTanks: settings.data.max_tanks_per_order,
         subscriptions,
       }}
     >

@@ -103,6 +103,12 @@ async function ChatHeader({ support, back }: { support: SupportInfo; back: strin
             : t("closed", { from: hour(support.hoursStart), to: hour(support.hoursEnd) })}
         </span>
       </div>
+      <CallCompany
+        phones={support.companyPhones}
+        label={t("whatsapp")}
+        variant="soft"
+        channel="whatsapp"
+      />
       <CallCompany phones={support.companyPhones} label={t("call")} variant="soft" />
     </header>
   );

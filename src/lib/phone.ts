@@ -78,6 +78,11 @@ export function formatPhone(e164: string | null): string {
   return match ? `+964 ${match[1]} ${match[2]} ${match[3]}` : e164;
 }
 
+/** A WhatsApp chat with an E.164 number: "+9647801234567" → "https://wa.me/9647801234567". */
+export function whatsappHref(e164: string): string {
+  return `https://wa.me/${e164.replace(/^\+/, "")}`;
+}
+
 /** settings.company_phone and company_phone_2 (A13), the ones set, first first. */
 export function companyPhones(settings: {
   company_phone: string | null;

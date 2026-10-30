@@ -18,6 +18,8 @@ const monthYear = new Intl.DateTimeFormat(LOCALE, { timeZone, month: "long", yea
 
 const dayMonth = new Intl.DateTimeFormat(LOCALE, { timeZone, day: "numeric", month: "long" });
 
+const monthName = new Intl.DateTimeFormat(LOCALE, { timeZone, month: "long" });
+
 const hourInBaghdad = new Intl.DateTimeFormat("en-GB", {
   timeZone,
   hour: "numeric",
@@ -42,6 +44,11 @@ export function formatDay(day: string): string {
 /** A calendar day in Baghdad ("2027-04-26") as "26 نيسان". */
 export function formatDayShort(day: string): string {
   return dayMonth.format(new Date(`${day}T12:00:00+03:00`));
+}
+
+/** A calendar day in Baghdad ("2027-01-05") as its month, "كانون الثاني". */
+export function formatMonthName(day: string): string {
+  return monthName.format(new Date(`${day}T12:00:00+03:00`));
 }
 
 /** A calendar day in Baghdad as "نيسان 2027". */

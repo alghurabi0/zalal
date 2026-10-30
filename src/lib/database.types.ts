@@ -2183,7 +2183,7 @@ export type Database = {
         Returns: string;
       };
       booking_availability: {
-        Args: Record<PropertyKey, never>;
+        Args: { p_from?: string; p_to?: string };
         Returns: {
           bookable: boolean;
           capacity: number;

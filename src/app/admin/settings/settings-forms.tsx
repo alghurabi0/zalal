@@ -23,6 +23,7 @@ import {
   type SettingsSectionInput,
   STERILANT_MAX,
 } from "@/lib/schemas/admin-catalog";
+import { MAX_SUBSCRIPTION_TANKS } from "@/lib/schemas/subscription";
 
 import { saveSettings } from "./actions";
 import { StampSection } from "./stamp-section";
@@ -268,15 +269,11 @@ type RangeKey = keyof typeof SETTING_RANGES;
 function BookingSection({ settings }: { settings: AdminSettings }) {
   const t = useTranslations("Admin.settings");
   const keys = [
-    ["booking_window_days", "window"],
     ["cancel_cutoff_hours", "cutoff"],
-    ["max_tanks_per_order", "maxTanks"],
     ["cleaning_interval_months", "interval"],
   ] as const satisfies readonly (readonly [RangeKey, string])[];
   const [values, setValues] = useState<Record<RangeKey, string>>({
-    booking_window_days: String(settings.booking_window_days),
     cancel_cutoff_hours: String(settings.cancel_cutoff_hours),
-    max_tanks_per_order: String(settings.max_tanks_per_order),
     cleaning_interval_months: String(settings.cleaning_interval_months),
   });
   const number = (key: RangeKey) => {
@@ -286,31 +283,19 @@ function BookingSection({ settings }: { settings: AdminSettings }) {
     return n >= min && n <= max ? n : null;
   };
   const parsed = {
-    booking_window_days: number("booking_window_days"),
     cancel_cutoff_hours: number("cancel_cutoff_hours"),
-    max_tanks_per_order: number("max_tanks_per_order"),
     cleaning_interval_months: number("cleaning_interval_months"),
   };
-  const {
-    booking_window_days: windowDays,
-    cancel_cutoff_hours: cutoff,
-    max_tanks_per_order: maxTanks,
-    cleaning_interval_months: interval,
-  } = parsed;
+  const { cancel_cutoff_hours: cutoff, cleaning_interval_months: interval } = parsed;
 
   return (
     <Section
       title={t("booking.title")}
       input={
-        windowDays !== null && cutoff !== null && maxTanks !== null && interval !== null
+        cutoff !== null && interval !== null
           ? {
               section: "booking",
-              values: {
-                booking_window_days: windowDays,
-                cancel_cutoff_hours: cutoff,
-                max_tanks_per_order: maxTanks,
-                cleaning_interval_months: interval,
-              },
+              values: { cancel_cutoff_hours: cutoff, cleaning_interval_months: interval },
             }
           : null
       }
@@ -470,7 +455,7 @@ function SubscriptionSection({ settings }: { settings: AdminSettings }) {
   };
   const priceValue = price.trim() === "" ? null : whole(price, 1, 10_000_000);
   const visitsValue = whole(visits, 1, 12);
-  const tanksValue = whole(tanks, 1, 6);
+  const tanksValue = whole(tanks, 1, MAX_SUBSCRIPTION_TANKS);
   const priceOk = price.trim() === "" || priceValue !== null;
 
   return (
@@ -513,16 +498,32 @@ function SubscriptionSection({ settings }: { settings: AdminSettings }) {
       </Field>
       {(
         [
-          ["subscription_visits", t("subscription.visits"), visits, setVisits, 12, visitsValue],
-          ["subscription_tanks", t("subscription.tanks"), tanks, setTanks, 6, tanksValue],
+          [
+            "subscription_visits",
+            t("subscription.visits"),
+            visits,
+            setVisits,
+            12,
+            visitsValue,
+            t("rangeHint", { min: 1, max: 12 }),
+          ],
+          [
+            "subscription_tanks",
+            t("subscription.tanks"),
+            tanks,
+            setTanks,
+            MAX_SUBSCRIPTION_TANKS,
+            tanksValue,
+            t("minHint", { min: 1 }),
+          ],
         ] as const
-      ).map(([name, label, value, setValue, max, parsed]) => (
+      ).map(([name, label, value, setValue, max, parsed, hint]) => (
         <Field
           key={name}
           label={label}
           variant="compact"
-          hint={t("rangeHint", { min: 1, max })}
-          error={parsed === null ? t("rangeHint", { min: 1, max }) : undefined}
+          hint={hint}
+          error={parsed === null ? hint : undefined}
         >
           {(control) => (
             <Input

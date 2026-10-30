@@ -127,20 +127,19 @@ export const supportSettingsSchema = z
 /** settings.certificate_stamp_path: an image in public-content/stamp/ (A13). */
 export const stampPathSchema = z.string().regex(/^stamp\/[\w-]+\.(webp|png|jpe?g)$/);
 
-/** The ranges in the settings table's checks. */
+/**
+ * The ranges in the settings table's checks. booking_window_days and
+ * max_tanks_per_order are no longer set (migration no_booking_limits).
+ */
 export const SETTING_RANGES = {
-  booking_window_days: [1, 60],
   cancel_cutoff_hours: [0, 48],
-  max_tanks_per_order: [1, 20],
   cleaning_interval_months: [1, 24],
 } as const;
 
 const inRange = ([min, max]: readonly [number, number]) => z.number().int().min(min).max(max);
 
 export const bookingSettingsSchema = z.object({
-  booking_window_days: inRange(SETTING_RANGES.booking_window_days),
   cancel_cutoff_hours: inRange(SETTING_RANGES.cancel_cutoff_hours),
-  max_tanks_per_order: inRange(SETTING_RANGES.max_tanks_per_order),
   cleaning_interval_months: inRange(SETTING_RANGES.cleaning_interval_months),
 });
 

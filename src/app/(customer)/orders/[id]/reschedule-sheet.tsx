@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useState, useTransition } from "react";
 
 import { DaySlotPicker } from "@/components/booking/day-slot-picker";
+import { useOtherDay } from "@/components/booking/use-other-day";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { type DayOption, findSlot } from "@/lib/booking/availability";
@@ -25,7 +26,7 @@ export function RescheduleSheet({
   orderId,
   current,
   currentLabel,
-  days,
+  days: serverDays,
   tooLate,
   children,
 }: {
@@ -45,6 +46,8 @@ export function RescheduleSheet({
   const [error, setError] = useState<OrderChangeError | null>(null);
   const [postponing, setPostponing] = useState(false);
   const [pending, startTransition] = useTransition();
+  // The row of days plus a day picked in the calendar ("تاريخ آخر").
+  const { days, pick } = useOtherDay(serverDays, serviceDate);
   const blocked = tooLate || error === "too_late";
   const chosen = findSlot(days, serviceDate, slotId);
   const isCurrent = serviceDate === current.serviceDate && slotId === current.slotId;
@@ -148,6 +151,7 @@ export function RescheduleSheet({
               setError(null);
             }}
             current={current}
+            onOtherDay={pick}
           />
           {error && <ChangeError error={error} />}
           <Button

@@ -1,6 +1,8 @@
--- booking_availability() (spec §5.9, N7, §6): one row per day and slot in
--- the booking window (today in Baghdad plus booking_window_days - 1 days),
--- for active slots on their weekdays, leaving out blocked dates. Each row
+-- booking_availability(from, to) (spec §5.9, N7, §6): one row per day and
+-- slot from `from` to `to` (at most 62 days, never before today in Baghdad;
+-- without dates, Booking's row of days: today plus 13 days), for active
+-- slots on their weekdays, leaving out blocked dates. Customers may book any
+-- future date (settled Oct 30, 2026: no booking window). Each row
 -- has the places left (capacity minus places held, never below 0) and
 -- whether it can be booked: a place is left and the slot starts at least
 -- cancel_cutoff_hours from now. Logged-in users only; guests are sent to
@@ -8,7 +10,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(14);
+select plan(20);
 
 select tests.create_user('+9647801111111');            -- customer
 select tests.create_user('+9647703333333', 'crew');
@@ -122,15 +124,48 @@ select results_eq(
   'places left follow the current capacity and never go below 0'
 );
 
--- The window and the cutoff come from settings.
+-- Any range of up to 62 days, however far ahead.
+select results_eq(
+  $$ select min(service_date), max(service_date), count(*)::int
+     from public.booking_availability(tests.today() + 400, tests.today() + 461)
+     where slot_id = tests.s1() $$,
+  $$ values (tests.today() + 400, tests.today() + 461, 62) $$,
+  'a range far ahead lists every open day in it'
+);
+select ok(
+  (select bool_and(bookable and remaining = capacity)
+   from public.booking_availability(tests.today() + 400, tests.today() + 461)
+   where slot_id = tests.s1()),
+  'and its slots can be booked'
+);
+select results_eq(
+  $$ select min(service_date) from public.booking_availability(tests.today() - 10, tests.today() + 3) $$,
+  $$ values (tests.today()) $$,
+  'a range never starts before today'
+);
+select is_empty(
+  $$ select * from public.booking_availability(tests.today() + 10, tests.today() + 9) $$,
+  'an empty range has no rows'
+);
+select throws_ok(
+  $$ select * from public.booking_availability(tests.today(), tests.today() + 62) $$,
+  '22023', 'invalid_range', 'a range of more than 62 days is refused'
+);
+select throws_ok(
+  $$ select * from public.booking_availability(tests.today(), null) $$,
+  '22023', 'invalid_range', 'a range needs both ends'
+);
+
+-- The old window setting no longer limits anything; the cutoff still comes
+-- from settings.
 select tests.clear_authentication();
 update public.settings set booking_window_days = 3, cancel_cutoff_hours = 0;
 select tests.authenticate_as(tests.user_id('+9647801111111'));
 
 select results_eq(
   $$ select min(service_date), max(service_date) from public.booking_availability() $$,
-  $$ values (tests.today(), tests.today() + 2) $$,
-  'the window follows booking_window_days'
+  $$ values (tests.today(), tests.today() + 13) $$,
+  'without dates it is always today plus 13 days'
 );
 select ok(
   (select bool_and(bookable = (remaining > 0 and start_at >= now()))

@@ -7,6 +7,7 @@ import {
   IRAQI_MOBILE_E164,
   normalizeIraqiMobile,
   toWesternDigits,
+  whatsappHref,
 } from "@/lib/phone";
 
 // Arabic-Indic and Persian digits, built from code points so the test reads
@@ -95,6 +96,12 @@ describe("formatPhone", () => {
 
   it("leaves anything else as it is", () => {
     expect(formatPhone("+12025550123")).toBe("+12025550123");
+  });
+});
+
+describe("whatsappHref", () => {
+  it("opens a WhatsApp chat with the number, without the plus", () => {
+    expect(whatsappHref("+9647801234567")).toBe("https://wa.me/9647801234567");
   });
 });
 

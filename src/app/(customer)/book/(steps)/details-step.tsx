@@ -15,10 +15,10 @@ import {
   detailsComplete,
   draftTotal,
   isSavedLine,
+  MAX_LINE_QTY,
   newLine,
   type NewLine,
   type SavedTank,
-  tankCount,
 } from "@/lib/booking/draft";
 import type { BookingError } from "@/lib/booking/errors";
 import { cn } from "@/lib/cn";
@@ -45,7 +45,7 @@ export function DetailsStep() {
   if (!draft) return <BookingSkeleton />;
 
   const total = draftTotal(draft.lines, data.savedTanks, data.prices);
-  const complete = detailsComplete(draft, data.days, data.maxTanks);
+  const complete = detailsComplete(draft, data.days);
 
   return (
     <Screen className="bg-bg">
@@ -73,16 +73,12 @@ export function DetailsStep() {
 
 function Notice({ notice }: { notice: BookingError }) {
   const t = useTranslations("Booking");
-  const tCheckout = useTranslations("Checkout");
-  const { data } = useBooking();
   const message =
     notice === "slot_full"
       ? t("errors.slotFull")
       : notice === "slot_unavailable"
         ? t("errors.slotUnavailable")
-        : notice === "too_many_tanks"
-          ? tCheckout("errors.tooManyTanks", { max: data.maxTanks })
-          : t("errors.stale");
+        : t("errors.stale");
   return (
     <p
       role="alert"
@@ -130,7 +126,6 @@ function TankLines() {
   const { data, draft, update } = useBooking();
   if (!draft) return null;
 
-  const room = data.maxTanks - tankCount(draft.lines);
   const newLines = draft.lines.filter((line): line is NewLine => !isSavedLine(line));
   const setQty = (key: string, qty: number) =>
     update((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? { ...l, qty } : l)) }));
@@ -142,7 +137,7 @@ function TankLines() {
       </h2>
 
       {data.savedTanks.map((tank) => (
-        <SavedTankCard key={tank.id} tank={tank} room={room} setQty={setQty} />
+        <SavedTankCard key={tank.id} tank={tank} setQty={setQty} />
       ))}
 
       {newLines.map((line) => {
@@ -162,7 +157,6 @@ function TankLines() {
                 <TankLineSheet
                   mode="edit"
                   initial={line}
-                  maxQty={line.qty + room}
                   onSave={(values) =>
                     update((d) => ({
                       ...d,
@@ -194,7 +188,7 @@ function TankLines() {
               <Stepper
                 label={t("qtyLabel", { name })}
                 value={line.qty}
-                max={line.qty + room}
+                max={MAX_LINE_QTY}
                 onValueChange={(qty) => setQty(line.key, qty)}
               />
             </div>
@@ -205,23 +199,18 @@ function TankLines() {
       {draft.lines.length === 0 && <p className="text-14 text-muted">{t("noLines")}</p>}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {room > 0 ? (
-          <TankLineSheet
-            mode="add"
-            initial={{ ...DEFAULT_NEW_TANK, qty: 1 }}
-            maxQty={room}
-            onSave={(values) =>
-              update((d) => ({ ...d, lines: [...d.lines, newLine(values, crypto.randomUUID())] }))
-            }
-          >
-            <Button variant="secondary" size="sm">
-              <Plus aria-hidden className="size-4.5 text-teal" strokeWidth={2.4} />
-              {t("addTank")}
-            </Button>
-          </TankLineSheet>
-        ) : (
-          <p className="text-13 text-muted">{t("tankLimit", { max: data.maxTanks })}</p>
-        )}
+        <TankLineSheet
+          mode="add"
+          initial={{ ...DEFAULT_NEW_TANK, qty: 1 }}
+          onSave={(values) =>
+            update((d) => ({ ...d, lines: [...d.lines, newLine(values, crypto.randomUUID())] }))
+          }
+        >
+          <Button variant="secondary" size="sm">
+            <Plus aria-hidden className="size-4.5 text-teal" strokeWidth={2.4} />
+            {t("addTank")}
+          </Button>
+        </TankLineSheet>
       </div>
     </section>
   );
@@ -229,11 +218,9 @@ function TankLines() {
 
 function SavedTankCard({
   tank,
-  room,
   setQty,
 }: {
   tank: SavedTank;
-  room: number;
   setQty: (key: string, qty: number) => void;
 }) {
   const t = useTranslations("Booking");
@@ -256,7 +243,6 @@ function SavedTankCard({
         type="button"
         aria-pressed={!!line}
         aria-label={t("selectTank", { name: `${name} · ${sizeName}` })}
-        disabled={!line && room <= 0}
         onClick={() =>
           update((d) => ({
             ...d,
@@ -265,7 +251,7 @@ function SavedTankCard({
               : [...d.lines, { key: crypto.randomUUID(), tankId: tank.id, qty: 1 }],
           }))
         }
-        className="flex min-h-11 w-full items-center gap-3 rounded-button p-3 text-start disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex min-h-11 w-full items-center gap-3 rounded-button p-3 text-start"
       >
         <Icon className="size-7.5 shrink-0 text-teal" />
         <span className="flex min-w-0 flex-1 flex-col">
@@ -290,7 +276,7 @@ function SavedTankCard({
           <Stepper
             label={t("qtyLabel", { name })}
             value={line.qty}
-            max={line.qty + room}
+            max={MAX_LINE_QTY}
             onValueChange={(qty) => setQty(line.key, qty)}
           />
         </div>
@@ -300,7 +286,7 @@ function SavedTankCard({
 }
 
 function DayAndSlot() {
-  const { data, draft, update } = useBooking();
+  const { data, draft, update, pickOtherDay } = useBooking();
   if (!draft) return null;
   return (
     <DaySlotPicker
@@ -309,6 +295,7 @@ function DayAndSlot() {
       slotId={draft.slotId}
       onDayChange={(serviceDate) => update((d) => ({ ...d, serviceDate, slotId: null }))}
       onSlotChange={(slotId) => update((d) => ({ ...d, slotId }))}
+      onOtherDay={pickOtherDay}
     />
   );
 }

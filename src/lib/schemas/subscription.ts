@@ -11,12 +11,18 @@ const reason = z
   .transform((value) => value.trim())
   .pipe(z.string().min(1).max(1000));
 
+/**
+ * A subscription covers any number of tanks (settled Oct 30, 2026); this is
+ * only what subscriptions.tanks_covered (smallint) can hold.
+ */
+export const MAX_SUBSCRIPTION_TANKS = 32767;
+
 /** A7 "فعّل": the plan this customer gets, prefilled from settings. */
 export const activateSubscriptionSchema = z.object({
   subscriptionId: z.uuid(),
   startsOn: z.iso.date(),
   visits: z.number().int().min(1).max(12),
-  tanks: z.number().int().min(1).max(6),
+  tanks: z.number().int().min(1).max(MAX_SUBSCRIPTION_TANKS),
   priceIqd: z.number().int().min(1).max(10_000_000),
   paid: z.boolean(),
   note: z
@@ -57,5 +63,5 @@ export type SetOrderSubscriptionInput = z.input<typeof setOrderSubscriptionSchem
 export const subscriptionPlanSchema = z.object({
   subscription_price_iqd: z.number().int().min(1).max(10_000_000).nullable(),
   subscription_visits: z.number().int().min(1).max(12),
-  subscription_tanks: z.number().int().min(1).max(6),
+  subscription_tanks: z.number().int().min(1).max(MAX_SUBSCRIPTION_TANKS),
 });

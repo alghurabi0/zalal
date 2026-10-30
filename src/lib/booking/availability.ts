@@ -63,3 +63,12 @@ export function findSlot(
 ): SlotOption | null {
   return days.find((d) => d.date === date)?.slots.find((s) => s.slotId === slotId) ?? null;
 }
+
+/**
+ * The days with `extra` (a day picked in the month calendar) added in date
+ * order, unless they already hold that day.
+ */
+export function withExtraDay(days: DayOption[], extra: DayOption | null): DayOption[] {
+  if (!extra || days.some((day) => day.date === extra.date)) return days;
+  return [...days, extra].sort((a, b) => a.date.localeCompare(b.date));
+}
