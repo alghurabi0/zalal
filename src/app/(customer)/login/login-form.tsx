@@ -49,7 +49,13 @@ export function LoginForm({ smsEnabled, next }: { smsEnabled: boolean; next: str
 
       <PhoneField value={phone} onChange={setPhone} error={phoneError} />
 
-      <ChannelChoice smsEnabled={showSms} channel={channel} onChange={setChannel} />
+      {/* With SMS off WhatsApp is the only way, so there is nothing to pick:
+          the intro says it instead (spec §5.2). */}
+      {showSms ? (
+        <ChannelChoice smsEnabled channel={channel} onChange={setChannel} />
+      ) : (
+        <input type="hidden" name="channel" value="whatsapp" />
+      )}
 
       {next && <input type="hidden" name="next" value={next} />}
 

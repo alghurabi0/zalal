@@ -249,7 +249,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 ### 5.2 Login — `Login.dc.html`
 
 - Input accepts `7XXXXXXXXX` or `07XXXXXXXXX`; it is stored as E.164 `+9647XXXXXXXXX`. Valid pattern: `^7[3-9]\d{8}$` after stripping a leading 0.
-- Channel picker: WhatsApp (default) and SMS. **The SMS button is hidden when the admin toggle `sms_enabled` is off.**
+- Channel picker: WhatsApp (default) and SMS. **While the admin toggle `sms_enabled` is off, the picker is hidden altogether** (WhatsApp is the only channel, so there is nothing to choose; the intro names it; settled Oct 29, 2026).
 - "أرسل الرمز" stays disabled until the number is valid.
 - Errors: invalid number; too many requests ("جرب بعد X دقايق"); WhatsApp send failed, which offers SMS if enabled, otherwise "جرب مرة ثانية".
 - Terms and Privacy links open the placeholder pages (N14). Phase 1 shows the settings text as plain paragraphs (an empty state until it is written); Markdown rendering comes with N14 in Phase 6, task 3 (the renderer exists since task 1, `MarkdownText`).
