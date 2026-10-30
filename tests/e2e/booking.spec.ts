@@ -307,6 +307,9 @@ test("books a day months ahead from the calendar, with more than 6 tanks", async
   for (let i = 0; i < months; i++) {
     await calendar.getByRole("button", { name: Booking.calendar.next }).click();
   }
+  await expect(calendar.getByRole("table")).toBeVisible();
+  await calendar.scrollIntoViewIfNeeded();
+  await screenshot(page, "booking-calendar");
   await calendar
     .getByRole("button", { name: new RegExp(`^\\S+ ${Number(date.slice(8))} `) })
     .click();
