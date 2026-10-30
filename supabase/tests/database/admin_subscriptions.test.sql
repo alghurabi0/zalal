@@ -9,7 +9,8 @@
 -- (no upper limit since migration `no_booking_limits`) and a positive price; another status is ZL036
 -- invalid_subscription_status; an overlap with the address's other active
 -- subscription is ZL035. The customer is told (subscription_activated).
--- admin_set_subscription_paid(id, paid): the paid tick of an active one.
+-- admin_set_subscription_paid(id, paid): the paid tick of an active one
+-- activated before the books start.
 -- admin_adjust_subscription_visits(id, delta, reason): adds delta to the
 -- visits used; used never goes below 0 and used plus held never above the
 -- total (22023 invalid_adjustment); a reason is required (ZL011).
@@ -148,6 +149,11 @@ select lives_ok(
 
 -- Paid --------------------------------------------------------------------------------------------
 
+-- The switch is for a subscription activated before the books start; in the
+-- books, payments tick it (migration finance_revenue; finance_payments.test.sql).
+select tests.clear_authentication();
+update public.finance_settings as s set start_on = (now() at time zone 'Asia/Baghdad')::date + 1 where s.id;
+select tests.authenticate_as(tests.admin());
 select lives_ok(
   $$ select public.admin_set_subscription_paid(tests.id('request'), true) $$,
   'an admin ticks paid'
