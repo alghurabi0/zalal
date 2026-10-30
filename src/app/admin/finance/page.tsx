@@ -78,6 +78,7 @@ async function Boxes({ searchParams }: PageProps<"/admin/finance">) {
         </Button>
       </div>
 
+      <h2 className="sr-only">{t("boxes.balancesTitle")}</h2>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {active.map((account) => (
           <li key={account.id}>
