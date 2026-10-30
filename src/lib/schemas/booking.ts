@@ -22,6 +22,15 @@ export const bookingItemSchema = z.union([
   z.object({ type: z.enum(tankTypes), size: z.enum(tankSizes), qty }),
 ]);
 
+/** booking_availability(from, to)'s range: at most 62 days (spec §5.9's calendar). */
+export const bookingDaysSchema = z
+  .object({ from: z.iso.date(), to: z.iso.date() })
+  .refine(({ from, to }) => {
+    const days = (Date.parse(to) - Date.parse(from)) / 86_400_000;
+    return days >= 0 && days < 62;
+  });
+export type BookingDaysInput = z.input<typeof bookingDaysSchema>;
+
 export const createBookingSchema = z.object({
   requestId: z.uuid(),
   addressId: z.uuid(),

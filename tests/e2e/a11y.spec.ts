@@ -13,7 +13,7 @@ import { baghdadDate, createCertificate, createOrder, createSlot } from "./helpe
 // for admin text links), names on the controls inside sheets, and a visible
 // focus while tabbing. Each role makes its own data.
 
-const { Home, Order, Settings } = messages;
+const { Booking, Home, Order, Settings } = messages;
 
 test.describe.configure({ timeout: 240_000 });
 
@@ -118,6 +118,11 @@ test("customer screens, sheets and focus", async ({ page }) => {
   const reschedule = page.getByRole("dialog", { name: Order.rescheduleSheet.title });
   await expect(reschedule).toBeVisible();
   await expectNoAxeViolations(page, "N7 reschedule sheet", '[role="dialog"]');
+  expect(await smallTargets(page)).toEqual([]);
+  // "تاريخ آخر" opens the month calendar under the days.
+  await reschedule.getByRole("button", { name: Booking.calendar.open }).click();
+  await expect(reschedule.getByRole("table")).toBeVisible();
+  await expectNoAxeViolations(page, "N7 month calendar", '[role="dialog"]');
   expect(await smallTargets(page)).toEqual([]);
   await reschedule.getByRole("button", { name: Order.rescheduleSheet.postpone }).click();
   await expect(page.getByRole("dialog", { name: Order.postponeSheet.title })).toBeVisible();

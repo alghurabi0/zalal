@@ -286,7 +286,7 @@ function SavedTankCard({
 }
 
 function DayAndSlot() {
-  const { data, draft, update } = useBooking();
+  const { data, draft, update, pickOtherDay } = useBooking();
   if (!draft) return null;
   return (
     <DaySlotPicker
@@ -295,6 +295,7 @@ function DayAndSlot() {
       slotId={draft.slotId}
       onDayChange={(serviceDate) => update((d) => ({ ...d, serviceDate, slotId: null }))}
       onSlotChange={(slotId) => update((d) => ({ ...d, slotId }))}
+      onOtherDay={pickOtherDay}
     />
   );
 }

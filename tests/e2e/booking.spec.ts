@@ -279,6 +279,56 @@ test("Upload refuses a video over a minute and removes a file", async ({ page })
   await expect(page.getByRole("definition").filter({ hasText: Checkout.filesNone })).toHaveCount(1);
 });
 
+test("books a day months ahead from the calendar, with more than 6 tanks", async ({ page }) => {
+  // No booking window and no tank limit (settled Oct 30, 2026).
+  slot = await createSlot();
+  const date = baghdadDate(100);
+  await signUp(page);
+  await page.goto("/book");
+
+  const line = page.getByRole("group", { name: /^عدد خزان سطح/ });
+  for (let i = 0; i < 9; i++)
+    await line.getByRole("button", { name: messages.UI.increase }).click();
+  // 10 × 35,000.
+  await expect(page.getByText("350,000 د.ع")).toBeVisible();
+  await expect(page.getByText("أكثر شي")).toHaveCount(0);
+
+  // The row shows two weeks; "تاريخ آخر" opens a month calendar.
+  await expect(page.locator(`input[name$="-day"][value="${date}"]`)).toHaveCount(0);
+  const open = page.getByRole("button", { name: Booking.calendar.open });
+  await open.click();
+  await expect(open).toHaveAttribute("aria-expanded", "true");
+  const calendar = page.getByRole("region", { name: Booking.calendar.title });
+  await expect(calendar.getByRole("button", { name: Booking.calendar.previous })).toBeDisabled();
+  const months =
+    (Number(date.slice(0, 4)) - Number(baghdadDate(0).slice(0, 4))) * 12 +
+    Number(date.slice(5, 7)) -
+    Number(baghdadDate(0).slice(5, 7));
+  for (let i = 0; i < months; i++) {
+    await calendar.getByRole("button", { name: Booking.calendar.next }).click();
+  }
+  await calendar
+    .getByRole("button", { name: new RegExp(`^\\S+ ${Number(date.slice(8))} `) })
+    .click();
+  await expect(calendar).toBeHidden();
+  await screenshot(page, "booking-calendar-picked");
+  await pickSlot(page, date, slot.label);
+  await page.getByRole("link", { name: Booking.next }).click();
+  await page.getByRole("link", { name: Upload.next }).click();
+  await expect(page.getByRole("definition").filter({ hasText: "10 خزانات" })).toHaveCount(1);
+  await page.getByRole("button", { name: Checkout.confirm }).click();
+
+  await page.waitForURL(/\/book\/done\//);
+  const { data: order } = await admin
+    .from("orders")
+    .select("service_date, slot_id, total_iqd, order_items(qty)")
+    .eq("id", page.url().split("/").pop()!)
+    .single()
+    .throwOnError();
+  expect(order).toMatchObject({ service_date: date, slot_id: slot.id, total_iqd: 350000 });
+  expect(order.order_items).toEqual([{ qty: 10 }]);
+});
+
 test("the booking steps can't be skipped", async ({ page }) => {
   await signUp(page);
   await page.goto("/book/confirm");

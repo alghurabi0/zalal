@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import type { AddressSummary } from "@/app/(customer)/addresses/address-picker";
+import { useOtherDay } from "@/components/booking/use-other-day";
 import type { DayOption } from "@/lib/booking/availability";
 import {
   type BookingDraft,
@@ -64,6 +65,8 @@ type BookingContextValue = {
   addFiles: (files: File[]) => Promise<AddProblem[]>;
   retryUpload: (id: string) => void;
   removeUpload: (id: string) => void;
+  /** Adds a day picked in the month calendar to data.days (useOtherDay). */
+  pickOtherDay: (day: DayOption) => void;
   /** A problem Checkout sent the customer back to fix. */
   notice: BookingError | null;
   setNotice: (notice: BookingError | null) => void;
@@ -79,11 +82,20 @@ const notRead = () => undefined;
  * uploads live in stores outside React (sessionStorage-backed), so uploads
  * keep running and a reload keeps the choices.
  */
-export function BookingProvider({ data, children }: { data: BookingData; children: ReactNode }) {
-  const { userId } = data;
+export function BookingProvider({
+  data: serverData,
+  children,
+}: {
+  data: BookingData;
+  children: ReactNode;
+}) {
+  const { userId } = serverData;
   const stored = useSyncExternalStore(subscribeDraft, () => getDraft(userId), notRead);
   const uploads = useSyncExternalStore(subscribeUploads, () => getUploads(userId), noUploads);
   const [notice, setNotice] = useState<BookingError | null>(null);
+  // The row of days plus a day picked in the calendar (also after a reload).
+  const otherDay = useOtherDay(serverData.days, stored?.serviceDate ?? null);
+  const data = useMemo(() => ({ ...serverData, days: otherDay.days }), [serverData, otherDay.days]);
 
   const context = useMemo(
     () => ({ addressId: data.address.id, savedTanks: data.savedTanks, days: data.days }),
@@ -123,10 +135,11 @@ export function BookingProvider({ data, children }: { data: BookingData; childre
       addFiles: (files) => addFiles(userId, files),
       retryUpload: (id) => retryUpload(userId, id),
       removeUpload: (id) => removeUpload(userId, id),
+      pickOtherDay: otherDay.pick,
       notice,
       setNotice,
     }),
-    [data, draft, update, latestDraft, uploads, notice, userId],
+    [data, draft, update, latestDraft, uploads, otherDay.pick, notice, userId],
   );
 
   return <BookingContext value={value}>{children}</BookingContext>;
