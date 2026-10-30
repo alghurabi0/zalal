@@ -375,7 +375,8 @@ as $$
 declare
   v_active boolean;
 begin
-  select a.active into v_active from public.finance_accounts as a where a.id = p_id;
+  -- Share lock: a switch-off running now (FOR UPDATE) finishes first, or waits for us.
+  select a.active into v_active from public.finance_accounts as a where a.id = p_id for share;
   if not found then
     raise exception using errcode = 'P0002', message = 'account_not_found';
   end if;
@@ -393,7 +394,7 @@ as $$
 declare
   v_active boolean;
 begin
-  select c.active into v_active from public.expense_categories as c where c.id = p_id;
+  select c.active into v_active from public.expense_categories as c where c.id = p_id for share;
   if not found then
     raise exception using errcode = 'P0002', message = 'category_not_found';
   end if;
