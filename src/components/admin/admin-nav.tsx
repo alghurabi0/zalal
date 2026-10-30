@@ -18,6 +18,7 @@ import {
   Star,
   Tag,
   Users,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,7 @@ const items = [
   { href: routes.adminTickets, key: "tickets", icon: MessageSquareWarning },
   { href: routes.adminRatings, key: "ratings", icon: Star },
   { href: routes.adminSubscriptions, key: "subscriptions", icon: Repeat },
+  { href: routes.adminFinance, key: "finance", icon: Wallet },
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
   { href: routes.adminLive, key: "live", icon: MapPinned },
   { href: routes.adminPrices, key: "prices", icon: Tag },

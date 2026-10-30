@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { z } from "zod";
 
 import { AdminPage } from "@/components/admin/admin-page";
+import { Money } from "@/components/admin/finance";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { TicketStatusBadge } from "@/components/tickets/ticket-status-badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/input";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from "@/lib/admin/audit";
+import { adminBoxesHref, adminExpensesHref } from "@/lib/admin/finance-query";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
 import { CATEGORY_ICONS, type CategoryIcon } from "@/lib/articles/category-icons";
 import { ticketNumber } from "@/lib/certificates/format";
@@ -29,10 +31,16 @@ import {
 } from "@/lib/admin/staff-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import type { Json } from "@/lib/database.types";
-import { formatDayTime } from "@/lib/dates";
+import { formatDay, formatDayTime } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
+import {
+  EXPENSE_CATEGORY_KINDS,
+  type ExpenseCategoryKind,
+  FINANCE_ACCOUNT_KINDS,
+  type FinanceAccountKind,
+} from "@/lib/schemas/finance";
 
 const querySchema = z.object({
   entity: z.enum(AUDIT_ENTITIES).optional().catch(undefined),
@@ -226,6 +234,7 @@ async function EntryRow({ entry, names }: { entry: AuditEntry; names: Names }) {
 
 async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
   const t = await getTranslations("Admin.audit");
+  const tFinance = await getTranslations("Admin.finance");
   const tTanks = await getTranslations("Tanks");
   switch (entry.entity as AuditEntity) {
     case "orders": {
@@ -302,6 +311,44 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
       );
     case "settings":
       return <>{t("entities.settings")}</>;
+    case "finance_settings":
+      return <>{t("entities.finance_settings")}</>;
+    case "finance_accounts": {
+      const account = names.financeAccounts.get(entry.entityId);
+      return (
+        <>
+          {account
+            ? (account.name ?? tFinance("crewBox", { crew: account.crewName ?? "" }))
+            : entry.entityId.slice(0, 8)}
+        </>
+      );
+    }
+    case "expense_categories":
+      return (
+        <>
+          {names.expenseCategories.get(Number(entry.entityId)) ??
+            diffString(entry.diff, "name") ??
+            entry.entityId}
+        </>
+      );
+    case "expenses":
+      return (
+        <Link
+          href={adminExpensesHref({ expense: entry.entityId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {t("entities.expenses")}
+        </Link>
+      );
+    case "finance_transfers":
+      return (
+        <Link
+          href={adminBoxesHref({ transfer: entry.entityId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {t("entities.finance_transfers")}
+        </Link>
+      );
     case "subscriptions":
       return (
         <Link
@@ -314,6 +361,14 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
     default:
       return <bdi dir="ltr">{entry.entityId}</bdi>;
   }
+}
+
+function isAccountKind(value: string): value is FinanceAccountKind {
+  return (FINANCE_ACCOUNT_KINDS as readonly string[]).includes(value);
+}
+
+function isCategoryKind(value: string): value is ExpenseCategoryKind {
+  return (EXPENSE_CATEGORY_KINDS as readonly string[]).includes(value);
 }
 
 function isCategoryIcon(value: string): value is CategoryIcon {
@@ -370,6 +425,15 @@ const KNOWN_FIELDS = [
   "status",
   "icon",
   "order",
+  "start_on",
+  "kind",
+  "opening_balance_iqd",
+  "spent_on",
+  "moved_on",
+  "account_id",
+  "from_account_id",
+  "to_account_id",
+  "amount_iqd",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -431,6 +495,7 @@ async function Value({
 }): Promise<ReactNode> {
   const t = await getTranslations("Admin.audit");
   const tContent = await getTranslations("Admin.content");
+  const tFinance = await getTranslations("Admin.finance");
   if (field === null && action === "order.transition" && typeof value === "string") {
     if ((ORDER_STATUSES as readonly string[]).includes(value)) {
       return <StatusBadge status={value as (typeof ORDER_STATUSES)[number]} />;
@@ -450,6 +515,34 @@ async function Value({
   }
   if (value === null) return <>{t("none")}</>;
   if (typeof value === "boolean") return <>{value ? t("yes") : t("no")}</>;
+  if (field === "amount_iqd" || field === "opening_balance_iqd") {
+    if (typeof value === "number") return <Money amount={value} />;
+  }
+  if (
+    (field === "account_id" || field === "from_account_id" || field === "to_account_id") &&
+    typeof value === "string"
+  ) {
+    const account = names.financeAccounts.get(value);
+    if (account)
+      return <>{account.name ?? tFinance("crewBox", { crew: account.crewName ?? "" })}</>;
+  }
+  if (action?.startsWith("expense.") && field === "category_id" && typeof value === "number") {
+    return <>{names.expenseCategories.get(value) ?? value}</>;
+  }
+  if (field === "kind" && typeof value === "string") {
+    if (action?.startsWith("finance_account.") && isAccountKind(value)) {
+      return <>{tFinance(`kinds.${value}`)}</>;
+    }
+    if (action?.startsWith("expense_category.") && isCategoryKind(value)) {
+      return <>{tFinance(`categoryKinds.${value}`)}</>;
+    }
+  }
+  if (
+    (field === "spent_on" || field === "moved_on" || field === "start_on") &&
+    typeof value === "string"
+  ) {
+    return <>{formatDay(value)}</>;
+  }
   if (action?.startsWith("article.")) {
     if (field === "category_id" && typeof value === "number") {
       return <>{names.categories.get(value) ?? value}</>;

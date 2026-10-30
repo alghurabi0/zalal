@@ -78,6 +78,11 @@ export const AUDIT_ENTITIES = [
   "articles",
   "article_categories",
   "subscriptions",
+  "finance_settings",
+  "finance_accounts",
+  "expense_categories",
+  "expenses",
+  "finance_transfers",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -144,6 +149,14 @@ export async function auditAdmins(): Promise<AdminAccount[]> {
   return data.map((p) => ({ id: p.id, fullName: p.full_name, phone: p.phone }));
 }
 
+const FINANCE_ENTITIES = new Set<string>([
+  "finance_settings",
+  "finance_accounts",
+  "expense_categories",
+  "expenses",
+  "finance_transfers",
+]);
+
 /** Crew ids a log row names: a crew row, or an order's old and new crew. */
 function crewIdsIn(entry: AuditEntry): string[] {
   if (entry.entity === "crews") return [entry.entityId];
@@ -181,6 +194,9 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   articles: Map<string, string>;
   categories: Map<number, string>;
   subscriptions: Map<string, string | null>;
+  /** Money boxes by id: the name, or the crew of a crew box. */
+  financeAccounts: Map<string, { name: string | null; crewName: string | null }>;
+  expenseCategories: Map<number, string>;
 }> {
   const supabase = await createClient();
   const idsOf = (entity: string) => [
@@ -192,8 +208,19 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   const articleIds = idsOf("articles");
   const categoryIds = [...new Set(entries.flatMap(categoryIdsIn))];
   const subscriptionIds = idsOf("subscriptions");
+  // A few boxes and categories: read them all when a row is about accounting.
+  const finance = entries.some((e) => FINANCE_ENTITIES.has(e.entity));
   const none = Promise.resolve({ data: [], error: null });
-  const [orders, crews, tickets, articles, categories, subscriptions] = await Promise.all([
+  const [
+    orders,
+    crews,
+    tickets,
+    articles,
+    categories,
+    subscriptions,
+    financeAccounts,
+    expenseCategories,
+  ] = await Promise.all([
     orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
     crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
     ticketIds.length ? supabase.from("tickets").select("id, number").in("id", ticketIds) : none,
@@ -204,6 +231,8 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     subscriptionIds.length
       ? supabase.from("subscription_overview").select("id, customer_name").in("id", subscriptionIds)
       : none,
+    finance ? supabase.from("finance_accounts").select("id, name, crew:crews(name)") : none,
+    finance ? supabase.from("expense_categories").select("id, name") : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
   if (crews.error) throw new Error(`Audit crews read failed: ${crews.error.message}`);
@@ -215,6 +244,12 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   if (subscriptions.error) {
     throw new Error(`Audit subscriptions read failed: ${subscriptions.error.message}`);
   }
+  if (financeAccounts.error) {
+    throw new Error(`Audit boxes read failed: ${financeAccounts.error.message}`);
+  }
+  if (expenseCategories.error) {
+    throw new Error(`Audit expense categories read failed: ${expenseCategories.error.message}`);
+  }
   return {
     orders: new Map(orders.data.map((o) => [o.id, o.number])),
     crews: new Map(crews.data.map((c) => [c.id, c.name])),
@@ -222,5 +257,9 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     articles: new Map(articles.data.map((article) => [article.id, article.title])),
     categories: new Map(categories.data.map((category) => [category.id, category.name])),
     subscriptions: new Map(subscriptions.data.map((s) => [s.id, s.customer_name])),
+    financeAccounts: new Map(
+      financeAccounts.data.map((a) => [a.id, { name: a.name, crewName: a.crew?.name ?? null }]),
+    ),
+    expenseCategories: new Map(expenseCategories.data.map((c) => [c.id, c.name])),
   };
 }

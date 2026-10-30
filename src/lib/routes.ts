@@ -128,6 +128,12 @@ export const routes = {
   /** Subscriptions (A7), filtered by its query string; `?subscription=` opens the drawer. */
   adminSubscriptions: "/admin/subscriptions",
   adminSubscription: (id: string) => `/admin/subscriptions?subscription=${encodeURIComponent(id)}`,
+  /** Accounts (spec §8.3): the money boxes and transfers (A15); `?month=`, `?transfer=`. */
+  adminFinance: "/admin/finance",
+  /** Expenses (A16), filtered by its query string; `?expense=` opens the drawer. */
+  adminExpenses: "/admin/finance/expenses",
+  /** Accounts settings (A17): the start day, the boxes and the expense categories. */
+  adminFinanceSettings: "/admin/finance/settings",
 } as const;
 
 /**
