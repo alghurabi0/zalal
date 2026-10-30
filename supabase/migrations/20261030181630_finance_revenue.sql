@@ -44,8 +44,11 @@
 -- 6. A subscription in the books is "paid" exactly while its payments cover
 --    its price less its discount (private.sync_subscription_paid, both
 --    ways); A7's switch keeps only the ones activated before the start day
---    (ZL053 paid_set_by_finance). admin_activate_subscription is unchanged:
---    the new A7 form sends paid false, and the payment is recorded after.
+--    (ZL053 paid_set_by_finance). admin_activate_subscription ignores its
+--    p_paid (kept for the app deployed before this migration): an
+--    activation is always in the books, so it starts unpaid and a payment
+--    ticks it. Moving the start day earlier re-checks the subscriptions it
+--    brings in.
 --
 -- 6b. finance_customer_balances (security invoker): each customer's items
 --    added up, each manual sale alone; admin_revenue_summary(from, to) and
@@ -53,13 +56,15 @@
 --    revenue tab's totals, and A16's count and total in SQL (task 1 summed
 --    them in the app 1,000 rows at a time).
 --
--- Changed functions: finance_account_balances adds the live payments;
+-- Changed functions (several from the RLS audit of this migration):
+-- finance_account_balances adds the live payments; admin_activate_subscription;
 -- admin_update_finance_settings also refuses to move the start past a live
 -- payment or manual sale (ZL046) and records the automatic payments of the
 -- orders a move brings into the books; admin_set_subscription_paid (ZL053);
 -- private.scrub_audit_text (delete_account) also blanks the notes of the
--- customer's payments, the reasons of their discounts and the note and
--- reason in those audit rows.
+-- customer's payments, the reasons of their discounts, their void reasons
+-- ('-deleted-', since a void keeps one) and the note and reason in those
+-- audit rows.
 --
 -- Access: admins read every new table and the view; guests, customers and
 -- crews nothing. Written only by audited security definer RPCs:
@@ -1109,7 +1114,98 @@ begin
     perform private.record_crew_cash(o.id)
     from public.orders as o
     where o.status = 'completed' and o.cash_collected and o.subscription_id is null and o.crew_id is not null;
+    -- And subscriptions: their paid tick now follows their payments (RLS audit).
+    perform private.sync_subscription_paid(s.id)
+    from public.subscriptions as s
+    where s.activated_at is not null
+      and (s.activated_at at time zone 'Asia/Baghdad')::date >= p_start_on
+      and (s.activated_at at time zone 'Asia/Baghdad')::date < v_old;
   end if;
+end;
+$$;
+
+-- admin_activate_subscription: paid comes from the payments ------------------------------
+
+-- p_paid stays in the signature (the app deployed before this migration
+-- still sends it) and is ignored.
+create or replace function public.admin_activate_subscription(
+  p_subscription_id uuid,
+  p_starts_on date,
+  p_visits integer,
+  p_tanks integer,
+  p_price_iqd integer,
+  p_paid boolean,
+  p_note text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_sub public.subscriptions := private.lock_subscription(p_subscription_id);
+  v_today date := (now() at time zone 'Asia/Baghdad')::date;
+  v_ends_on date;
+  v_note text := nullif(btrim(p_note), '');
+begin
+  if v_sub.status <> 'requested' then
+    raise exception using errcode = 'ZL036', message = 'invalid_subscription_status';
+  end if;
+  if p_starts_on is null or p_starts_on < v_today or p_starts_on > v_today + 366 then
+    raise exception using errcode = '22023', message = 'invalid_start';
+  end if;
+  if p_visits is null or p_visits not between 1 and 12 then
+    raise exception using errcode = '22023', message = 'invalid_visits';
+  end if;
+  -- Any number of tanks; only what tanks_covered (smallint) can hold.
+  if p_tanks is null or p_tanks not between 1 and 32767 then
+    raise exception using errcode = '22023', message = 'invalid_tanks';
+  end if;
+  if p_price_iqd is null or p_price_iqd not between 1 and 10000000 then
+    raise exception using errcode = '22023', message = 'invalid_price';
+  end if;
+
+  v_ends_on := (p_starts_on + interval '12 months' - interval '1 day')::date;
+  if exists (
+    select 1 from public.subscriptions as s
+    where s.address_id = v_sub.address_id
+      and s.status = 'active'
+      and daterange(s.starts_on, s.ends_on, '[]') && daterange(p_starts_on, v_ends_on, '[]')
+  ) then
+    raise exception using errcode = 'ZL035', message = 'subscription_exists';
+  end if;
+
+  update public.subscriptions as s
+  set
+    status = 'active',
+    starts_on = p_starts_on,
+    ends_on = v_ends_on,
+    visits_total = p_visits,
+    tanks_covered = p_tanks,
+    price_iqd = p_price_iqd,
+    -- Activated today, so always in the books: payments set paid
+    -- (private.sync_subscription_paid), never the form (RLS audit).
+    paid = false,
+    activated_at = now()
+  where s.id = v_sub.id
+  returning * into v_sub;
+
+  if v_note is not null then
+    perform private.add_subscription_note(v_sub.id, v_note);
+  end if;
+
+  perform private.log_admin_action(
+    'subscription.activate', 'subscriptions', v_sub.id::text,
+    jsonb_build_object(
+      'starts_on', v_sub.starts_on,
+      'ends_on', v_sub.ends_on,
+      'visits_total', v_sub.visits_total,
+      'tanks_covered', v_sub.tanks_covered,
+      'price_iqd', v_sub.price_iqd,
+      'paid', v_sub.paid
+    )
+  );
+  perform private.notify_user(v_sub.user_id, 'subscription_activated', private.subscription_notice(v_sub));
 end;
 $$;
 
@@ -1194,6 +1290,21 @@ as $$
   update public.finance_discounts as d
   set reason = null
   where d.reason is not null
+    and (
+      d.order_id in (select o.id from public.orders as o where o.customer_id = p_user_id)
+      or d.subscription_id in (select s.id from public.subscriptions as s where s.user_id = p_user_id)
+    );
+  -- A void keeps a reason (its check), so the placeholder addresses use (RLS audit).
+  update public.finance_payments as p
+  set void_reason = '-deleted-'
+  where p.void_reason is not null
+    and (
+      p.order_id in (select o.id from public.orders as o where o.customer_id = p_user_id)
+      or p.subscription_id in (select s.id from public.subscriptions as s where s.user_id = p_user_id)
+    );
+  update public.finance_discounts as d
+  set void_reason = '-deleted-'
+  where d.void_reason is not null
     and (
       d.order_id in (select o.id from public.orders as o where o.customer_id = p_user_id)
       or d.subscription_id in (select s.id from public.subscriptions as s where s.user_id = p_user_id)
