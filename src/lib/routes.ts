@@ -128,7 +128,7 @@ export const routes = {
   /** Subscriptions (A7), filtered by its query string; `?subscription=` opens the drawer. */
   adminSubscriptions: "/admin/subscriptions",
   adminSubscription: (id: string) => `/admin/subscriptions?subscription=${encodeURIComponent(id)}`,
-  /** Accounts (spec §8.3): the money boxes and transfers (A15); `?month=`, `?transfer=`. */
+  /** Accounts (spec §8.3): the money boxes and transfers (A15); `?month=`, `?n=`, `?transfer=`. */
   adminFinance: "/admin/finance",
   /** Expenses (A16), filtered by its query string; `?expense=` opens the drawer. */
   adminExpenses: "/admin/finance/expenses",
@@ -139,6 +139,12 @@ export const routes = {
   adminRevenue: "/admin/finance/revenue",
   /** Accounts settings (A17): the start day, the boxes and the expense categories. */
   adminFinanceSettings: "/admin/finance/settings",
+  /** Accounting overview (A19): boxes, the last 6 months, where the money went, crew cash. */
+  adminFinanceOverview: "/admin/finance/overview",
+  /** Reports (A20): a month's profit and loss and its close (`?month=`), or a year (`?year=`). */
+  adminFinanceReports: "/admin/finance/reports",
+  /** A20's CSV download, with the page's `?month=` or `?year=`. */
+  adminFinanceReportsCsv: "/admin/finance/reports/csv",
 } as const;
 
 /**

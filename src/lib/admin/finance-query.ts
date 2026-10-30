@@ -67,9 +67,13 @@ export function adminExpensesHref(query: Partial<AdminExpensesQuery>): string {
   return search ? `${routes.adminExpenses}?${search}` : routes.adminExpenses;
 }
 
+export const ADMIN_BOXES_PAGE = ADMIN_ORDERS_PAGE;
+
 export const adminBoxesQuerySchema = z.object({
   /** The month of the transfers listed. */
   month: monthSchema,
+  /** How many transfers show. */
+  n: pageSizeSchema(ADMIN_BOXES_PAGE, ADMIN_ORDERS_MAX),
   transfer: drawerSchema,
   /** A new transfer from this box (a crew's "استلم المبلغ"). */
   from: z.uuid().optional().catch(undefined),
@@ -86,6 +90,7 @@ export function parseAdminBoxesQuery(
 export function adminBoxesHref(query: Partial<AdminBoxesQuery>): string {
   const params = new URLSearchParams();
   if (query.month) params.set("month", query.month);
+  if (query.n && query.n !== ADMIN_BOXES_PAGE) params.set("n", String(query.n));
   if (query.transfer) params.set("transfer", query.transfer);
   if (query.from) params.set("from", query.from);
   const search = params.toString();
@@ -124,4 +129,33 @@ export function adminRevenueHref(query: Partial<AdminRevenueQuery>): string {
   if (query.sale) params.set("sale", query.sale);
   const search = params.toString();
   return search ? `${routes.adminRevenue}?${search}` : routes.adminRevenue;
+}
+
+export const adminReportsQuerySchema = z.object({
+  /** The month's profit and loss ("2026-10"); the default view. */
+  month: monthSchema,
+  /** The year's twelve months side by side ("2026"); wins over `month`. */
+  year: z
+    .string()
+    .regex(/^20\d{2}$/)
+    .optional()
+    .catch(undefined),
+});
+
+export type AdminReportsQuery = z.output<typeof adminReportsQuerySchema>;
+
+export function parseAdminReportsQuery(
+  params: Record<string, string | string[] | undefined>,
+): AdminReportsQuery {
+  return adminReportsQuerySchema.parse(firstValues(params));
+}
+
+/** The reports page, or with `csv` its CSV download, for a month or a year. */
+export function adminReportsHref(query: AdminReportsQuery, csv = false): string {
+  const params = new URLSearchParams();
+  if (query.year) params.set("year", query.year);
+  else if (query.month) params.set("month", query.month);
+  const search = params.toString();
+  const base = csv ? routes.adminFinanceReportsCsv : routes.adminFinanceReports;
+  return search ? `${base}?${search}` : base;
 }

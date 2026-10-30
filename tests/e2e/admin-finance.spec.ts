@@ -48,12 +48,12 @@ async function addCategory(page: Page, name: string) {
   await expect(page.getByRole("status").getByText(F.settings.categoryAdded)).toBeVisible();
 }
 
-test("the sidebar's الحسابات reaches the boxes, expenses and settings", async ({ page }) => {
+test("the sidebar's الحسابات opens the overview and reaches every tab", async ({ page }) => {
   await logInAsAdmin(page);
   const nav = page.getByRole("navigation", { name: Admin.nav.label });
   await nav.getByRole("link", { name: Admin.nav.finance, exact: true }).click();
-  await expect(page).toHaveURL("/admin/finance");
-  await expect(page.getByRole("heading", { level: 1, name: F.boxes.title })).toBeVisible();
+  await expect(page).toHaveURL("/admin/finance/overview");
+  await expect(page.getByRole("heading", { level: 1, name: F.overview.title })).toBeVisible();
   await expect(nav.getByRole("link", { name: Admin.nav.finance, exact: true })).toHaveAttribute(
     "aria-current",
     "page",
@@ -62,8 +62,10 @@ test("the sidebar's الحسابات reaches the boxes, expenses and settings", 
   const tabs = page.getByRole("navigation", { name: F.tabs.label });
   for (const [tab, url, heading] of [
     [F.tabs.expenses, "/admin/finance/expenses", F.expenses.title],
+    [F.tabs.reports, "/admin/finance/reports", F.reports.title],
     [F.tabs.settings, "/admin/finance/settings", F.settings.title],
     [F.tabs.boxes, "/admin/finance", F.boxes.title],
+    [F.tabs.overview, "/admin/finance/overview", F.overview.title],
   ] as const) {
     await tabs.getByRole("link", { name: tab, exact: true }).click();
     await expect(page).toHaveURL(url);

@@ -17,6 +17,7 @@ export const ADMIN_ORDER_ERRORS = [
   "outside_subscription_period",
   "no_visits_left",
   "subscription_tanks_exceeded",
+  "month_closed",
   "not_found",
   "failed",
 ] as const;
@@ -29,6 +30,8 @@ const byCode: Record<string, AdminOrderError> = {
   ZL010: "invalid_transition",
   ZL013: "crew_inactive",
   ZL014: "crew_change_not_allowed",
+  // An override out of completed for an order completed in a closed month.
+  ZL054: "month_closed",
   P0002: "not_found",
 };
 

@@ -44,6 +44,8 @@ export const AUDIT_ACTIONS = [
   "subscription.note",
   "order.subscription",
   "finance.settings",
+  "finance.month_close",
+  "finance.month_reopen",
   "finance_account.create",
   "finance_account.update",
   "expense_category.create",

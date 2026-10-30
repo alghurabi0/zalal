@@ -54,6 +54,11 @@
   --color-star: #d97706; /* rating stars */
   --color-whatsapp: #128c7e; /* WhatsApp glyph (Chat, Profile); icons only, 3:1 */
 
+  /* Accounting charts (A19): two categorical series, fills only (text stays in ink).
+     Checked with the dataviz validator on white: CVD ΔE 27, 3:1 on the surface. */
+  --color-chart-revenue: #1565c0;
+  --color-chart-expense: #d4720b;
+
   /* Radii. Role names for the spec's shapes; pixel names for one-offs.
      Circles and pills use rounded-full. */
   --radius-*: initial;

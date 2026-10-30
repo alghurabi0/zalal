@@ -193,3 +193,93 @@ test("A13 uploads the certificate stamp, the certificate prints it, and removing
   const files = await admin.storage.from("public-content").list("stamp");
   expect(files.data?.map((file) => `stamp/${file.name}`)).not.toContain(path);
 });
+
+// A20's month close (Phase 7, task 3) is global: a closed month refuses
+// every test's records dated in it. The books start last month for this
+// test, which closes and reopens it, then puts the settings back.
+test("an admin closes last month, its records lock, and reopens it with a reason", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const F = Admin.finance;
+  const today = baghdadDate(0);
+  const [year, month] = today.split("-").map(Number) as [number, number];
+  const last = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, "0")}`;
+  const { data: before } = await admin
+    .from("finance_settings")
+    .select("start_on, closed_through")
+    .single()
+    .throwOnError();
+  let expenseId: string | null = null;
+  try {
+    await admin
+      .from("finance_settings")
+      .update({ start_on: `${last}-01`, closed_through: null })
+      .eq("id", true)
+      .throwOnError();
+    const { id } = await logInAsAdmin(page);
+    const { data: cash } = await admin
+      .from("finance_accounts")
+      .select("id")
+      .eq("kind", "cash")
+      .order("created_at")
+      .limit(1)
+      .single()
+      .throwOnError();
+    const { data: category } = await admin
+      .from("expense_categories")
+      .select("id")
+      .eq("active", true)
+      .order("id")
+      .limit(1)
+      .single()
+      .throwOnError();
+    const { data: expense } = await admin
+      .from("expenses")
+      .insert({
+        spent_on: `${last}-10`,
+        category_id: category.id,
+        account_id: cash.id,
+        amount_iqd: 3000,
+        created_by: id,
+      })
+      .select("id")
+      .single()
+      .throwOnError();
+    expenseId = expense.id;
+
+    await page.goto(`/admin/finance/reports?month=${last}`);
+    await page.getByRole("button", { name: F.reports.close }).click();
+    await page.getByRole("button", { name: F.reports.closeConfirm }).click();
+    await expect(page.getByText(F.reports.statusClosed)).toBeVisible();
+    await expect(page.getByText(F.closedBadge, { exact: true })).toBeVisible();
+    await screenshot(page, "admin-finance-month-closed");
+
+    // Its expense is shown, not edited; the start day holds still.
+    await page.goto(`/admin/finance/expenses?month=${last}&expense=${expense.id}`);
+    await expect(page.getByText(F.closedRecord)).toBeVisible();
+    await expect(page.getByRole("button", { name: F.save })).toHaveCount(0);
+    await page.goto("/admin/finance/settings");
+    await expect(page.getByText(F.settings.startLocked)).toBeVisible();
+
+    await page.goto(`/admin/finance/reports?month=${last}`);
+    await page.getByRole("button", { name: F.reports.reopen }).click();
+    const form = page.locator("form").filter({ has: page.getByLabel(F.reports.reopenReason) });
+    await form.getByRole("button", { name: F.reports.reopenConfirm }).click();
+    await expect(form.getByText(Admin.editErrors.reason_required)).toBeVisible();
+    await form.getByLabel(F.reports.reopenReason).fill("مصروف ناقص");
+    await form.getByRole("button", { name: F.reports.reopenConfirm }).click();
+    await expect(page.getByText(F.reports.statusOpen)).toBeVisible();
+    await expect(page.getByRole("button", { name: F.reports.close })).toBeVisible();
+  } finally {
+    // The expense first: the books then start after its day again.
+    await admin.from("finance_settings").update({ closed_through: null }).eq("id", true);
+    if (expenseId) await admin.from("expenses").delete().eq("id", expenseId);
+    await admin
+      .from("finance_settings")
+      .update({ start_on: before.start_on, closed_through: before.closed_through })
+      .eq("id", true)
+      .throwOnError();
+  }
+});

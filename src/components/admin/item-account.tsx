@@ -5,8 +5,9 @@ import { accountName, Money } from "@/components/admin/finance";
 import { ItemAccountActions } from "@/components/admin/revenue-forms";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { type FinanceAccount, financeAccounts, financeStartOn } from "@/lib/admin/finance-queries";
+import { type FinanceAccount, financeAccounts, financeBooks } from "@/lib/admin/finance-queries";
 import { adminRevenueHref } from "@/lib/admin/finance-query";
+import { type FinanceBooks, firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
 import { itemAccount, type ItemRef } from "@/lib/admin/revenue-queries";
 import { baghdadToday, formatDay } from "@/lib/dates";
 
@@ -23,14 +24,14 @@ export async function ItemAccountCard({
   books,
 }: {
   item: ItemRef;
-  /** The boxes and the start day, when the page already has them (a list of cards). */
-  books?: { boxes: FinanceAccount[]; startOn: string };
+  /** The boxes, the start day and the close, when the page already has them (a list of cards). */
+  books?: { boxes: FinanceAccount[]; books: FinanceBooks };
 }) {
   const t = await getTranslations("Admin.finance");
-  const [account, boxes, startOn] = await Promise.all([
+  const [account, boxes, settings] = await Promise.all([
     itemAccount(item),
     books?.boxes ?? financeAccounts(),
-    books?.startOn ?? financeStartOn(),
+    books?.books ?? financeBooks(),
   ]);
   const { order, receivable, payments, discount } = account;
   // A covered order is paid through its subscription; one paid before it was
@@ -157,6 +158,9 @@ export async function ItemAccountCard({
         </ul>
       )}
 
+      {counted && receivable?.revenueOn && isClosed(settings, receivable.revenueOn) && (
+        <p className="text-13 text-muted">{t("account.discountClosed")}</p>
+      )}
       <ItemAccountActions
         // Fresh forms after every change.
         key={`${paid}-${balance}-${discount?.id ?? ""}-${discount?.amountIqd ?? ""}`}
@@ -173,14 +177,22 @@ export async function ItemAccountCard({
             ? { id: discount.id, amountIqd: discount.amountIqd, reason: discount.reason }
             : null
         }
-        discountMax={item.kind !== "sale" && counted && receivable ? receivable.totalIqd : null}
+        // A discount counts on the item's revenue day: none once that month is closed.
+        discountMax={
+          item.kind !== "sale" &&
+          counted &&
+          receivable &&
+          !(receivable.revenueOn && isClosed(settings, receivable.revenueOn))
+            ? receivable.totalIqd
+            : null
+        }
         boxes={boxes.map((box) => ({
           id: box.id,
           label: boxName.get(box.id) ?? "",
           active: box.active,
         }))}
         today={baghdadToday()}
-        startOn={startOn}
+        firstDay={firstOpenDay(settings)}
       />
     </Card>
   );

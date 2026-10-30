@@ -169,6 +169,19 @@ export const expenseCategoryIdSchema = z.number().int().positive();
 export const financeSettingsSchema = z.object({ startOn: z.iso.date() });
 export type FinanceSettingsInput = z.input<typeof financeSettingsSchema>;
 
+/** A20's month close: "2026-10". Reopening takes a reason too. */
+const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+export const monthCloseSchema = z.object({ month });
+export type MonthCloseInput = z.input<typeof monthCloseSchema>;
+export const monthReopenSchema = z.object({
+  month,
+  reason: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(z.string().min(1).max(NOTE_MAX)),
+});
+export type MonthReopenInput = z.input<typeof monthReopenSchema>;
+
 /**
  * A typed amount ("45,000", "45000", or with Arabic-Indic digits and the
  * Arabic thousands separator) as whole IQD; null when it isn't a whole

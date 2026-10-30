@@ -3,14 +3,24 @@ import { describe, expect, it } from "vitest";
 import { AUDIT_ACTIONS } from "@/lib/admin/audit";
 import { adminEditErrorFor } from "@/lib/admin/edit-errors";
 import {
+  ADMIN_BOXES_PAGE,
   ADMIN_EXPENSES_PAGE,
   adminBoxesHref,
   adminExpensesHref,
+  adminReportsHref,
   adminRevenueHref,
   parseAdminBoxesQuery,
   parseAdminExpensesQuery,
+  parseAdminReportsQuery,
   parseAdminRevenueQuery,
 } from "@/lib/admin/finance-query";
+import {
+  firstOpenDay,
+  isClosed,
+  type MonthReport,
+  reportLines,
+  toCsv,
+} from "@/lib/admin/finance-reports";
 import {
   discountSchema,
   expenseCategorySchema,
@@ -18,6 +28,8 @@ import {
   financeAccountSchema,
   manualSaleSchema,
   parseAmount,
+  monthCloseSchema,
+  monthReopenSchema,
   paymentSchema,
   transferSchema,
   voidSchema,
@@ -163,10 +175,30 @@ describe("boxes URL", () => {
     expect(adminBoxesHref(query)).toBe(`/admin/finance?transfer=new&from=${uuid}`);
   });
   it("drops bad values", () => {
-    expect(parseAdminBoxesQuery({ month: "26-10", transfer: "1", from: "x" })).toEqual({
+    expect(parseAdminBoxesQuery({ month: "26-10", transfer: "1", from: "x", n: "7" })).toEqual({
       month: undefined,
+      n: ADMIN_BOXES_PAGE,
       transfer: undefined,
       from: undefined,
+    });
+  });
+  it("shows more transfers", () => {
+    expect(adminBoxesHref({ month: "2026-10", n: ADMIN_BOXES_PAGE * 2 })).toBe(
+      `/admin/finance?month=2026-10&n=${ADMIN_BOXES_PAGE * 2}`,
+    );
+  });
+});
+
+describe("reports URL", () => {
+  it("is a month by default, or a year", () => {
+    expect(adminReportsHref({ month: "2026-10" })).toBe("/admin/finance/reports?month=2026-10");
+    expect(adminReportsHref({ year: "2026" })).toBe("/admin/finance/reports?year=2026");
+    expect(adminReportsHref({ year: "2026" }, true)).toBe("/admin/finance/reports/csv?year=2026");
+  });
+  it("drops bad values", () => {
+    expect(parseAdminReportsQuery({ month: "2026-13", year: "26" })).toEqual({
+      month: undefined,
+      year: undefined,
     });
   });
 });
@@ -188,6 +220,10 @@ describe("adminEditErrorFor (accounting)", () => {
     ["ZL053", "paid_set_by_finance", "paid_set_by_finance"],
     ["22023", "same_account", "same_account"],
     ["ZL011", "reason_required", "reason_required"],
+    ["ZL054", "month_closed", "month_closed"],
+    ["ZL055", "close_not_allowed", "close_not_allowed"],
+    ["ZL055", "reopen_not_allowed", "reopen_not_allowed"],
+    ["ZL056", "books_closed", "books_closed"],
   ])("%s %s → %s", (code, message, expected) => {
     expect(adminEditErrorFor({ code, message })).toBe(expected);
   });
@@ -300,5 +336,110 @@ describe("revenue URL", () => {
       customer: undefined,
       sale: undefined,
     });
+  });
+});
+
+describe("month close", () => {
+  const books = { startOn: "2026-08-10", closedThrough: "2026-09-30" };
+  it("opens records the day after the last closed month", () => {
+    expect(firstOpenDay(books)).toBe("2026-10-01");
+    expect(firstOpenDay({ ...books, closedThrough: null })).toBe("2026-08-10");
+  });
+  it("knows a closed day or month", () => {
+    expect(isClosed(books, "2026-09-30")).toBe(true);
+    expect(isClosed(books, "2026-09")).toBe(true);
+    expect(isClosed(books, "2026-10-01")).toBe(false);
+    expect(isClosed(books, "2026-10")).toBe(false);
+    expect(isClosed({ ...books, closedThrough: null }, "2026-08")).toBe(false);
+  });
+  it("closes a month and reopens it with a reason", () => {
+    expect(monthCloseSchema.safeParse({ month: "2026-09" }).success).toBe(true);
+    expect(monthCloseSchema.safeParse({ month: "2026-9" }).success).toBe(false);
+    expect(monthReopenSchema.safeParse({ month: "2026-09", reason: "  " }).success).toBe(false);
+    expect(monthReopenSchema.parse({ month: "2026-09", reason: " مصروف ناقص " }).reason).toBe(
+      "مصروف ناقص",
+    );
+  });
+});
+
+describe("report lines", () => {
+  const month = (m: string, patch: Partial<MonthReport>): MonthReport => ({
+    month: m,
+    ordersIqd: 0,
+    subscriptionsIqd: 0,
+    salesIqd: 0,
+    discountsIqd: 0,
+    revenueIqd: 0,
+    expensesIqd: 0,
+    profitIqd: 0,
+    receivedIqd: 0,
+    refundedIqd: 0,
+    netCashIqd: 0,
+    closed: false,
+    ...patch,
+  });
+  const months = [
+    month("2026-09", {
+      ordersIqd: 40000,
+      discountsIqd: 5000,
+      revenueIqd: 35000,
+      expensesIqd: 8000,
+      profitIqd: 27000,
+      receivedIqd: 30000,
+      refundedIqd: 10000,
+      netCashIqd: 12000,
+    }),
+    month("2026-10", { salesIqd: 9000, revenueIqd: 9000, expensesIqd: 1000, profitIqd: 8000 }),
+  ];
+  const lines = reportLines(
+    months,
+    [
+      { month: "2026-09", categoryId: 1, totalIqd: 3000 },
+      { month: "2026-09", categoryId: 2, totalIqd: 5000 },
+      { month: "2026-10", categoryId: 1, totalIqd: 1000 },
+    ],
+    new Map([
+      [1, "وقود"],
+      [2, "مواد"],
+    ]),
+  );
+  const find = (label: string) =>
+    lines.find((line) =>
+      "figure" in line.label ? line.label.figure === label : line.label.category === label,
+    );
+
+  it("adds each line up across the months", () => {
+    expect(find("orders")).toMatchObject({ values: [40000, 0], total: 40000 });
+    expect(find("profit")).toMatchObject({ values: [27000, 8000], total: 35000, weight: "total" });
+  });
+  it("shows deductions below zero", () => {
+    expect(find("discounts")?.values).toEqual([-5000, 0]);
+    expect(find("refunded")?.values).toEqual([-10000, 0]);
+    expect(find("cashExpenses")?.values).toEqual([-8000, -1000]);
+  });
+  it("lists the categories with expenses, the largest first", () => {
+    const categories = lines.filter((line) => "category" in line.label);
+    expect(categories.map((line) => line.total)).toEqual([5000, 4000]);
+    expect(find("وقود")?.values).toEqual([3000, 1000]);
+  });
+  it("orders the sections: revenue, expenses, profit, cash", () => {
+    const sections = lines.map((line) => line.section);
+    expect([...new Set(sections)]).toEqual(["revenue", "expenses", "profit", "cash"]);
+  });
+});
+
+describe("toCsv", () => {
+  it("starts with a byte-order mark and ends lines with CRLF", () => {
+    expect(
+      toCsv([
+        ["البند", "المبلغ"],
+        ["الربح", 1000],
+      ]),
+    ).toBe("\uFEFFالبند,المبلغ\r\nالربح,1000\r\n");
+  });
+  it("quotes commas and quotes, and keeps a name from running as a formula", () => {
+    expect(toCsv([['وقود، "بانزين", نقل', "=SUM(A1)", -500]])).toBe(
+      '\uFEFF"وقود، ""بانزين"", نقل",\'=SUM(A1),-500\r\n',
+    );
   });
 });

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { monthRange } from "./calendar";
 import type { AdminExpensesQuery } from "./finance-query";
+import type { FinanceBooks } from "./finance-reports";
 
 // Reads for the accounting screens (spec §8.3 A15–A17; A18 in revenue-queries.ts), made as the admin:
 // RLS lets admins read every box, category, expense and transfer, and nobody
@@ -79,6 +80,17 @@ export async function financeStartOn(): Promise<string> {
   const { data, error } = await supabase.from("finance_settings").select("start_on").single();
   if (error) throw new Error(`Finance settings read failed: ${error.message}`);
   return data.start_on;
+}
+
+/** The start day and the last closed day (A17's start, A20's month close). */
+export async function financeBooks(): Promise<FinanceBooks> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("finance_settings")
+    .select("start_on, closed_through")
+    .single();
+  if (error) throw new Error(`Finance settings read failed: ${error.message}`);
+  return { startOn: data.start_on, closedThrough: data.closed_through };
 }
 
 type Voidable = {
@@ -228,8 +240,14 @@ const toTransfer = (row: TransferRow): Transfer => ({
   voidedBy: row.voider?.full_name ?? null,
 });
 
-/** The month's transfers, voided ones included (A15 shows them struck out), newest first. */
-export async function listTransfers(month: string): Promise<Transfer[]> {
+/**
+ * The month's first `n` transfers, voided ones included (A15 shows them
+ * struck out), newest first; `more` when there are others.
+ */
+export async function listTransfers(
+  month: string,
+  n: number,
+): Promise<{ transfers: Transfer[]; more: boolean }> {
   const supabase = await createClient();
   const { from, to } = monthRange(month);
   const { data, error } = await supabase
@@ -238,9 +256,12 @@ export async function listTransfers(month: string): Promise<Transfer[]> {
     .gte("moved_on", from)
     .lte("moved_on", to)
     .order("moved_on", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id")
+    .limit(n + 1);
   if (error) throw new Error(`Transfers read failed: ${error.message}`);
-  return (data as unknown as TransferRow[]).map(toTransfer);
+  const rows = (data as unknown as TransferRow[]).map(toTransfer);
+  return { transfers: rows.slice(0, n), more: rows.length > n };
 }
 
 export async function getTransfer(id: string): Promise<Transfer | null> {

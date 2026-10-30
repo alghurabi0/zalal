@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { AmountField, VoidForm, VoidedNote } from "@/components/admin/finance-forms";
+import { AmountField, VoidForm, ReadOnlyRecord } from "@/components/admin/finance-forms";
 import { Money } from "@/components/admin/finance";
 import { useAdminEdit } from "@/components/admin/use-admin-edit";
 import { Button } from "@/components/ui/button";
@@ -29,14 +29,18 @@ export function TransferForm({
   accounts,
   defaults,
   today,
-  startOn,
+  firstDay,
+  closed = false,
   closeHref,
 }: {
   transfer: Transfer | null;
   accounts: Option[];
   defaults: { fromAccountId: string; toAccountId: string; amount: number | null };
   today: string;
-  startOn: string;
+  /** The first day a record may take: the start day, or the day after the last closed month. */
+  firstDay: string;
+  /** The record is dated in a closed month: shown, not edited. */
+  closed?: boolean;
   closeHref: string;
 }) {
   const t = useTranslations("Admin.finance");
@@ -52,9 +56,9 @@ export function TransferForm({
   const [note, setNote] = useState(transfer?.note ?? "");
   const [tried, setTried] = useState(false);
 
-  if (transfer?.voidedAt) {
+  if (transfer && (transfer.voidedAt || closed)) {
     return (
-      <VoidedNote
+      <ReadOnlyRecord
         rows={[
           [t("transfer.date"), formatDay(transfer.movedOn)],
           [t("transfer.from"), accounts.find((a) => a.id === transfer.fromAccountId)?.label],
@@ -82,7 +86,7 @@ export function TransferForm({
     note,
   };
   const valid = transferSchema.safeParse(input).success;
-  const dayOk = movedOn >= startOn && movedOn <= today;
+  const dayOk = movedOn >= firstDay && movedOn <= today;
 
   return (
     <div className="flex flex-col gap-5">
@@ -105,7 +109,7 @@ export function TransferForm({
           variant="compact"
           error={
             tried && !dayOk
-              ? t("dayRange", { from: formatDay(startOn), to: formatDay(today) })
+              ? t("dayRange", { from: formatDay(firstDay), to: formatDay(today) })
               : undefined
           }
         >
@@ -114,7 +118,7 @@ export function TransferForm({
               {...control}
               type="date"
               variant="compact"
-              min={startOn}
+              min={firstDay}
               max={today}
               required
               value={movedOn}

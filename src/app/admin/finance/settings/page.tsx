@@ -5,9 +5,9 @@ import { AdminPage } from "@/components/admin/admin-page";
 import { accountName, FinanceTabs } from "@/components/admin/finance";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
-import { expenseCategories, financeAccounts, financeStartOn } from "@/lib/admin/finance-queries";
+import { expenseCategories, financeAccounts, financeBooks } from "@/lib/admin/finance-queries";
 import { requireViewer } from "@/lib/auth/viewer";
-import { baghdadToday } from "@/lib/dates";
+import { baghdadToday, formatDay } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
 import { AccountList } from "./account-list";
@@ -42,8 +42,8 @@ export default async function FinanceSettingsPage() {
 async function Settings() {
   await requireViewer(routes.adminFinanceSettings, "admin");
   const t = await getTranslations("Admin.finance");
-  const [startOn, accounts, categories] = await Promise.all([
-    financeStartOn(),
+  const [books, accounts, categories] = await Promise.all([
+    financeBooks(),
     financeAccounts(),
     expenseCategories(),
   ]);
@@ -53,7 +53,15 @@ async function Settings() {
       <Card className="flex flex-col gap-3 p-5">
         <h2 className="text-18 font-extrabold">{t("settings.startTitle")}</h2>
         <p className="max-w-3xl text-14 text-body-2">{t("settings.startIntro")}</p>
-        <StartForm startOn={startOn} today={baghdadToday()} />
+        {books.closedThrough ? (
+          <p className="rounded-chip bg-well px-3 py-2.5 text-14 text-body-2">
+            {t("settings.startOn")}: <strong>{formatDay(books.startOn)}</strong>
+            <br />
+            {t("settings.startLocked")}
+          </p>
+        ) : (
+          <StartForm startOn={books.startOn} today={baghdadToday()} />
+        )}
       </Card>
       <section aria-labelledby="boxes-title" className="flex flex-col gap-3">
         <h2 id="boxes-title" className="text-20 font-black">

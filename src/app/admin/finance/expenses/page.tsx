@@ -6,7 +6,13 @@ import { Suspense } from "react";
 
 import { AdminPage } from "@/components/admin/admin-page";
 import { Drawer } from "@/components/admin/drawer";
-import { accountName, FinanceTabs, Money, MonthPicker } from "@/components/admin/finance";
+import {
+  accountName,
+  ClosedBadge,
+  FinanceTabs,
+  Money,
+  MonthPicker,
+} from "@/components/admin/finance";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,7 +26,7 @@ import {
   expenseCategories,
   type FinanceAccount,
   financeAccounts,
-  financeStartOn,
+  financeBooks,
   getExpense,
   listExpenses,
 } from "@/lib/admin/finance-queries";
@@ -30,6 +36,7 @@ import {
   adminExpensesHref,
   parseAdminExpensesQuery,
 } from "@/lib/admin/finance-query";
+import { firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
 import { requireViewer } from "@/lib/auth/viewer";
 import { baghdadToday, formatDay } from "@/lib/dates";
 import { routes } from "@/lib/routes";
@@ -60,10 +67,11 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
   const today = baghdadToday();
   const thisMonth = today.slice(0, 7);
   const month = query.month && query.month <= thisMonth ? query.month : thisMonth;
-  const [accounts, categories, list] = await Promise.all([
+  const [accounts, categories, list, books] = await Promise.all([
     financeAccounts(),
     expenseCategories(),
     listExpenses(query, month),
+    financeBooks(),
   ]);
   const hrefFor = (patch: Partial<AdminExpensesQuery>) => adminExpensesHref({ ...query, ...patch });
   const accountNames = new Map(
@@ -75,15 +83,18 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <MonthPicker
-          month={month}
-          prevHref={hrefFor({ month: addMonthsTo(month, -1), n: undefined, expense: undefined })}
-          nextHref={
-            month < thisMonth
-              ? hrefFor({ month: addMonthsTo(month, 1), n: undefined, expense: undefined })
-              : null
-          }
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <MonthPicker
+            month={month}
+            prevHref={hrefFor({ month: addMonthsTo(month, -1), n: undefined, expense: undefined })}
+            nextHref={
+              month < thisMonth
+                ? hrefFor({ month: addMonthsTo(month, 1), n: undefined, expense: undefined })
+                : null
+            }
+          />
+          {isClosed(books, month) && <ClosedBadge />}
+        </div>
         <Button href={hrefFor({ expense: "new" })} size="sm" scroll={false}>
           <Plus aria-hidden className="size-4" />
           {t("expenses.new")}
@@ -301,7 +312,7 @@ async function ExpenseDrawer({
 }) {
   const t = await getTranslations("Admin.finance");
   const isNew = id === "new";
-  const [expense, startOn] = await Promise.all([isNew ? null : getExpense(id), financeStartOn()]);
+  const [expense, books] = await Promise.all([isNew ? null : getExpense(id), financeBooks()]);
 
   if (!isNew && !expense) {
     return (
@@ -323,7 +334,8 @@ async function ExpenseDrawer({
         }))}
         categories={categories}
         today={today}
-        startOn={startOn}
+        firstDay={firstOpenDay(books)}
+        closed={expense !== null && isClosed(books, expense.spentOn)}
         closeHref={closeHref}
       />
     </Drawer>

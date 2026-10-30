@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Money } from "@/components/admin/finance";
-import { AmountField, VoidedNote, VoidForm } from "@/components/admin/finance-forms";
+import { AmountField, ReadOnlyRecord, VoidForm } from "@/components/admin/finance-forms";
 import type { BoxOption } from "@/components/admin/revenue-forms";
 import { useAdminEdit } from "@/components/admin/use-admin-edit";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,8 @@ export function SaleForm({
   boxes,
   crews,
   today,
-  startOn,
+  firstDay,
+  closed = false,
   closeHref,
   listQuery,
 }: {
@@ -46,7 +47,10 @@ export function SaleForm({
   boxes: BoxOption[];
   crews: CrewOption[];
   today: string;
-  startOn: string;
+  /** The first day a record may take: the start day, or the day after the last closed month. */
+  firstDay: string;
+  /** The record is dated in a closed month: shown, not edited. */
+  closed?: boolean;
   closeHref: string;
   /** The list's month and size: a new sale opens there once saved, to take more payments. */
   listQuery: { month: string | undefined; n: number };
@@ -66,9 +70,9 @@ export function SaleForm({
   const [paidInto, setPaidInto] = useState("");
   const [tried, setTried] = useState(false);
 
-  if (sale?.voidedAt) {
+  if (sale && (sale.voidedAt || closed)) {
     return (
-      <VoidedNote
+      <ReadOnlyRecord
         rows={[
           [t("sale.date"), formatDay(sale.soldOn)],
           [t("sale.customer"), sale.customerName],
@@ -87,7 +91,7 @@ export function SaleForm({
   const nameOk = customerName.trim().length >= 2;
   const phoneOk = phone.trim() === "" || normalizeIraqiMobile(phone) !== null;
   const serviceOk = service.trim().length >= 2;
-  const dayOk = soldOn >= startOn && soldOn <= today;
+  const dayOk = soldOn >= firstDay && soldOn <= today;
   const valid = amountOk && nameOk && phoneOk && serviceOk && dayOk;
   const title = sale ? t("sale.editTitle") : t("sale.newTitle");
 
@@ -128,7 +132,7 @@ export function SaleForm({
           variant="compact"
           error={
             tried && !dayOk
-              ? t("dayRange", { from: formatDay(startOn), to: formatDay(today) })
+              ? t("dayRange", { from: formatDay(firstDay), to: formatDay(today) })
               : undefined
           }
         >
@@ -137,7 +141,7 @@ export function SaleForm({
               {...control}
               type="date"
               variant="compact"
-              min={startOn}
+              min={firstDay}
               max={today}
               required
               value={soldOn}

@@ -5,8 +5,14 @@ import { Suspense } from "react";
 
 import { AdminPage } from "@/components/admin/admin-page";
 import { Drawer } from "@/components/admin/drawer";
-import { accountName, FinanceTabs, Money, MonthPicker } from "@/components/admin/finance";
-import { VoidedNote } from "@/components/admin/finance-forms";
+import {
+  accountName,
+  ClosedBadge,
+  FinanceTabs,
+  Money,
+  MonthPicker,
+} from "@/components/admin/finance";
+import { ReadOnlyRecord } from "@/components/admin/finance-forms";
 import { ItemAccountCard } from "@/components/admin/item-account";
 import { PaymentForm } from "@/components/admin/revenue-forms";
 import { Button } from "@/components/ui/button";
@@ -14,7 +20,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { addMonthsTo } from "@/lib/admin/calendar";
-import { type FinanceAccount, financeAccounts, financeStartOn } from "@/lib/admin/finance-queries";
+import { type FinanceAccount, financeAccounts, financeBooks } from "@/lib/admin/finance-queries";
 import {
   ADMIN_REVENUE_PAGE,
   type AdminRevenueQuery,
@@ -35,6 +41,7 @@ import {
   type Payment,
   revenueSummary,
 } from "@/lib/admin/revenue-queries";
+import { firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { baghdadToday, formatDay } from "@/lib/dates";
@@ -69,13 +76,14 @@ async function Revenue({ searchParams }: PageProps<"/admin/finance/revenue">) {
   const today = baghdadToday();
   const thisMonth = today.slice(0, 7);
   const month = query.month && query.month <= thisMonth ? query.month : thisMonth;
-  const [accounts, summary, owed, credit, payments, sales] = await Promise.all([
+  const [accounts, summary, owed, credit, payments, sales, books] = await Promise.all([
     financeAccounts(),
     revenueSummary(month),
     customerBalances("owed", query.n),
     customerBalances("credit", query.n),
     listPayments(month, query.n),
     listManualSales(month, query.n),
+    financeBooks(),
   ]);
   const hrefFor = (patch: Partial<AdminRevenueQuery>) => adminRevenueHref({ ...query, ...patch });
   const closed = { customer: undefined, payment: undefined, sale: undefined };
@@ -87,15 +95,18 @@ async function Revenue({ searchParams }: PageProps<"/admin/finance/revenue">) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <MonthPicker
-          month={month}
-          prevHref={hrefFor({ ...closed, month: addMonthsTo(month, -1), n: undefined })}
-          nextHref={
-            month < thisMonth
-              ? hrefFor({ ...closed, month: addMonthsTo(month, 1), n: undefined })
-              : null
-          }
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <MonthPicker
+            month={month}
+            prevHref={hrefFor({ ...closed, month: addMonthsTo(month, -1), n: undefined })}
+            nextHref={
+              month < thisMonth
+                ? hrefFor({ ...closed, month: addMonthsTo(month, 1), n: undefined })
+                : null
+            }
+          />
+          {isClosed(books, month) && <ClosedBadge />}
+        </div>
         <Button href={hrefFor({ ...closed, sale: "new" })} size="sm" scroll={false}>
           <Plus aria-hidden className="size-4" />
           {t("revenue.newSale")}
@@ -509,13 +520,13 @@ async function CustomerDrawer({
   closeHref: string;
 }) {
   const t = await getTranslations("Admin.finance");
-  const [items, contact, boxes, startOn] = await Promise.all([
+  const [items, contact, boxes, settings] = await Promise.all([
     customerReceivables(customerId),
     customerContact(customerId),
     financeAccounts(),
-    financeStartOn(),
+    financeBooks(),
   ]);
-  const books = { boxes, startOn };
+  const books = { boxes, books: settings };
   const name = contact?.name ?? t("revenue.deletedCustomer");
   return (
     <Drawer closeHref={closeHref} title={t("revenue.customerTitle", { name })}>
@@ -581,7 +592,7 @@ async function PaymentDrawer({
   closeHref: string;
 }) {
   const t = await getTranslations("Admin.finance");
-  const [payment, startOn] = await Promise.all([getPayment(id), financeStartOn()]);
+  const [payment, books] = await Promise.all([getPayment(id), financeBooks()]);
   if (!payment) {
     return (
       <Drawer title={t("payment.notFound")} closeHref={closeHref}>
@@ -606,8 +617,8 @@ async function PaymentDrawer({
           {t("revenue.openOrder")}
         </Link>
       )}
-      {payment.voidedAt ? (
-        <VoidedPayment payment={payment} accountNames={accountNames} />
+      {payment.voidedAt || isClosed(books, payment.paidOn) ? (
+        <ReadOnlyPayment payment={payment} accountNames={accountNames} />
       ) : (
         <PaymentForm
           key={payment.id}
@@ -625,7 +636,7 @@ async function PaymentDrawer({
             active: account.active,
           }))}
           today={today}
-          startOn={startOn}
+          firstDay={firstOpenDay(books)}
           done={{ closeHref }}
         />
       )}
@@ -633,7 +644,7 @@ async function PaymentDrawer({
   );
 }
 
-async function VoidedPayment({
+async function ReadOnlyPayment({
   payment,
   accountNames,
 }: {
@@ -642,14 +653,14 @@ async function VoidedPayment({
 }) {
   const t = await getTranslations("Admin.finance");
   return (
-    <VoidedNote
+    <ReadOnlyRecord
       rows={[
         [t("payment.date"), formatDay(payment.paidOn)],
         [t("payment.account"), accountNames.get(payment.accountId)],
         [t("amount"), <Money key="amount" amount={payment.amountIqd} />],
         [t("payment.note"), payment.note ?? t("none")],
       ]}
-      voidedAt={payment.voidedAt ?? ""}
+      voidedAt={payment.voidedAt}
       voidedBy={payment.voidedBy}
       reason={payment.voidReason}
     />
@@ -673,9 +684,9 @@ async function SaleDrawer({
 }) {
   const t = await getTranslations("Admin.finance");
   const isNew = id === "new";
-  const [sale, startOn, crews] = await Promise.all([
+  const [sale, books, crews] = await Promise.all([
     isNew ? null : getManualSale(id),
-    financeStartOn(),
+    financeBooks(),
     listCrews(),
   ]);
   if (!isNew && !sale) {
@@ -698,7 +709,8 @@ async function SaleDrawer({
         }))}
         crews={crews}
         today={today}
-        startOn={startOn}
+        firstDay={firstOpenDay(books)}
+        closed={sale !== null && isClosed(books, sale.soldOn)}
         closeHref={closeHref}
         listQuery={listQuery}
       />
