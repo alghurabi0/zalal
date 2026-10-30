@@ -146,7 +146,11 @@ export async function listExpenses(
   const { from, to } = monthRange(month);
   // The same filters for the page and for the total.
   const select = (columns: string) => {
-    let builder = supabase.from("expenses").select(columns).gte("spent_on", from).lte("spent_on", to);
+    let builder = supabase
+      .from("expenses")
+      .select(columns)
+      .gte("spent_on", from)
+      .lte("spent_on", to);
     builder = query.voided ? builder.not("voided_at", "is", null) : builder.is("voided_at", null);
     if (query.category) builder = builder.eq("category_id", query.category);
     if (query.account) builder = builder.eq("account_id", query.account);

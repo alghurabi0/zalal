@@ -92,7 +92,9 @@ export type FinanceSettingsInput = z.input<typeof financeSettingsSchema>;
  * number. A leading minus is kept (opening balances may be below zero).
  */
 export function parseAmount(text: string): number | null {
-  const digits = toWesternDigits(text).replace(/[\s,\u066C]/g, "").replace(/^\u2212/, "-");
+  const digits = toWesternDigits(text)
+    .replace(/[\s,\u066C]/g, "")
+    .replace(/^\u2212/, "-");
   if (!/^-?\d{1,10}$/.test(digits)) return null;
   return Number(digits);
 }
