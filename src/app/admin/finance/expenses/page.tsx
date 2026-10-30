@@ -16,7 +16,9 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { addMonthsTo } from "@/lib/admin/calendar";
 import {
   type Expense,
+  type ExpenseCategory,
   expenseCategories,
+  type FinanceAccount,
   financeAccounts,
   financeStartOn,
   getExpense,
@@ -217,6 +219,9 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
         <Suspense key={query.expense}>
           <ExpenseDrawer
             id={query.expense}
+            accounts={accounts}
+            accountNames={accountNames}
+            categories={categories}
             today={today}
             closeHref={hrefFor({ expense: undefined })}
           />
@@ -281,21 +286,22 @@ async function ExpenseTable({
 
 async function ExpenseDrawer({
   id,
+  accounts,
+  accountNames,
+  categories,
   today,
   closeHref,
 }: {
   id: string;
+  accounts: FinanceAccount[];
+  accountNames: Map<string, string>;
+  categories: ExpenseCategory[];
   today: string;
   closeHref: string;
 }) {
   const t = await getTranslations("Admin.finance");
   const isNew = id === "new";
-  const [expense, accounts, categories, startOn] = await Promise.all([
-    isNew ? null : getExpense(id),
-    financeAccounts(),
-    expenseCategories(),
-    financeStartOn(),
-  ]);
+  const [expense, startOn] = await Promise.all([isNew ? null : getExpense(id), financeStartOn()]);
 
   if (!isNew && !expense) {
     return (
@@ -312,7 +318,7 @@ async function ExpenseDrawer({
         expense={expense}
         accounts={accounts.map((account) => ({
           id: account.id,
-          label: accountName(account, (crew) => t("crewBox", { crew })),
+          label: accountNames.get(account.id) ?? "",
           active: account.active,
         }))}
         categories={categories}

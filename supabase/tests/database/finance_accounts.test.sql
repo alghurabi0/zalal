@@ -5,12 +5,13 @@
 -- gets its own box (kind crew, no name: it shows the crew's name), the ones
 -- that exist and every new one. Admins read every box; guests, customers and
 -- crews none (a crew not even its own). Nobody writes the table directly.
+-- A crew's box goes with the crew, unless the box has records.
 --
 -- admin_save_finance_account(id, kind, name, opening_balance_iqd, active):
 -- creates a box (id null; any kind but crew, 22023 invalid_kind; a name,
 -- 22023 invalid_name) or changes one (null keeps a value). A crew box keeps
 -- kind crew and no name. A taken name is ZL048 name_taken; a missing box
--- P0002 account_not_found; an opening balance beyond ±1,000,000,000
+-- P0002 finance_account_not_found; an opening balance beyond ±1,000,000,000
 -- 22023 invalid_amount. Logs finance_account.create / finance_account.update
 -- with only what changed.
 begin;
@@ -19,7 +20,7 @@ begin;
 create function tests.today() returns date language sql stable
 as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 
-select plan(36);
+select plan(38);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -180,7 +181,25 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.admin_save_finance_account(gen_random_uuid(), null, 'مفقود') $$,
-  'P0002', 'account_not_found', 'a missing box is refused'
+  'P0002', 'finance_account_not_found', 'a missing box is refused'
+);
+
+-- A crew's box goes with the crew, unless the box has records.
+select tests.clear_authentication();
+insert into tests.ids values ('crew2', tests.create_crew('+9647705555555'));
+insert into tests.ids values ('crew3', tests.create_crew('+9647706666666'));
+insert into public.expenses (spent_on, category_id, account_id, amount_iqd, created_by)
+select current_date, (select id from public.expense_categories order by id limit 1), a.id, 1000,
+  tests.user_id('+9647504444444')
+from public.finance_accounts as a where a.crew_id = tests.id('crew3');
+delete from public.crews where id = tests.id('crew2');
+select is(
+  (select count(*)::int from public.finance_accounts where crew_id = tests.id('crew2')), 0,
+  'deleting a crew deletes its unused box'
+);
+select throws_ok(
+  $$ delete from public.crews where id = tests.id('crew3') $$,
+  '23503', null, 'but a box with records holds its crew back'
 );
 
 select * from finish();

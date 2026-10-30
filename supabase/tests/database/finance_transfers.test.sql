@@ -10,7 +10,7 @@
 -- expense rules for the day (ZL042, ZL043), amount (22023 invalid_amount),
 -- note (22023 invalid_note) and switched-off boxes (ZL044 account_inactive,
 -- kept when an edit leaves the box as it was). Two different boxes (22023
--- same_account). P0002 transfer_not_found, account_not_found; ZL047
+-- same_account). P0002 transfer_not_found, finance_account_not_found; ZL047
 -- record_voided. Logs transfer.create / transfer.update.
 -- admin_void_transfer(id, reason): ZL011 reason_required; ZL047 once voided.
 -- Logs transfer.void.
@@ -133,7 +133,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.admin_save_transfer(null, current_date, tests.cash(), gen_random_uuid(), 1000, null) $$,
-  'P0002', 'account_not_found', 'so is a missing box'
+  'P0002', 'finance_account_not_found', 'so is a missing box'
 );
 select lives_ok(
   format(

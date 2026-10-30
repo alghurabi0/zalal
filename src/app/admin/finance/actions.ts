@@ -7,6 +7,7 @@ import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
 import {
   type ExpenseCategoryInput,
+  expenseCategoryIdSchema,
   expenseCategorySchema,
   type ExpenseInput,
   expenseSchema,
@@ -118,9 +119,10 @@ export async function saveExpenseCategory(input: ExpenseCategoryInput): Promise<
 }
 
 export async function deleteExpenseCategory(id: number): Promise<AdminEditResult> {
-  if (!Number.isInteger(id) || id <= 0) return invalid;
+  const parsed = expenseCategoryIdSchema.safeParse(id);
+  if (!parsed.success) return invalid;
   const supabase = await admin(routes.adminFinanceSettings);
-  const { error } = await supabase.rpc("admin_delete_expense_category", { p_id: id });
+  const { error } = await supabase.rpc("admin_delete_expense_category", { p_id: parsed.data });
   return error ? editFailure("admin_delete_expense_category", error, report) : { status: "done" };
 }
 

@@ -53,7 +53,7 @@ async function Settings() {
       <Card className="flex flex-col gap-3 p-5">
         <h2 className="text-18 font-extrabold">{t("settings.startTitle")}</h2>
         <p className="max-w-3xl text-14 text-body-2">{t("settings.startIntro")}</p>
-        <StartForm key={startOn} startOn={startOn} today={baghdadToday()} />
+        <StartForm startOn={startOn} today={baghdadToday()} />
       </Card>
       <section aria-labelledby="boxes-title" className="flex flex-col gap-3">
         <h2 id="boxes-title" className="text-20 font-black">

@@ -154,7 +154,9 @@ export async function listExpenses(
     builder = query.voided ? builder.not("voided_at", "is", null) : builder.is("voided_at", null);
     if (query.category) builder = builder.eq("category_id", query.category);
     if (query.account) builder = builder.eq("account_id", query.account);
-    if (query.q) builder = builder.ilike("note", `%${query.q.replace(/[%_\\]/g, "\\$&")}%`);
+    // PostgREST reads * as %, so it goes too.
+    const words = query.q?.replace(/\*/g, "").replace(/[%_\\]/g, "\\$&");
+    if (words) builder = builder.ilike("note", `%${words}%`);
     return builder;
   };
 

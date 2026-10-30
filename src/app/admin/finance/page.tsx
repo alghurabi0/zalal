@@ -283,7 +283,9 @@ async function TransferDrawer({
     );
   }
 
-  const from = isNew && query.from ? accounts.find((a) => a.id === query.from) : undefined;
+  // A switched-off box can't hand anything over (the form wouldn't list it).
+  const from =
+    isNew && query.from ? accounts.find((a) => a.id === query.from && a.active) : undefined;
   const cash = accounts.find((a) => a.kind === "cash" && a.active);
   const options = accounts.map((account) => ({
     id: account.id,

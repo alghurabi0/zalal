@@ -83,6 +83,9 @@ export const expenseCategorySchema = z.object({
 });
 export type ExpenseCategoryInput = z.input<typeof expenseCategorySchema>;
 
+/** The category A17 deletes. */
+export const expenseCategoryIdSchema = z.number().int().positive();
+
 export const financeSettingsSchema = z.object({ startOn: z.iso.date() });
 export type FinanceSettingsInput = z.input<typeof financeSettingsSchema>;
 

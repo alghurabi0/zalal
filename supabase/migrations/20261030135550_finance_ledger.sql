@@ -12,7 +12,8 @@
 --    name, opening_balance_iqd, active. A crew box belongs to one crew, has
 --    no name (the app shows the crew's) and is made by a trigger for every
 --    crew, the existing ones included, because the crew holds the cash it
---    collects until it hands it in. The migration adds a cash, a Zain Cash
+--    collects until it hands it in; the box goes with its crew unless it
+--    has records. The migration adds a cash, a Zain Cash
 --    and a bank box; admins rename them and add more. Switched off, never
 --    deleted; a switched-off box takes no new record.
 --
@@ -36,10 +37,11 @@
 -- admin_update_finance_settings, admin_save_finance_account,
 -- admin_save_expense_category / admin_delete_expense_category,
 -- admin_save_expense / admin_void_expense, admin_save_transfer /
--- admin_void_transfer. New errors: ZL042 before_finance_start, ZL043
--- date_in_future, ZL044 account_inactive / category_inactive, ZL045
--- category_in_use, ZL046 records_before_start, ZL047 record_voided, ZL048
--- name_taken.
+-- admin_void_transfer. A missing box is P0002 finance_account_not_found
+-- (account_not_found is a login account's). New errors: ZL042
+-- before_finance_start, ZL043 date_in_future, ZL044 account_inactive /
+-- category_inactive, ZL045 category_in_use, ZL046 records_before_start,
+-- ZL047 record_voided, ZL048 name_taken.
 --
 -- §7 had no accounting; these tables are new, so there are no departures.
 
@@ -83,7 +85,8 @@ create table public.finance_accounts (
   kind public.finance_account_kind not null,
   -- "الصندوق", "مصرف الرافدين"; null for a crew box, which shows its crew's name.
   name text unique check (char_length(name) between 2 and 40 and name = btrim(name)),
-  crew_id uuid unique references public.crews (id) on delete restrict,
+  -- A crew's box goes with the crew; a box with records holds the crew back (their foreign keys restrict).
+  crew_id uuid unique references public.crews (id) on delete cascade,
   -- What the box held on the day the books start. Below zero for an overdrawn bank.
   opening_balance_iqd integer not null default 0
     check (opening_balance_iqd between -1000000000 and 1000000000),
@@ -378,7 +381,7 @@ begin
   -- Share lock: a switch-off running now (FOR UPDATE) finishes first, or waits for us.
   select a.active into v_active from public.finance_accounts as a where a.id = p_id for share;
   if not found then
-    raise exception using errcode = 'P0002', message = 'account_not_found';
+    raise exception using errcode = 'P0002', message = 'finance_account_not_found';
   end if;
   if p_new and not v_active then
     raise exception using errcode = 'ZL044', message = 'account_inactive';
@@ -498,7 +501,7 @@ begin
   if p_id is not null then
     select * into v_old from public.finance_accounts as a where a.id = p_id for update;
     if not found then
-      raise exception using errcode = 'P0002', message = 'account_not_found';
+      raise exception using errcode = 'P0002', message = 'finance_account_not_found';
     end if;
   end if;
 

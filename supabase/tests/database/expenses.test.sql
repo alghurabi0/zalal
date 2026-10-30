@@ -13,7 +13,7 @@
 -- to it (ZL044 category_inactive / account_inactive), and kept when an edit
 -- leaves it as it was. A voided expense can't be edited (ZL047
 -- record_voided). P0002 expense_not_found, category_not_found,
--- account_not_found. Logs expense.create / expense.update (only what
+-- finance_account_not_found. Logs expense.create / expense.update (only what
 -- changed).
 -- admin_void_expense(id, reason): a reason of 1–300 characters (ZL011
 -- reason_required); once only (ZL047). Logs expense.void.
@@ -166,7 +166,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.admin_save_expense(null, current_date, tests.cat('وقود ونقل'), gen_random_uuid(), 5000, null) $$,
-  'P0002', 'account_not_found', 'so is a missing box'
+  'P0002', 'finance_account_not_found', 'so is a missing box'
 );
 
 -- Edit ---------------------------------------------------------------------------------------
