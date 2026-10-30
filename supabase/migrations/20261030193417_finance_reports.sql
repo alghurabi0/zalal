@@ -17,12 +17,18 @@
 --    tasks' RPCs too. A discount has no day of its own: it counts on its
 --    item's revenue day, so that day decides. The one change it lets
 --    through is account deletion blanking a customer's notes and reasons
---    (no amount moves; admins never get this pass). Days in the current
---    month skip the settings lock, since this month can't be closed yet.
+--    (no amount moves; admins never get this pass). Days in the month of
+--    tomorrow skip the settings lock, since that month can't close yet.
+--    Opening balances stay editable (spec §13): no report shows a box's
+--    balance at a past month's end.
 --
 -- 3. An override that takes an order completed in a closed month out of
 --    completed is refused (ZL054): its revenue would leave that month.
---    Completing always dates today, so it never lands in a closed month.
+--    Completing dates today, which is closed only if the month closed at
+--    midnight while the completion ran; that is refused too. Known: an
+--    override out of completed while another admin moves the start day
+--    earlier can deadlock (one is aborted with 40P01 and retried); both are
+--    rare admin actions, so the lock order stays (RLS audit).
 --
 -- 4. orders.completed_on: the Baghdad day of the last completion while the
 --    order is completed. Kept by triggers (order_events after insert, the
@@ -57,9 +63,12 @@ alter table public.finance_settings
     or closed_through = (date_trunc('month', closed_through) + interval '1 month' - interval '1 day')::date
   );
 
--- Whether a day is in a closed month. A day in this month never is (a month
--- closes once it has ended), so it skips the lock; an older day share-locks
--- the settings row, so a close running now finishes first or waits for us.
+-- Whether a day is in a closed month. Any other day share-locks the
+-- settings row, so a close running now finishes first or waits for us. A
+-- day in the month of tomorrow skips the lock: that month can't close while
+-- this transaction runs (it closes once it has ended). On a month's last day
+-- that month takes the lock too, so a change started before midnight and
+-- committed after the close at midnight is refused (RLS audit).
 create function private.finance_month_closed(p_day date)
 returns boolean
 language plpgsql
@@ -68,7 +77,7 @@ as $$
 declare
   v_closed date;
 begin
-  if p_day is null or p_day >= date_trunc('month', private.baghdad_today())::date then
+  if p_day is null or p_day >= date_trunc('month', private.baghdad_today() + 1)::date then
     return false;
   end if;
   select s.closed_through into v_closed from public.finance_settings as s where s.id for share;
@@ -124,8 +133,10 @@ for each row
 when (new.to_status = 'completed')
 execute function private.order_events_set_completed_on();
 
--- Leaving completed clears the day, unless it is in a closed month.
-create function private.orders_leave_completed()
+-- Leaving completed clears the day, unless it is in a closed month. Entering
+-- completed dates today, which is in a closed month only when the month
+-- closed at midnight while this transaction ran (RLS audit).
+create function private.orders_guard_closed_month()
 returns trigger
 language plpgsql
 security definer
@@ -137,16 +148,18 @@ begin
       raise exception using errcode = 'ZL054', message = 'month_closed';
     end if;
     new.completed_on := null;
+  elsif new.status = 'completed' and private.finance_month_closed(private.baghdad_today()) then
+    raise exception using errcode = 'ZL054', message = 'month_closed';
   end if;
   return new;
 end;
 $$;
 
-create trigger orders_leave_completed
+create trigger orders_guard_closed_month
 before update of status on public.orders
 for each row
 when (old.status is distinct from new.status)
-execute function private.orders_leave_completed();
+execute function private.orders_guard_closed_month();
 
 create or replace function private.order_completed_on(p_order_id uuid)
 returns date
