@@ -44,7 +44,6 @@ export type BookingData = {
   savedTanks: SavedTank[];
   prices: PriceTable;
   days: DayOption[];
-  maxTanks: number;
   /** Every address's; Checkout uses the booking address's (coverageFor). */
   subscriptions: Subscription[];
 };

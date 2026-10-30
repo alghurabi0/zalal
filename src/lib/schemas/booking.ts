@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { MAX_LINE_QTY } from "@/lib/booking/draft";
 import {
   bookingObjectPathPattern,
   MAX_BOOKING_FILES,
@@ -9,12 +10,12 @@ import {
 import { tankSizes, tankTypes } from "./tank";
 
 // Booking step 3 (spec §5.11): what Checkout sends to create_order(). The
-// database checks every rule again (slot, cutoff, area, tank limit, uploads).
+// database checks every rule again (slot, cutoff, area, uploads).
 
 /** The longest note for the crew (Upload, spec §5.10; orders.customer_note). */
 export const NOTE_MAX = 500;
 
-const qty = z.number().int().min(1).max(20);
+const qty = z.number().int().min(1).max(MAX_LINE_QTY);
 
 export const bookingItemSchema = z.union([
   z.object({ tankId: z.uuid(), qty }),
@@ -26,7 +27,7 @@ export const createBookingSchema = z.object({
   addressId: z.uuid(),
   serviceDate: z.iso.date(),
   slotId: z.number().int().positive(),
-  items: z.array(bookingItemSchema).min(1).max(20),
+  items: z.array(bookingItemSchema).min(1),
   note: z
     .string()
     .transform((value) => value.trim())

@@ -18,7 +18,13 @@ export const DEFAULT_NEW_TANK = { type: "roof", size: "m" } as const satisfies {
   size: TankSize;
 };
 
-const qtySchema = z.number().int().min(1).max(20);
+/**
+ * A line's quantity has no business limit (settled Oct 30, 2026); this is
+ * only what order_items.qty (smallint) can hold.
+ */
+export const MAX_LINE_QTY = 32767;
+
+const qtySchema = z.number().int().min(1).max(MAX_LINE_QTY);
 
 const lineSchema = z.union([
   z.object({ key: z.string().min(1), tankId: z.uuid(), qty: qtySchema }),
@@ -144,13 +150,10 @@ export function draftTotal(lines: DraftLine[], savedTanks: SavedTank[], prices: 
   return lines.reduce((sum, line) => sum + linePrice(line, savedTanks, prices), 0);
 }
 
-/** Step 1 is done: at least one tank, within the limit, and a slot that can be booked. */
-export function detailsComplete(draft: BookingDraft, days: DayOption[], maxTanks: number) {
-  const count = tankCount(draft.lines);
+/** Step 1 is done: at least one tank and a slot that can be booked. */
+export function detailsComplete(draft: BookingDraft, days: DayOption[]) {
   return (
-    count > 0 &&
-    count <= maxTanks &&
-    findSlot(days, draft.serviceDate, draft.slotId)?.bookable === true
+    tankCount(draft.lines) > 0 && findSlot(days, draft.serviceDate, draft.slotId)?.bookable === true
   );
 }
 

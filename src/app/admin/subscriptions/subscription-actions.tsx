@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { addDays, addMonths, baghdadToday, formatDay } from "@/lib/dates";
+import { MAX_SUBSCRIPTION_TANKS } from "@/lib/schemas/subscription";
 import type { SubscriptionState } from "@/lib/subscriptions/state";
 
 import {
@@ -188,7 +189,7 @@ function Activate({
               name="tanks"
               variant="compact"
               min={1}
-              max={6}
+              max={MAX_SUBSCRIPTION_TANKS}
               required
               value={tanks}
               onChange={(event) => setTanks(event.target.value)}

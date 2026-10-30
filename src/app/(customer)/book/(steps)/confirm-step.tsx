@@ -73,7 +73,7 @@ export function ConfirmStep() {
     latestData.current = data;
   });
 
-  const ready = draft !== null && detailsComplete(draft, data.days, data.maxTanks);
+  const ready = draft !== null && detailsComplete(draft, data.days);
   useEffect(() => {
     if (draft && !ready && !busy) router.replace(routes.book);
   }, [draft, ready, busy, router]);
@@ -107,7 +107,7 @@ export function ConfirmStep() {
       // The booking as it is now: the customer may have changed it while
       // the uploads finished.
       const current = latestDraft();
-      if (!detailsComplete(current, data.days, data.maxTanks)) return;
+      if (!detailsComplete(current, data.days)) return;
       // Kept with the draft, so sending again can't book twice.
       const requestId = current.requestId ?? crypto.randomUUID();
       if (!current.requestId) update((d) => ({ ...d, requestId }));

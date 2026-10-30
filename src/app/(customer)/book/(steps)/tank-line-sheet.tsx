@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Chip, ChipGroup } from "@/components/ui/chip";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
+import { MAX_LINE_QTY } from "@/lib/booking/draft";
 import { type TankSize, tankSizes, type TankType, tankTypes } from "@/lib/schemas/tank";
 
 const typeIcons = { roof: RoofTankIcon, ground: GroundTankIcon } as const;
@@ -17,8 +18,6 @@ export type TankLineValues = { type: TankType; size: TankSize; qty: number };
 type TankLineSheetProps = {
   mode: "add" | "edit";
   initial: TankLineValues;
-  /** The most this line may hold: the tank limit minus the other lines. */
-  maxQty: number;
   onSave: (values: TankLineValues) => void;
   /** The button that opens the sheet. */
   children: ReactNode;
@@ -28,7 +27,7 @@ type TankLineSheetProps = {
  * "أضف خزان" (spec §5.9): Booking.dc.html's type tiles, size chips and count
  * stepper, now a form for one tank line. Also edits a new-tank line.
  */
-export function TankLineSheet({ mode, initial, maxQty, onSave, children }: TankLineSheetProps) {
+export function TankLineSheet({ mode, initial, onSave, children }: TankLineSheetProps) {
   const t = useTranslations("Booking");
   const [open, setOpen] = useState(false);
   // A new key per opening starts the form from `initial` again.
@@ -48,7 +47,6 @@ export function TankLineSheet({ mode, initial, maxQty, onSave, children }: TankL
           key={session}
           mode={mode}
           initial={initial}
-          maxQty={maxQty}
           onSave={(values) => {
             onSave(values);
             setOpen(false);
@@ -59,13 +57,10 @@ export function TankLineSheet({ mode, initial, maxQty, onSave, children }: TankL
   );
 }
 
-function TankLineForm({ mode, initial, maxQty, onSave }: Omit<TankLineSheetProps, "children">) {
+function TankLineForm({ mode, initial, onSave }: Omit<TankLineSheetProps, "children">) {
   const t = useTranslations("Booking");
   const tTanks = useTranslations("Tanks");
-  const [values, setValues] = useState(() => ({
-    ...initial,
-    qty: Math.min(initial.qty, Math.max(maxQty, 1)),
-  }));
+  const [values, setValues] = useState(initial);
 
   return (
     <form
@@ -116,7 +111,7 @@ function TankLineForm({ mode, initial, maxQty, onSave }: Omit<TankLineSheetProps
         <Stepper
           label={t("count")}
           value={values.qty}
-          max={Math.max(maxQty, 1)}
+          max={MAX_LINE_QTY}
           onValueChange={(qty) => setValues((v) => ({ ...v, qty }))}
         />
       </div>

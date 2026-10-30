@@ -265,14 +265,21 @@ describe("admin form schemas", () => {
     expect(
       settingsSectionSchema.safeParse({
         section: "booking",
+        values: { cancel_cutoff_hours: 49, cleaning_interval_months: 6 },
+      }).success,
+    ).toBe(false);
+    // The booking window and tank limit are gone (migration no_booking_limits).
+    expect(
+      settingsSectionSchema.parse({
+        section: "booking",
         values: {
           booking_window_days: 61,
           cancel_cutoff_hours: 2,
           max_tanks_per_order: 6,
           cleaning_interval_months: 6,
         },
-      }).success,
-    ).toBe(false);
+      }).values,
+    ).toEqual({ cancel_cutoff_hours: 2, cleaning_interval_months: 6 });
     expect(
       settingsSectionSchema.parse({ section: "crew", values: { sterilant_text: " كلور " } }).values,
     ).toEqual({ sterilant_text: "كلور" });

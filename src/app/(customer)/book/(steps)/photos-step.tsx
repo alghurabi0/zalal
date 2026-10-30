@@ -33,7 +33,7 @@ export function PhotosStep() {
   const galleryInput = useRef<HTMLInputElement>(null);
   const [problems, setProblems] = useState<AddProblem[]>([]);
 
-  const ready = draft !== null && detailsComplete(draft, data.days, data.maxTanks);
+  const ready = draft !== null && detailsComplete(draft, data.days);
   // Step 1 isn't done (opened directly, or the slot was taken meanwhile).
   useEffect(() => {
     if (draft && !ready) router.replace(routes.book);

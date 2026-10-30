@@ -166,10 +166,15 @@ describe("booking draft", () => {
   it("adds up tanks and prices (line price × qty)", () => {
     expect(tankCount(draft.lines)).toBe(3);
     expect(draftTotal(draft.lines, saved, prices)).toBe(120000 + 2 * 25000);
-    expect(detailsComplete(draft, days, 6)).toBe(true);
-    expect(detailsComplete(draft, days, 2)).toBe(false);
-    expect(detailsComplete({ ...draft, slotId: null }, days, 6)).toBe(false);
-    expect(detailsComplete({ ...draft, lines: [] }, days, 6)).toBe(false);
+    expect(detailsComplete(draft, days)).toBe(true);
+    // No tank limit (settled Oct 30, 2026).
+    const many: BookingDraft = {
+      ...draft,
+      lines: [{ key: "n", type: "roof", size: "s", qty: 250 }],
+    };
+    expect(detailsComplete(many, days)).toBe(true);
+    expect(detailsComplete({ ...draft, slotId: null }, days)).toBe(false);
+    expect(detailsComplete({ ...draft, lines: [] }, days)).toBe(false);
   });
 
   it("sends lines the way create_order takes them", () => {
