@@ -199,6 +199,11 @@ test.describe("admin", () => {
       "/admin/audit",
       "/admin/settings",
       "/admin/settings/area",
+      "/admin/finance",
+      "/admin/finance?transfer=new",
+      "/admin/finance/expenses",
+      "/admin/finance/expenses?expense=new",
+      "/admin/finance/settings",
     ]) {
       await audit(page, url, { linkMin: 24 });
     }
