@@ -15,27 +15,27 @@
   --color-white: #ffffff; /* text on navy, translucent overlays (bg-white/90) */
   --color-black: #000000; /* translucent overlays on photos (bg-black/55) */
 
-  --color-navy: #0b2545; /* primary buttons, headings, ink, dark header */
-  --color-navy-2: #13315c; /* dark cards, icon wells on dark */
-  --color-navy-3: #1b4a7a; /* welcome waves */
-  --color-aqua: #4cc9f0; /* brand accent, logo, CTA on dark */
-  --color-aqua-soft: #8fe0f5; /* link hover on dark */
-  --color-teal: #0a6e8f; /* links, active tab, focus border, icons */
+  --color-navy: #0a2a5e; /* primary buttons, headings, ink, dark header */
+  --color-navy-2: #0f3874; /* dark cards, icon wells on dark */
+  --color-navy-3: #0d50ae; /* welcome waves; the logo's deep blue */
+  --color-aqua: #4bb4f2; /* brand accent on dark: the logo's sky blue, lightened for text on navy */
+  --color-aqua-soft: #9ad3f8; /* link hover on dark */
+  --color-teal: #1565c0; /* links, active tab, focus border, icons */
   --color-bg: #f4f7fb; /* app background */
   --color-surface: #ffffff; /* cards, inputs */
   --color-border: #e3eaf2; /* card and input borders */
   --color-track: #d3dce6; /* progress tracks, inactive steps */
   --color-muted: #52627a; /* secondary text */
   --color-body-2: #34455c; /* long body text */
-  --color-on-dark-muted: #9fb8d3; /* secondary text on navy */
+  --color-on-dark-muted: #9fbcdd; /* secondary text on navy */
   --color-on-dark-body: #c9d8ea; /* body text on navy */
-  --color-selected: #e6f7fd; /* selected chip/card background */
+  --color-selected: #e8f3fd; /* selected chip/card background */
   --color-disabled: #c9d3e0; /* disabled button */
   --color-divider: #eef2f7; /* row dividers inside cards */
   --color-control-off: #9aa9bc; /* unchecked radio border, row chevrons */
   --color-otp-filled: #9fb3c8; /* filled OTP box border */
-  --color-chip-border: #bfe6f5; /* quick-reply chip border */
-  --color-dashed: #8fb6cc; /* dashed "add file" tile border */
+  --color-chip-border: #bfdcf5; /* quick-reply chip border */
+  --color-dashed: #8fb2d6; /* dashed "add file" tile border */
   --color-well: #f1f5f9; /* neutral icon well */
   --color-map-bg: #e8eef3; /* map placeholder */
 
@@ -44,6 +44,8 @@
   --color-warn: #f59e0b; /* unread dot */
   --color-warn-icon: #b45309; /* amber icon stroke on warn-bg */
   --color-warn-strong: #78350f; /* strong text on the amber banner */
+  --color-sun: #ffaa00; /* the logo's sun: CTA on dark (accent button) */
+
   --color-ok-bg: #dcfce7; /* completed, uploaded, certificate */
   --color-ok-fg: #15803d;
   --color-ok: #16a34a;
@@ -100,12 +102,12 @@
 
   /* Shadows, named by where the canvas uses them */
   --shadow-*: initial;
-  --shadow-card: 0 6px 20px rgb(11 37 69 / 0.08); /* raised card (Home live order) */
-  --shadow-float: 0 2px 10px rgb(11 37 69 / 0.15); /* buttons and chips floating on the map */
-  --shadow-sheet: 0 -6px 24px rgb(11 37 69 / 0.12); /* bottom sheet */
-  --shadow-fab: 0 8px 18px rgb(11 37 69 / 0.3); /* raised Book button in the tab bar */
-  --shadow-pin: 0 4px 12px rgb(11 37 69 / 0.3); /* crew pin on the map */
-  --shadow-segment: 0 1px 4px rgb(11 37 69 / 0.12); /* active segmented-control tab */
+  --shadow-card: 0 6px 20px rgb(10 42 94 / 0.08); /* raised card (Home live order) */
+  --shadow-float: 0 2px 10px rgb(10 42 94 / 0.15); /* buttons and chips floating on the map */
+  --shadow-sheet: 0 -6px 24px rgb(10 42 94 / 0.12); /* bottom sheet */
+  --shadow-fab: 0 8px 18px rgb(10 42 94 / 0.3); /* raised Book button in the tab bar */
+  --shadow-pin: 0 4px 12px rgb(10 42 94 / 0.3); /* crew pin on the map */
+  --shadow-segment: 0 1px 4px rgb(10 42 94 / 0.12); /* active segmented-control tab */
   --shadow-knob: 0 1px 3px rgb(0 0 0 / 0.2); /* switch knob */
   --shadow-logo: 0 12px 30px rgb(0 0 0 / 0.25); /* logo tile on Welcome */
 

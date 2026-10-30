@@ -66,6 +66,7 @@ Design source: [Zalal canvas](https://claude.ai/artifact/6oMMA7Tb5eo2KttDmmB1Bb)
 | 54–55 | Content | Articles and categories managed by admin, seeded at launch |
 | 59 | Stack | Next.js 16 + Supabase + Vercel (section 3) |
 | 60 | Environments | Local (Docker), dev and prod Supabase projects in separate orgs; Claude never holds prod credentials; CI deploys migrations (`docs/supabase-setup.md`). Production releases only through the approved "Deploy prod" workflow, database first, then app (`docs/deploy-setup.md`) |
+| — | Brand | The owner's logo (the sun over "Zalal") is the app icon and the in-app logo; the blues and a new `sun` accent follow its colors (settled Oct 30, 2026, §4) |
 
 ## 2. Roles and surfaces
 
@@ -140,24 +141,27 @@ These tokens are lifted from the artboards' inline styles; put them in `tailwind
 
 | Token | Hex | Used for |
 | --- | --- | --- |
-| `navy` | #0B2545 | Primary buttons, headings, ink, dark header |
-| `navy-2` | #13315C | Dark cards, icon wells on dark |
-| `navy-3` | #1B4A7A | Welcome waves |
-| `aqua` | #4CC9F0 | Brand accent, logo, CTA on dark |
-| `aqua-soft` | #8FE0F5 | Link hover on dark |
-| `teal` | #0A6E8F | Links, active tab, focus border, icons |
+| `navy` | #0A2A5E | Primary buttons, headings, ink, dark header |
+| `navy-2` | #0F3874 | Dark cards, icon wells on dark |
+| `navy-3` | #0D50AE | Welcome waves |
+| `aqua` | #4BB4F2 | Brand accent on dark |
+| `aqua-soft` | #9AD3F8 | Link hover on dark |
+| `teal` | #1565C0 | Links, active tab, focus border, icons |
 | `bg` | #F4F7FB | App background |
 | `surface` | #FFFFFF | Cards, inputs |
 | `border` | #E3EAF2 | Card and input borders |
 | `track` | #D3DCE6 | Progress tracks, inactive steps |
 | `muted` | #52627A | Secondary text |
 | `body-2` | #34455C | Long body text |
-| `on-dark-muted` | #9FB8D3 | Secondary text on navy |
-| `selected` | #E6F7FD | Selected chip/card background (with 2px navy border) |
+| `on-dark-muted` | #9FBCDD | Secondary text on navy |
+| `selected` | #E8F3FD | Selected chip/card background (with 2px navy border) |
+| `sun` | #FFAA00 | The logo's sun: CTA on dark (the `accent` button) |
 | `disabled` | #C9D3E0 | Disabled button |
 | `warn-bg` / `warn-fg` / `warn` | #FEF3C7 / #92400E / #F59E0B | "Needs cleaning", "on the way", unread dot |
 | `ok-bg` / `ok-fg` / `ok` | #DCFCE7 / #15803D / #16A34A | Completed, uploaded, certificate |
 | `map-bg` | #E8EEF3 | Map placeholder |
+
+**Brand colors (Oct 30, 2026).** The owner's logo replaced the canvas's three-wave mark, and the blues follow it: `navy`, `navy-2`, `navy-3`, `aqua`, `aqua-soft`, `teal`, `selected`, `on-dark-muted`, `chip-border` and `dashed` differ from the canvas hex, and `sun` is new. The token names stay so screens didn't change. Where a design file and this table disagree on these colors, this table wins. Every text pair still reaches 4.5:1 (`tests/unit/theme-tokens.test.ts`).
 
 **Colors used in the canvas but missing from the table above.** Add tokens for these in Phase 0 (pick names that fit the scheme above). Note that the table has no error color, but every screen needs an error state:
 
@@ -169,8 +173,8 @@ These tokens are lifted from the artboards' inline styles; put them in `tailwind
 | #B45309 | Amber icon stroke on `warn-bg` (Home, Notifications) | `warn-icon` |
 | #78350F | Strong text on amber banner (LiveJob) | `warn-strong` |
 | #D97706 | Star / rating accent (Report) | `star` |
-| #8FB6CC | Dashed "add file" tile border (Upload, Issue) | `dashed` |
-| #BFE6F5 | Quick-reply chip border (Chat, Notifications) | `chip-border` |
+| #8FB2D6 | Dashed "add file" tile border (Upload, Issue) | `dashed` |
+| #BFDCF5 | Quick-reply chip border (Chat, Notifications) | `chip-border` |
 | #9AA9BC | Unchecked radio border, row chevrons (Checkout, Profile) | `control-off` |
 | #9FB3C8 | Filled OTP box border (Otp) | `otp-filled` |
 | #F1F5F9 | Neutral icon well (Notifications) | `well` |
@@ -178,7 +182,7 @@ These tokens are lifted from the artboards' inline styles; put them in `tailwind
 
 These are now tokens under the suggested names (Phase 0).
 
-Illustration-only colors don't need tokens. Keep them inside the illustration or SVG component: the map drawing (#DCE5EC, #D4EDDA, #BFE3F2), the photo placeholders in Report (#8B7355, #2B8FB3), the Iraqi flag in Login (#CE1126, #000000) and the shadows (`rgba(11,37,69,…)`). Shadows become `shadow-*` theme tokens.
+Illustration-only colors don't need tokens. Keep them inside the illustration or SVG component: the map drawing (#DCE5EC, #D4EDDA, #BFE3F2), the photo placeholders in Report (#8B7355, #2B8FB3), the Iraqi flag in Login (#CE1126, #000000) and the shadows (`rgba(11,37,69,…)` in the canvas, now `navy`'s `rgb(10 42 94 / …)`). Shadows become `shadow-*` theme tokens.
 
 ### Type, shape, spacing
 
@@ -187,7 +191,7 @@ Illustration-only colors don't need tokens. Keep them inside the illustration or
 - Heights: primary button 56 (54 in footers, 48 inside cards), inputs 56 (46 in compact forms), chips 40–52. Minimum touch target 44.
 - Screen padding 20–24; vertical gaps 8–14.
 - Icons: 24-grid, 2px stroke, round caps. Use `lucide-react` and match the canvas glyphs. lucide has no water tank, so Booking's two tank glyphs live in `src/components/icons/tank-icons.tsx`.
-- Logo: the three-wave mark in `Main.dc.html`, extracted to `public/brand/logo.svg`. `pnpm icons` (`scripts/generate-icons.mjs`) generates the rest from it (commit the output): the Welcome tile (`public/brand/logo-tile.svg`, also the favicon `src/app/icon.svg`), the 192 and 512 icons (rounded tile), a 512 maskable icon (full bleed, mark inside the 80% safe zone) and the 180 Apple touch icon (`src/app/apple-icon.png`, full bleed).
+- Logo: the owner's artwork, the sun over "Zalal" (Oct 30, 2026; it replaces the canvas's three-wave mark), traced to `public/brand/logo.svg` in its own colors (blue gradient #1E9DEA → #0D50AE, sun #FFB703 → #FF9A0E). `LogoMark` shows it; on Welcome and the offline page it sits on a white rounded tile (`LogoTile`), and the chat and certificate headers put it on a white tile with a border instead of the canvas's navy one. `pnpm icons` (`scripts/generate-icons.mjs`) generates the rest from it (commit the output): the white tile (`public/brand/logo-tile.svg`, also the favicon `src/app/icon.svg`), the 192 and 512 icons (rounded tile), a 512 maskable icon (full bleed, logo inside the 80% safe zone), the 180 Apple touch icon (`src/app/apple-icon.png`, full bleed) and the push badge.
 - Numbers: Western digits (0–9) as in the designs; currency written "35,000 د.ع".
 - Phone numbers and times are wrapped in `dir="ltr"` spans, as in the designs.
 

@@ -20,7 +20,7 @@ async function waitForServiceWorker(page: Page) {
 test("links the manifest, icons and theme color", async ({ page, request }) => {
   await page.goto("/");
 
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#0b2545");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#0a2a5e");
   await expect(page.locator('meta[name="mobile-web-app-capable"]')).toHaveAttribute(
     "content",
     "yes",
@@ -83,7 +83,7 @@ test("Chrome finds the app installable, with a valid manifest", async ({ baseURL
     expect(manifest.errors).toEqual([]);
 
     const parsed = JSON.parse(manifest.data ?? "{}") as Record<string, unknown>;
-    expect(parsed).toMatchObject({ display: "standalone", start_url: "/", theme_color: "#0b2545" });
+    expect(parsed).toMatchObject({ display: "standalone", start_url: "/", theme_color: "#0a2a5e" });
     const icons = parsed.icons as { sizes: string; purpose?: string }[];
     expect(icons.map((icon) => `${icon.sizes} ${icon.purpose ?? "any"}`)).toEqual(
       expect.arrayContaining(["192x192 any", "512x512 any", "512x512 maskable"]),

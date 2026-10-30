@@ -2,23 +2,25 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Every color token from spec §4, with the hex the canvas uses.
+// Every color token from spec §4. The brand blues and `sun` follow the logo
+// (spec §4 "Brand colors"); the rest are the hex the canvas uses.
 const SPEC_COLORS: Record<string, string> = {
-  navy: "#0B2545",
-  "navy-2": "#13315C",
-  "navy-3": "#1B4A7A",
-  aqua: "#4CC9F0",
-  "aqua-soft": "#8FE0F5",
-  teal: "#0A6E8F",
+  navy: "#0A2A5E",
+  "navy-2": "#0F3874",
+  "navy-3": "#0D50AE",
+  aqua: "#4BB4F2",
+  "aqua-soft": "#9AD3F8",
+  teal: "#1565C0",
   bg: "#F4F7FB",
   surface: "#FFFFFF",
   border: "#E3EAF2",
   track: "#D3DCE6",
   muted: "#52627A",
   "body-2": "#34455C",
-  "on-dark-muted": "#9FB8D3",
-  selected: "#E6F7FD",
+  "on-dark-muted": "#9FBCDD",
+  selected: "#E8F3FD",
   disabled: "#C9D3E0",
+  sun: "#FFAA00",
   "warn-bg": "#FEF3C7",
   "warn-fg": "#92400E",
   warn: "#F59E0B",
@@ -33,8 +35,8 @@ const SPEC_COLORS: Record<string, string> = {
   "warn-icon": "#B45309",
   "warn-strong": "#78350F",
   star: "#D97706",
-  dashed: "#8FB6CC",
-  "chip-border": "#BFE6F5",
+  dashed: "#8FB2D6",
+  "chip-border": "#BFDCF5",
   "control-off": "#9AA9BC",
   "otp-filled": "#9FB3C8",
   well: "#F1F5F9",
@@ -119,6 +121,7 @@ const TEXT_PAIRS: [text: string, background: string][] = [
   ["navy", "selected"],
   ["navy", "aqua"],
   ["navy", "warn"],
+  ["navy", "sun"],
   ["muted", "bg"],
   ["muted", "surface"],
   ["muted", "selected"],

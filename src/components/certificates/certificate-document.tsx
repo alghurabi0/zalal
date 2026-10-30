@@ -48,8 +48,8 @@ export async function CertificateDocument({
     >
       <header className="flex items-start justify-between gap-6 border-b-2 border-navy pb-5">
         <div className="flex items-center gap-3.5">
-          <span className="flex size-16 shrink-0 items-center justify-center rounded-input bg-navy">
-            <LogoMark className="h-8 w-10" />
+          <span className="flex size-16 shrink-0 items-center justify-center rounded-input border border-border bg-surface">
+            <LogoMark className="w-12" />
           </span>
           <div className="flex flex-col">
             <h1 className="text-24 leading-snug font-black">{t("title")}</h1>

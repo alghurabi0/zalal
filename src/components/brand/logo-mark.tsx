@@ -1,19 +1,21 @@
+import Image from "next/image";
+
 import { cn } from "@/lib/cn";
 
-/** The three-wave mark from public/brand/logo.svg, stroked in `className`'s stroke color. */
+/**
+ * The logo from public/brand/logo.svg: the sun over "Zalal", in its own
+ * colors. Decorative; the tile around it carries the label. Size it with
+ * a width class; the height follows.
+ */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 100 80"
-      fill="none"
-      strokeLinecap="round"
-      strokeWidth="9"
-      className={cn("stroke-aqua", className)}
-    >
-      <path d="M8 18 q10.5 -10 21 0 t21 0 t21 0 t21 0" />
-      <path d="M8 40 q10.5 -10 21 0 t21 0 t21 0 t21 0" strokeOpacity="0.7" />
-      <path d="M8 62 q10.5 -10 21 0 t21 0 t21 0 t21 0" strokeOpacity="0.4" />
-    </svg>
+    <Image
+      src="/brand/logo.svg"
+      alt=""
+      aria-hidden
+      width={705}
+      height={472}
+      className={cn("h-auto", className)}
+    />
   );
 }

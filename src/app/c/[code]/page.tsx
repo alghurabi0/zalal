@@ -33,8 +33,8 @@ export default function PublicCertificatePage(props: PageProps<"/c/[code]">) {
   return (
     <Screen className="bg-bg">
       <header className="flex items-center gap-3 px-5 pt-4.5">
-        <span className="flex size-11 items-center justify-center rounded-full bg-navy">
-          <LogoMark className="h-4.5 w-5.5" />
+        <span className="flex size-11 items-center justify-center rounded-full border border-border bg-surface">
+          <LogoMark className="w-7.5" />
         </span>
         <PageTitle />
       </header>
