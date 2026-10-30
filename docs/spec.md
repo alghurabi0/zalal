@@ -203,7 +203,7 @@ All tokens live in `@theme` in `src/app/globals.css`. Tailwind's default colors,
 - **Radii:** role names `chip` 12, `input` 14, `button` 16, `card` 18, `sheet` 26 (`rounded-t-sheet`). One-offs use pixel names: `4` (chat bubble tail), `8` (photo badges), `10` (status badges), `20` (video player, dark profile card), `30` (logo tile). The canvas's other radii are all half the element's height (dots, progress bars, 44×44 icon buttons, 38px pills), so they use `rounded-full`.
 - **Font sizes:** pixel names for each size in the canvas: `text-11` to `text-20`, `text-22`, `24`, `26`, `28`, `44`.
 - **Line heights:** `display` 1.2, `tight` 1.3, `snug` 1.4, `normal` 1.5, `relaxed` 1.6, `body` 1.7 (the default on `body`). These replace Tailwind's defaults of the same names, whose values differ.
-- **Letter spacing:** `wordmark` 6px ("ZALAL"), `phone` 1px (phone input).
+- **Letter spacing:** `phone` 1px (phone input).
 - **Shadows**, by where the canvas uses them: `card`, `float` (controls over the map), `sheet`, `fab` (tab bar Book button), `pin` (crew pin), `segment` (active segmented tab), `knob` (switch), `logo`.
 - **Layout:** `max-w-phone` is 430px, so phones up to the largest common width (430) are full width and wider screens get a centered column. The canvas artboards are 390 wide.
 - **Spacing:** Tailwind's 4px scale already covers every canvas value (`p-5.5` = 22px), so there are no spacing tokens.
@@ -249,6 +249,7 @@ Each designed screen below lists what changes from the canvas, how it behaves, a
 - Route `/welcome`. Customer URLs are kept in `src/lib/routes.ts`: Home `/`, Login `/login`, OTP `/login/verify`, Name `/onboarding/name`, Location `/addresses/new` and `/addresses/[id]/edit`, My tanks `/tanks`, Orders `/orders`, Booking `/book`, Chat `/chat`, Profile `/profile`, Terms `/terms`, Privacy `/privacy`.
 - Shown on first open only: a guest's first visit to `/` redirects here and sets the `zl_welcomed` cookie (also set when Welcome is opened directly). A logged-in user goes straight to Home (`src/proxy.ts`).
 - "ابدأ الآن" opens Login. "تصفح بدون تسجيل" opens Home in guest mode.
+- The logo tile, then "زلال". The canvas's "ZALAL" line under the name is dropped, since the logo already spells it (Oct 30, 2026).
 
 ### 5.2 Login — `Login.dc.html`
 

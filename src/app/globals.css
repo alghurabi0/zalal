@@ -97,7 +97,6 @@
 
   /* Letter spacing */
   --tracking-*: initial;
-  --tracking-wordmark: 0.375rem; /* "ZALAL" under the logo */
   --tracking-phone: 1px; /* phone number input */
 
   /* Shadows, named by where the canvas uses them */
