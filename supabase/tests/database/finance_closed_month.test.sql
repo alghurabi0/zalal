@@ -9,7 +9,10 @@
 -- out of completed is refused, since its revenue would leave that month.
 -- Records in open months, and a payment dated today for an item whose
 -- revenue is in a closed month, still go through. Account deletion still
--- blanks a customer's notes there (no amount moves).
+-- blanks a customer's notes there (no amount moves). Orders with no revenue
+-- (covered, or completed before the books) reopen freely, and a
+-- subscription activated into a closed month (a close at midnight) is
+-- refused like a completion.
 begin;
 \ir _helpers.psql
 
@@ -18,7 +21,7 @@ as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 create function tests.month(n int) returns date language sql stable
 as $$ select (date_trunc('month', tests.today()) - make_interval(months => n))::date $$;
 
-select plan(32);
+select plan(35);
 
 select tests.create_user('+9647801111111');            -- customer
 select tests.create_user('+9647504444444', 'admin');
@@ -44,7 +47,13 @@ $$;
 
 insert into tests.ids values
   ('old', tests.completed_order(tests.month(1) + 4)),
-  ('new', tests.completed_order(tests.today()));
+  ('new', tests.completed_order(tests.today())),
+  ('covered', tests.completed_order(tests.month(1) + 5)),
+  ('before_books', tests.completed_order(tests.month(3) + 5)),
+  ('sub', tests.create_subscription(tests.user_id('+9647801111111'), 'requested'));
+update public.orders set subscription_id = (
+  select s.id from public.subscriptions as s where s.user_id = tests.user_id('+9647801111111') limit 1
+) where id = tests.id('covered');
 
 create function tests.cash() returns uuid language sql stable security definer
 as $$ select id from public.finance_accounts where kind = 'cash' order by created_at limit 1 $$;
@@ -178,6 +187,23 @@ select lives_ok(
 -- Every writer obeys it ----------------------------------------------------------------------
 
 select tests.clear_authentication();
+select lives_ok(
+  format($$ update public.orders set status = 'in_progress' where id = %L $$, tests.id('covered')),
+  'a covered order completed in a closed month still reopens (it has no revenue)'
+);
+select lives_ok(
+  format($$ update public.orders set status = 'in_progress' where id = %L $$, tests.id('before_books')),
+  'and an order completed before the books'
+);
+select throws_ok(
+  format(
+    $$ update public.subscriptions set status = 'active', price_iqd = 70000, starts_on = %L, ends_on = %L,
+         activated_at = %L where id = %L $$,
+    tests.month(1) + 3, tests.month(1) + 300, ((tests.month(1) + 3) + time '12:00') at time zone 'Asia/Baghdad',
+    tests.id('sub')
+  ),
+  'ZL054', 'month_closed', 'an activation landing in a closed month is refused (a close at midnight)'
+);
 select throws_ok(
   format($$ update public.expenses set amount_iqd = 1 where id = %L $$, :'old_expense'),
   'ZL054', 'month_closed', 'a direct change is refused too'

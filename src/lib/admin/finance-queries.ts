@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { ExpenseCategoryKind, FinanceAccountKind } from "@/lib/schemas/finance";
 import { createClient } from "@/lib/supabase/server";
 
@@ -82,8 +84,11 @@ export async function financeStartOn(): Promise<string> {
   return data.start_on;
 }
 
-/** The start day and the last closed day (A17's start, A20's month close). */
-export async function financeBooks(): Promise<FinanceBooks> {
+/**
+ * The start day and the last closed day (A17's start, A20's month close),
+ * read once per request however many drawers and cards ask (code review).
+ */
+export const financeBooks = cache(async (): Promise<FinanceBooks> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("finance_settings")
@@ -91,7 +96,7 @@ export async function financeBooks(): Promise<FinanceBooks> {
     .single();
   if (error) throw new Error(`Finance settings read failed: ${error.message}`);
   return { startOn: data.start_on, closedThrough: data.closed_through };
-}
+});
 
 type Voidable = {
   voidedAt: string | null;

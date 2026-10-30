@@ -50,6 +50,13 @@ async function Overview() {
     accountName(account, (crew) => t("crewBox", { crew }));
   const total = accounts.reduce((sum, account) => sum + account.balanceIqd, 0);
   const boxes = accounts.filter((account) => account.kind !== "crew" && account.active);
+  // The rest of the total, so the rows add up to it (code review).
+  const crewTotal = accounts
+    .filter((account) => account.kind === "crew")
+    .reduce((sum, account) => sum + account.balanceIqd, 0);
+  const offTotal = accounts
+    .filter((account) => account.kind !== "crew" && !account.active)
+    .reduce((sum, account) => sum + account.balanceIqd, 0);
   const crews = accounts
     .filter((account) => account.kind === "crew" && account.balanceIqd !== 0)
     .sort((a, b) => b.balanceIqd - a.balanceIqd);
@@ -74,6 +81,16 @@ async function Overview() {
               <Money amount={account.balanceIqd} className="font-extrabold" />
             </li>
           ))}
+          <li className="flex items-center justify-between gap-3 py-2 text-15">
+            <span>{t("overview.crewBoxes")}</span>
+            <Money amount={crewTotal} className="font-extrabold" />
+          </li>
+          {offTotal !== 0 && (
+            <li className="flex items-center justify-between gap-3 py-2 text-15 text-muted">
+              <span>{t("overview.offBoxes")}</span>
+              <Money amount={offTotal} className="font-extrabold" />
+            </li>
+          )}
         </ul>
         <Link
           href={routes.adminFinance}

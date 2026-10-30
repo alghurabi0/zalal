@@ -25,7 +25,9 @@
 -- 3. An override that takes an order completed in a closed month out of
 --    completed is refused (ZL054): its revenue would leave that month.
 --    Completing dates today, which is closed only if the month closed at
---    midnight while the completion ran; that is refused too. Known: an
+--    midnight while the completion ran; that is refused too, and so is a
+--    subscription activated then (its revenue day). Covered orders and
+--    those completed before the books have no revenue, so they reopen. Known: an
 --    override out of completed while another admin moves the start day
 --    earlier can deadlock (one is aborted with 40P01 and retried); both are
 --    rare admin actions, so the lock order stays (RLS audit).
@@ -143,12 +145,20 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Only an order that is revenue in the books: not covered, completed on
+  -- or after the start day (code review).
   if old.status = 'completed' then
-    if private.finance_month_closed(old.completed_on) then
+    if old.subscription_id is null
+      and old.completed_on >= (select s.start_on from public.finance_settings as s where s.id)
+      and private.finance_month_closed(old.completed_on)
+    then
       raise exception using errcode = 'ZL054', message = 'month_closed';
     end if;
     new.completed_on := null;
-  elsif new.status = 'completed' and private.finance_month_closed(private.baghdad_today()) then
+  elsif new.status = 'completed'
+    and new.subscription_id is null
+    and private.finance_month_closed(private.baghdad_today())
+  then
     raise exception using errcode = 'ZL054', message = 'month_closed';
   end if;
   return new;
@@ -160,6 +170,29 @@ before update of status on public.orders
 for each row
 when (old.status is distinct from new.status)
 execute function private.orders_guard_closed_month();
+
+-- A subscription is revenue on its activation day, which is today: closed
+-- only when the month closed at midnight while the activation ran, as for a
+-- completion (code review).
+create function private.subscriptions_guard_closed_month()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if private.finance_month_closed((new.activated_at at time zone 'Asia/Baghdad')::date) then
+    raise exception using errcode = 'ZL054', message = 'month_closed';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger subscriptions_guard_closed_month
+before update of activated_at on public.subscriptions
+for each row
+when (old.activated_at is null and new.activated_at is not null)
+execute function private.subscriptions_guard_closed_month();
 
 create or replace function private.order_completed_on(p_order_id uuid)
 returns date

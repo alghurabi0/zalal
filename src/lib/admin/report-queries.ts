@@ -2,7 +2,14 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
-import type { CategoryTotal, MonthReport } from "./finance-reports";
+import { expenseCategories } from "./finance-queries";
+import type { AdminReportsQuery } from "./finance-query";
+import {
+  type CategoryTotal,
+  type MonthReport,
+  type ReportLine,
+  reportLines,
+} from "./finance-reports";
 
 // Reads for the accounting overview and reports (spec §8.3 A19–A20), made
 // as the admin: both functions refuse anyone else (42501).
@@ -47,4 +54,25 @@ export async function expensesByCategory(from: string, to: string): Promise<Cate
     categoryId: Number(row.category_id),
     totalIqd: Number(row.total_iqd),
   }));
+}
+
+/**
+ * A20's report, for the page and its CSV alike: the year asked for, or the
+ * month (this month by default), neither past today in Baghdad.
+ */
+export async function loadReport(
+  query: AdminReportsQuery,
+  today: string,
+): Promise<{ year: string | null; month: string; months: MonthReport[]; lines: ReportLine[] }> {
+  const thisMonth = today.slice(0, 7);
+  const year = query.year && query.year <= today.slice(0, 4) ? query.year : null;
+  const month = !year && query.month && query.month <= thisMonth ? query.month : thisMonth;
+  const [from, to] = year ? [`${year}-01`, `${year}-12`] : [month, month];
+  const [months, byCategory, categories] = await Promise.all([
+    profitAndLoss(from, to),
+    expensesByCategory(from, to),
+    expenseCategories(),
+  ]);
+  const names = new Map(categories.map((category) => [category.id, category.name]));
+  return { year, month, months, lines: reportLines(months, byCategory, names) };
 }

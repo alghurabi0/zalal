@@ -9,15 +9,10 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { addMonthsTo } from "@/lib/admin/calendar";
-import { expenseCategories, financeBooks } from "@/lib/admin/finance-queries";
+import { financeBooks } from "@/lib/admin/finance-queries";
 import { adminReportsHref, parseAdminReportsQuery } from "@/lib/admin/finance-query";
-import {
-  type FinanceBooks,
-  isClosed,
-  type ReportLine,
-  reportLines,
-} from "@/lib/admin/finance-reports";
-import { expensesByCategory, profitAndLoss } from "@/lib/admin/report-queries";
+import { type FinanceBooks, isClosed, type ReportLine } from "@/lib/admin/finance-reports";
+import { loadReport } from "@/lib/admin/report-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { baghdadToday, formatDay, formatMonthName, formatMonthYear } from "@/lib/dates";
@@ -52,20 +47,10 @@ async function Reports({ searchParams }: PageProps<"/admin/finance/reports">) {
   const today = baghdadToday();
   const thisMonth = today.slice(0, 7);
   const thisYear = today.slice(0, 4);
-  const year = query.year && query.year <= thisYear ? query.year : null;
-  const month = !year && query.month && query.month <= thisMonth ? query.month : thisMonth;
-  const [from, to] = year ? [`${year}-01`, `${year}-12`] : [month, month];
-  const [books, months, byCategory, categories] = await Promise.all([
+  const [books, { year, month, months, lines }] = await Promise.all([
     financeBooks(),
-    profitAndLoss(from, to),
-    expensesByCategory(from, to),
-    expenseCategories(),
+    loadReport(query, today),
   ]);
-  const lines = reportLines(
-    months,
-    byCategory,
-    new Map(categories.map((category) => [category.id, category.name])),
-  );
   const title = year ? t("yearTitle", { year }) : t("monthTitle", { month: monthLabel(month) });
   const csvHref = adminReportsHref(year ? { year } : { month }, true);
 
@@ -252,13 +237,14 @@ async function ReportTable({
                   </td>
                 </tr>
               )}
-              {rows.map((line) => {
+              {rows.map((line, index) => {
                 const label =
                   "figure" in line.label ? t(`figures.${line.label.figure}`) : line.label.category;
                 const strong = line.weight !== "item";
                 return (
                   <tr
-                    key={label}
+                    // A category may share a fixed figure's name.
+                    key={`${section}-${index}`}
                     className={cn(
                       "border-t border-divider",
                       line.weight === "total" &&
@@ -314,7 +300,9 @@ async function MonthState({
   } else if (isClosed(books, month)) {
     body = (
       <>
-        <p className="text-14 font-bold text-body-2">{t("statusClosed")}</p>
+        <p role="status" className="text-14 font-bold text-body-2">
+          {t("statusClosed")}
+        </p>
         {month === lastClosed ? (
           <ReopenMonth month={month} label={label} />
         ) : (
@@ -327,7 +315,9 @@ async function MonthState({
   } else {
     body = (
       <>
-        <p className="text-14 font-bold text-body-2">{t("statusOpen")}</p>
+        <p role="status" className="text-14 font-bold text-body-2">
+          {t("statusOpen")}
+        </p>
         {month >= thisMonth ? (
           <p className="text-13 text-muted">{t("notEnded")}</p>
         ) : month === nextToClose ? (

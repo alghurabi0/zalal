@@ -14,6 +14,7 @@ import { closeFinanceMonth, reopenFinanceMonth } from "../actions";
 
 // A20's month close (spec §8.3 "Reports"): "أقفل الشهر" asks once, with what
 // the close stops; "افتح الشهر" asks for the reason, which the audit log keeps.
+// Done, the page shows the month's new state in its status line.
 
 export function CloseMonth({ month, label }: { month: string; label: string }) {
   const t = useTranslations("Admin.finance.reports");
@@ -21,19 +22,13 @@ export function CloseMonth({ month, label }: { month: string; label: string }) {
   const tErrors = useTranslations("Admin.editErrors");
   const edit = useAdminEdit();
   const [open, setOpen] = useState(false);
-  const [done, setDone] = useState(false);
 
   if (!open) {
     return (
-      <div className="flex flex-col gap-2">
-        <Button size="sm" className="self-start" onClick={() => setOpen(true)}>
-          <Lock aria-hidden className="size-4" />
-          {t("close")}
-        </Button>
-        <p role="status" className="text-13 font-bold text-ok-fg">
-          {done && t("closed")}
-        </p>
-      </div>
+      <Button size="sm" className="self-start" onClick={() => setOpen(true)}>
+        <Lock aria-hidden className="size-4" />
+        {t("close")}
+      </Button>
     );
   }
   return (
@@ -44,10 +39,8 @@ export function CloseMonth({ month, label }: { month: string; label: string }) {
         event.preventDefault();
         edit.run(
           () => closeFinanceMonth({ month }),
-          () => {
-            setOpen(false);
-            setDone(true);
-          },
+          // The page refreshes into the month's new state, which its status line announces.
+          () => setOpen(false),
         );
       }}
     >
@@ -74,22 +67,16 @@ export function ReopenMonth({ month, label }: { month: string; label: string }) 
   const tErrors = useTranslations("Admin.editErrors");
   const edit = useAdminEdit();
   const [open, setOpen] = useState(false);
-  const [done, setDone] = useState(false);
   const [reason, setReason] = useState("");
   const [tried, setTried] = useState(false);
   const ok = reason.trim().length > 0;
 
   if (!open) {
     return (
-      <div className="flex flex-col gap-2">
-        <Button size="sm" variant="secondary" className="self-start" onClick={() => setOpen(true)}>
-          <LockOpen aria-hidden className="size-4" />
-          {t("reopen")}
-        </Button>
-        <p role="status" className="text-13 font-bold text-ok-fg">
-          {done && t("reopened")}
-        </p>
-      </div>
+      <Button size="sm" variant="secondary" className="self-start" onClick={() => setOpen(true)}>
+        <LockOpen aria-hidden className="size-4" />
+        {t("reopen")}
+      </Button>
     );
   }
   return (
@@ -103,10 +90,8 @@ export function ReopenMonth({ month, label }: { month: string; label: string }) 
         if (!ok) return;
         edit.run(
           () => reopenFinanceMonth({ month, reason }),
-          () => {
-            setOpen(false);
-            setDone(true);
-          },
+          // The page refreshes into the month's new state, which its status line announces.
+          () => setOpen(false),
         );
       }}
     >
