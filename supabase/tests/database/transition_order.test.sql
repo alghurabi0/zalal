@@ -1,7 +1,9 @@
 -- transition_order() (spec §6): the one way an order's status changes.
 -- Customer: cancel (with an N6 reason) or reschedule (new date and slot,
--- back to pending_confirmation) from pending_confirmation or confirmed, only
--- while the slot starts at least cancel_cutoff_hours from now (ZL006).
+-- back to pending_confirmation) from pending_confirmation or confirmed, until
+-- the slot starts (ZL006 from then on; no 2-hour rule since Oct 29, 2026: the
+-- new slot of a reschedule still follows the booking notice). Postponing is
+-- in postponed_orders.test.sql.
 -- Crew (assigned, active): confirmed -> on_the_way -> arrived -> in_progress
 -- -> completed (needs cash collected and the C4 sterilant; job_reports.test.sql), or no_show from
 -- confirmed/on_the_way/arrived with a note. Before and after photos are
@@ -44,8 +46,8 @@ as $$ select tests.user_id('+9647801111111') $$;
 
 -- Orders in the fixture slot unless named otherwise.
 insert into tests.ids values
-  ('p_2h', tests.create_order(tests.a(), 'pending_confirmation', now() + interval '2 hours')),
-  ('p_1h59', tests.create_order(tests.a(), 'pending_confirmation', now() + interval '1 hour 59 minutes')),
+  ('p_1min', tests.create_order(tests.a(), 'pending_confirmation', now() + interval '1 minute')),
+  ('p_started', tests.create_order(tests.a(), 'pending_confirmation', now())),
   ('c_3d', tests.create_order(tests.a(), 'confirmed', now() + interval '3 days')),
   ('p_b', tests.create_order(tests.user_id('+9647802222222'), 'pending_confirmation')),
   ('otw', tests.create_order(tests.a(), 'on_the_way', now() + interval '1 hour', tests.id('crew1'))),
@@ -82,7 +84,7 @@ grant execute on all functions in schema tests to anon, authenticated;
 
 select tests.authenticate_as_anon();
 select throws_ok(
-  $$ select tests.go('p_2h', 'cancelled', '{"cancel_reason": "other"}') $$,
+  $$ select tests.go('p_1min', 'cancelled', '{"cancel_reason": "other"}') $$,
   '42501', null, 'a guest cannot change orders'
 );
 
@@ -96,21 +98,21 @@ select throws_ok(
 );
 
 select lives_ok(
-  $$ select tests.go('p_2h', 'cancelled', '{"cancel_reason": "plans_changed"}') $$,
-  'a customer cancels exactly 2 hours before the slot'
+  $$ select tests.go('p_1min', 'cancelled', '{"cancel_reason": "plans_changed"}') $$,
+  'a customer cancels a minute before the slot starts'
 );
-select is(tests.status('p_2h'), 'cancelled', 'the order is cancelled');
+select is(tests.status('p_1min'), 'cancelled', 'the order is cancelled');
 select results_eq(
   $$ select from_status::text, to_status::text, actor_id, actor_role::text, cancel_reason::text, is_override
-     from public.order_events where order_id = tests.id('p_2h') $$,
+     from public.order_events where order_id = tests.id('p_1min') $$,
   $$ values ('pending_confirmation', 'cancelled', tests.a(), 'customer', 'plans_changed', false) $$,
   'the cancel is recorded with its reason'
 );
-select is(tests.seat_of('p_2h'), null, 'cancelling frees the place');
+select is(tests.seat_of('p_1min'), null, 'cancelling frees the place');
 
 select throws_ok(
-  $$ select tests.go('p_1h59', 'cancelled', '{"cancel_reason": "plans_changed"}') $$,
-  'ZL006', 'change_too_late', 'a customer cannot cancel 1 h 59 min before the slot'
+  $$ select tests.go('p_started', 'cancelled', '{"cancel_reason": "plans_changed"}') $$,
+  'ZL006', 'change_too_late', 'a customer cannot cancel once the slot has started'
 );
 select throws_ok(
   $$ select tests.go('c_3d', 'cancelled') $$,
@@ -129,7 +131,7 @@ select throws_ok(
   'ZL010', 'invalid_transition', 'a customer cannot cancel once the crew is on the way'
 );
 select throws_ok(
-  $$ select tests.go('p_1h59', 'confirmed') $$,
+  $$ select tests.go('p_started', 'confirmed') $$,
   'ZL010', 'invalid_transition', 'a customer cannot confirm'
 );
 select throws_ok(
@@ -185,9 +187,9 @@ select throws_ok(
   '22023', 'new_slot_required', 'a reschedule names the new date and slot'
 );
 select throws_ok(
-  $$ select tests.go('p_1h59', 'pending_confirmation',
+  $$ select tests.go('p_started', 'pending_confirmation',
        jsonb_build_object('service_date', tests.today() + 3, 'slot_id', tests.main())) $$,
-  'ZL006', 'change_too_late', 'a customer cannot reschedule within 2 hours of the slot'
+  'ZL006', 'change_too_late', 'a customer cannot reschedule once the slot has started'
 );
 
 -- Crew -------------------------------------------------------------------------
@@ -336,7 +338,7 @@ select throws_ok(
   'ZL010', 'invalid_transition', 'an order cannot move to the status it has'
 );
 select throws_ok(
-  $$ select tests.go('p_1h59', 'in_progress', '{"override": true, "reason": " "}') $$,
+  $$ select tests.go('p_started', 'in_progress', '{"override": true, "reason": " "}') $$,
   'ZL011', 'reason_required', 'a blank reason is no reason'
 );
 select lives_ok(
@@ -391,7 +393,7 @@ select tests.clear_authentication();
 update public.profiles set deleted_at = now() where id = tests.a();
 select tests.authenticate_as(tests.a());
 select throws_ok(
-  $$ select tests.go('p_1h59', 'cancelled', '{"cancel_reason": "other"}') $$,
+  $$ select tests.go('p_started', 'cancelled', '{"cancel_reason": "other"}') $$,
   '42501', 'not_allowed', 'a deleted account cannot change orders'
 );
 

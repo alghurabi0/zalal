@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 
 import {
   type AdminOrdersQuery,
+  DATED_STATUSES,
   likePattern,
-  ORDER_STATUSES,
   soonestFirst,
   statusesFor,
 } from "./orders-query";
@@ -56,10 +56,10 @@ export async function listAdminOrders(
 ): Promise<{ orders: AdminOrderRow[]; more: boolean }> {
   const supabase = await createClient();
   const ascending = soonestFirst(query);
-  let request = supabase
-    .from("orders")
-    .select(rowColumns)
-    .in("status", [...statusesFor(query.status)]);
+  const dated = !!(query.date || query.from || query.to);
+  // A postponed order keeps its old date only as a record: day filters skip it.
+  const statuses = statusesFor(query.status).filter((s) => !dated || s !== "postponed");
+  let request = supabase.from("orders").select(rowColumns).in("status", statuses);
   if (query.date) request = request.eq("service_date", query.date);
   if (query.from) request = request.gte("service_date", query.from);
   if (query.to) request = request.lte("service_date", query.to);
@@ -77,18 +77,20 @@ export async function listAdminOrders(
   return { orders: data.slice(0, query.n).map(toRow), more: data.length > query.n };
 }
 
+type DatedStatus = (typeof DATED_STATUSES)[number];
+
 /**
  * A1: the orders of a range of service days counted by status (`to` null =
- * from `from` on). One exact count per status, so the numbers never stop
- * at the API's row limit.
+ * from `from` on), leaving out postponed orders, which have no date. One
+ * exact count per status, so the numbers never stop at the API's row limit.
  */
 export async function orderCounts(range: {
   from: string;
   to: string | null;
-}): Promise<Record<OrderStatus, number>> {
+}): Promise<Record<DatedStatus, number>> {
   const supabase = await createClient();
   const counts = await Promise.all(
-    ORDER_STATUSES.map(async (status) => {
+    DATED_STATUSES.map(async (status) => {
       let request = supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
@@ -100,7 +102,18 @@ export async function orderCounts(range: {
       return [status, count ?? 0] as const;
     }),
   );
-  return Object.fromEntries(counts) as Record<OrderStatus, number>;
+  return Object.fromEntries(counts) as Record<DatedStatus, number>;
+}
+
+/** A1: every postponed order, whatever its old date. */
+export async function postponedCount(): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "postponed");
+  if (error) throw new Error(`Postponed orders read failed: ${error.message}`);
+  return count ?? 0;
 }
 
 /** A1: orders waiting for confirmation, soonest first. */

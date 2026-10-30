@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { CANCEL_REASONS } from "@/lib/orders/status";
 
-// Cancel (N6) and reschedule (N7) as their Server Actions receive them. The
-// database checks the order, the cutoff and the new slot again
+// Cancel (N6), reschedule and postpone (N7) as their Server Actions receive
+// them. The database checks the order, its slot start and the new slot again
 // (transition_order, spec §6).
 
 export const cancelOrderSchema = z.object({
@@ -20,6 +20,10 @@ export const rescheduleOrderSchema = z.object({
 });
 
 export type RescheduleOrderInput = z.input<typeof rescheduleOrderSchema>;
+
+export const postponeOrderSchema = z.object({ orderId: z.uuid() });
+
+export type PostponeOrderInput = z.input<typeof postponeOrderSchema>;
 
 /** Orders (spec §5.12): `?tab=past&n=40`. Lists load 20 at a time. */
 export const ORDERS_PAGE = 20;

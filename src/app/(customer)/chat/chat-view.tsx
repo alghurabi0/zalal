@@ -100,7 +100,10 @@ export function ChatView({
   };
 
   const changeable = Object.values(orders).filter(
-    (order) => order.status === "pending_confirmation" || order.status === "confirmed",
+    (order) =>
+      order.status === "pending_confirmation" ||
+      order.status === "confirmed" ||
+      order.status === "postponed",
   );
 
   return (
@@ -194,10 +197,14 @@ function ChangeActions({
   const tOrder = useTranslations("Order");
   const tBooking = useTranslations("Booking");
   const order = message.orderId ? orders[message.orderId] : undefined;
+  // A postponed order can still be cancelled here; its new date comes from
+  // support, so its reschedule message gets no button.
+  const allowed =
+    order?.change === "allowed" || (message.topic === "cancel" && order?.change === "postponed");
   if (
     message.author !== "customer" ||
     !order ||
-    order.change !== "allowed" ||
+    !allowed ||
     (message.topic !== "reschedule" && message.topic !== "cancel")
   ) {
     return null;

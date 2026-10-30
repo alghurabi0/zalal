@@ -167,6 +167,7 @@ const toneClasses: Record<Tone, string> = {
 const icons: Record<string, { icon: LucideIcon; tone: Tone }> = {
   order_confirmed: { icon: CalendarCheck, tone: "info" },
   order_rescheduled: { icon: CalendarClock, tone: "info" },
+  order_postponed: { icon: CalendarClock, tone: "warn" },
   order_cancelled: { icon: CalendarX, tone: "neutral" },
   crew_on_the_way: { icon: Truck, tone: "warn" },
   crew_arrived: { icon: House, tone: "warn" },

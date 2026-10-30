@@ -2061,11 +2061,14 @@ export type Database = {
         | "subscription_activated"
         | "subscription_declined"
         | "subscription_expiring"
-        | "subscription_requested";
+        | "subscription_requested"
+        | "order_postponed"
+        | "customer_postponed";
       order_media_kind: "customer" | "before" | "after" | "clip";
       order_status:
         | "pending_confirmation"
         | "confirmed"
+        | "postponed"
         | "on_the_way"
         | "arrived"
         | "in_progress"
@@ -2225,11 +2228,14 @@ export const Constants = {
         "subscription_declined",
         "subscription_expiring",
         "subscription_requested",
+        "order_postponed",
+        "customer_postponed",
       ],
       order_media_kind: ["customer", "before", "after", "clip"],
       order_status: [
         "pending_confirmation",
         "confirmed",
+        "postponed",
         "on_the_way",
         "arrived",
         "in_progress",

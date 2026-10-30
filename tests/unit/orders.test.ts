@@ -23,6 +23,7 @@ describe("ordersTab", () => {
   it.each<[OrderStatus, "current" | "past"]>([
     ["pending_confirmation", "current"],
     ["confirmed", "current"],
+    ["postponed", "current"],
     ["on_the_way", "current"],
     ["arrived", "current"],
     ["in_progress", "current"],
@@ -40,10 +41,12 @@ describe("badgeTone and primaryAction", () => {
     expect(badgeTone("on_the_way")).toBe("warn");
     expect(badgeTone("completed")).toBe("ok");
     expect(badgeTone("cancelled")).toBe("neutral");
+    expect(badgeTone("postponed")).toBe("warn");
   });
 
   it("tracks on the way, follows the job from arrival, opens the certificate, rebooks a cancelled order", () => {
     expect(primaryAction("cancelled")).toBe("rebook");
+    expect(primaryAction("postponed")).toBe("details");
     expect(primaryAction("on_the_way")).toBe("track");
     expect(primaryAction("arrived")).toBe("progress");
     expect(primaryAction("in_progress")).toBe("progress");
@@ -79,23 +82,23 @@ describe("changeState", () => {
   const now = new Date("2026-10-26T06:00:00Z");
   const startIn = (ms: number) => new Date(now.getTime() + ms).toISOString();
 
-  it("allows a change at exactly 2 h", () => {
-    expect(changeState("confirmed", startIn(2 * HOUR), now, 2)).toBe("allowed");
+  it("allows a change until the slot starts, with no 2-hour rule", () => {
+    expect(changeState("confirmed", startIn(2 * HOUR), now)).toBe("allowed");
+    expect(changeState("pending_confirmation", startIn(60_000), now)).toBe("allowed");
   });
 
-  it("refuses a change at 1 h 59 min", () => {
-    expect(changeState("pending_confirmation", startIn(2 * HOUR - 60_000), now, 2)).toBe(
-      "too_late",
-    );
+  it("refuses a change once the slot has started", () => {
+    expect(changeState("pending_confirmation", startIn(0), now)).toBe("too_late");
+    expect(changeState("confirmed", startIn(-HOUR), now)).toBe("too_late");
   });
 
-  it("follows the cutoff setting", () => {
-    expect(changeState("confirmed", startIn(3 * HOUR), now, 4)).toBe("too_late");
+  it("lets a postponed order only be cancelled, whatever its old date", () => {
+    expect(changeState("postponed", startIn(-48 * HOUR), now)).toBe("postponed");
   });
 
   it("is closed once the crew is on the way or the order has ended", () => {
-    expect(changeState("on_the_way", startIn(48 * HOUR), now, 2)).toBe("closed");
-    expect(changeState("cancelled", startIn(48 * HOUR), now, 2)).toBe("closed");
+    expect(changeState("on_the_way", startIn(48 * HOUR), now)).toBe("closed");
+    expect(changeState("cancelled", startIn(48 * HOUR), now)).toBe("closed");
   });
 });
 
@@ -284,6 +287,20 @@ describe("pickActiveOrder", () => {
       now,
     );
     expect(picked?.id).toBe("next");
+  });
+
+  it("puts a postponed order after any order with a date", () => {
+    const picked = pickActiveOrder(
+      [
+        order("off", "postponed", "2026-10-27T07:00:00Z"),
+        order("old", "confirmed", "2026-10-25T07:00:00Z"),
+      ],
+      now,
+    );
+    expect(picked?.id).toBe("old");
+    expect(pickActiveOrder([order("off", "postponed", "2026-10-20T07:00:00Z")], now)?.id).toBe(
+      "off",
+    );
   });
 
   it("still shows a stale order when it is the only one", () => {

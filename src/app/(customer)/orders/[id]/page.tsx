@@ -28,8 +28,8 @@ import { RescheduleSheet } from "./reschedule-sheet";
 
 /**
  * Order details (N4): status, timeline, summary, price and attachments, with
- * the buttons its status allows. Cancel (N6) and reschedule (N7) open
- * sheets. From the crew setting off it links to Tracking and then Job
+ * the buttons its status allows. Cancel (N6) and reschedule (N7, which also
+ * postpones) open sheets; a postponed order offers cancel only. From the crew setting off it links to Tracking and then Job
  * progress, and once completed to the certificate (Report) and the job's
  * files. Help opens Chat tagged with the order.
  */
@@ -165,11 +165,13 @@ async function Summary({ order }: { order: OrderDetails }) {
       <dl className="flex flex-col gap-2.5">
         {row(
           t("when"),
-          t("whenValue", {
-            weekday,
-            day,
-            slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
-          }),
+          order.status === "postponed"
+            ? t("whenPostponed")
+            : t("whenValue", {
+                weekday,
+                day,
+                slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
+              }),
         )}
         {row(
           t("address"),
@@ -279,6 +281,8 @@ async function Timeline({ entries }: { entries: TimelineEntry[] }) {
           ? `${t("events.cancelled", { by })} · ${t(`reasons.${entry.reason}`)}`
           : t("events.cancelled", { by });
       }
+      case "postponed":
+        return t("events.postponed", { by: entry.by === "you" ? "you" : "company" });
       case "status":
         return t(`events.${entry.status}`);
     }
@@ -314,7 +318,7 @@ async function Timeline({ entries }: { entries: TimelineEntry[] }) {
   );
 }
 
-/** The buttons the order's status allows, in a footer. */
+/** The booking notice: how soon a slot can be booked, a new one included. */
 async function cancelCutoffHours(): Promise<number> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("settings").select("cancel_cutoff_hours").single();
@@ -322,6 +326,7 @@ async function cancelCutoffHours(): Promise<number> {
   return data.cancel_cutoff_hours;
 }
 
+/** The buttons the order's status allows, in a footer. */
 async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number }) {
   const t = await getTranslations("Order");
   const tBooking = await getTranslations("Booking");
@@ -370,8 +375,25 @@ async function Actions({ order, cutoff }: { order: OrderDetails; cutoff: number 
 
   // The server's clock, never the device's; the database checks again.
   const now = new Date();
-  const state = changeState(order.status, order.slot_start_at, now, cutoff);
+  const state = changeState(order.status, order.slot_start_at, now);
   if (state === "closed") return null;
+
+  // Postponed: only cancel; the company sets the new date with the customer.
+  if (state === "postponed") {
+    return (
+      <Footer>
+        <p className="flex items-start gap-2 text-13 text-muted">
+          <CalendarClock aria-hidden className="mt-0.5 size-4 shrink-0" />
+          {t("postponedHint")}
+        </p>
+        <CancelSheet orderId={order.id} tooLate={false}>
+          <Button variant="secondary" size="footer" className="w-full text-danger">
+            {t("cancel")}
+          </Button>
+        </CancelSheet>
+      </Footer>
+    );
+  }
 
   const tooLate = state === "too_late";
   const supabase = await createClient();
