@@ -40,6 +40,16 @@ async function clearNotifications(userId: string) {
 }
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+/** A time on a Baghdad calendar day, so the list's day groups never depend on when tests run. */
+const baghdadAt = (days: number, time: string) =>
+  new Date(`${baghdadDate(days)}T${time}:00+03:00`).toISOString();
+/** `minutes` ago, but never before today began in Baghdad (just after midnight, it stays today). */
+const todayAgo = (minutes: number) => {
+  const start = Date.parse(`${baghdadDate(0)}T00:00:00+03:00`);
+  return new Date(
+    Math.max(Date.now() - minutes * 60_000, start + (60 - minutes) * 1000),
+  ).toISOString();
+};
 
 /** A logged-in customer (on Home) with one on-the-way order and no notifications. */
 async function customerWithOrder(page: Page) {
@@ -68,18 +78,18 @@ test("the list groups today and before, opens items and marks them read", async 
     district: "حي الحسين",
   };
   await addNotifications(userId, [
-    { type: "crew_on_the_way", data: orderValues, order_id: order.id, created_at: hoursAgo(0.1) },
+    { type: "crew_on_the_way", data: orderValues, order_id: order.id, created_at: todayAgo(6) },
     {
       type: "support_message",
       data: { excerpt: "تم تأكيد تغيير الموعد" },
-      created_at: hoursAgo(0.05),
+      created_at: todayAgo(3),
     },
     {
       type: "order_completed",
       data: orderValues,
       order_id: order.id,
-      created_at: hoursAgo(26),
-      read_at: hoursAgo(25),
+      created_at: baghdadAt(-1, "12:00"),
+      read_at: baghdadAt(-1, "13:00"),
     },
     {
       type: "cleaning_reminder",
