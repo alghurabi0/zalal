@@ -1,6 +1,6 @@
 import { subscriptionReasonFor } from "@/lib/subscriptions/errors";
 
-// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A17 admin RPCs (codes in
+// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A18 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
 export const ADMIN_EDIT_ERRORS = [
@@ -37,6 +37,11 @@ export const ADMIN_EDIT_ERRORS = [
   "record_voided",
   "name_taken",
   "same_account",
+  "payment_not_allowed",
+  "refund_too_large",
+  "discount_not_allowed",
+  "discount_exists",
+  "paid_set_by_finance",
   "invalid",
   "not_found",
   "failed",
@@ -66,6 +71,11 @@ const byCode: Record<string, AdminEditError> = {
   ZL046: "records_before_start",
   ZL047: "record_voided",
   ZL048: "name_taken",
+  ZL049: "payment_not_allowed",
+  ZL050: "refund_too_large",
+  ZL051: "discount_not_allowed",
+  ZL052: "discount_exists",
+  ZL053: "paid_set_by_finance",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.

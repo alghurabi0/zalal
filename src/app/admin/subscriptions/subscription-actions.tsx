@@ -28,14 +28,17 @@ function endsOnFor(startsOn: string): string {
 
 /**
  * The A7 drawer's actions, by state. A request: "فعّل" (start date, visits,
- * tanks and price prefilled from the plan, the paid tick, a note) or decline.
- * Running: the paid tick, a visit counted or given back (with a reason), and
- * cancel. Any state: an internal note. The database checks and audits each.
+ * tanks and price prefilled from the plan, a note) or decline; its payments
+ * go in the "الحساب" card. Running: the paid tick for a subscription from
+ * before the books (in the books, payments tick it), a visit counted or
+ * given back (with a reason), and cancel. Any state: an internal note. The
+ * database checks and audits each.
  */
 export function SubscriptionActions({
   subscriptionId,
   state,
   paid,
+  paidFromBooks,
   plan,
   today,
   defaultStart,
@@ -43,6 +46,8 @@ export function SubscriptionActions({
   subscriptionId: string;
   state: SubscriptionState;
   paid: boolean;
+  /** In the books, payments tick "paid" (the "الحساب" card); A7's switch is for older ones. */
+  paidFromBooks: boolean;
   plan: { visits: number; tanks: number; priceIqd: number | null };
   /** Today in Baghdad, by the server's clock. */
   today: string;
@@ -64,9 +69,11 @@ export function SubscriptionActions({
       )}
       {running && (
         <>
-          <Panel>
-            <Paid subscriptionId={subscriptionId} paid={paid} />
-          </Panel>
+          {!paidFromBooks && (
+            <Panel>
+              <Paid subscriptionId={subscriptionId} paid={paid} />
+            </Panel>
+          )}
           <Panel>
             <Adjust subscriptionId={subscriptionId} />
           </Panel>
@@ -119,7 +126,6 @@ function Activate({
   const [visits, setVisits] = useState(String(plan.visits));
   const [tanks, setTanks] = useState(String(plan.tanks));
   const [price, setPrice] = useState(plan.priceIqd === null ? "" : String(plan.priceIqd));
-  const [paid, setPaid] = useState(false);
   const [note, setNote] = useState("");
   const validStart = /^\d{4}-\d{2}-\d{2}$/.test(startsOn);
 
@@ -136,7 +142,6 @@ function Activate({
               visits: Number(visits),
               tanks: Number(tanks),
               priceIqd: Number(price),
-              paid,
               note,
             }),
           () => undefined,
@@ -219,16 +224,7 @@ function Activate({
           )}
         </Field>
       </div>
-      <label className="flex min-h-11 items-center gap-3 text-15 font-bold">
-        <input
-          type="checkbox"
-          name="paid"
-          className="size-5 accent-navy"
-          checked={paid}
-          onChange={(event) => setPaid(event.target.checked)}
-        />
-        {t("paidField")}
-      </label>
+      <p className="text-13 text-muted">{t("paidFromBooks")}</p>
       <Field label={t("noteField")} variant="compact">
         {(control) => (
           <Textarea

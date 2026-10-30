@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { Drawer } from "@/components/admin/drawer";
+import { ItemAccountCard } from "@/components/admin/item-account";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -31,8 +32,9 @@ import { OrderSubscriptionButton } from "./order-subscription";
 const RESCHEDULE_DAYS = 30;
 
 /**
- * The A2 order drawer: details, customer media, the timeline with staff
- * notes and crew changes, and the actions the status allows.
+ * The A2 order drawer: details, the account (payments, discount, what is
+ * owed), customer media, the timeline with staff notes and crew changes,
+ * and the actions the status allows.
  */
 export async function OrderDrawer({
   orderId,
@@ -83,6 +85,7 @@ export async function OrderDrawer({
     >
       <Details order={order} />
       <SubscriptionSection order={order} />
+      <ItemAccountCard item={{ kind: "order", id: order.id }} />
       {order.customer_note && (
         <Section title={t("note")}>
           <p className="text-15 whitespace-pre-line text-body-2">{order.customer_note}</p>

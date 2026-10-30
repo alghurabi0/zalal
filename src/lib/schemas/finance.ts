@@ -2,10 +2,10 @@ import { z } from "zod";
 
 import { toWesternDigits } from "@/lib/phone";
 
-// The accounting inputs (spec §8.3 A15–A17; Phase 7, task 1), shared by the
+// The accounting inputs (spec §8.3; Phase 7, tasks 1 and 2), shared by the
 // forms and the Server Actions. The database checks every rule again: the
 // day between the books' start and today, switched-off boxes and categories,
-// voided records.
+// voided records, refunds and discounts.
 
 /** Integer IQD; the database allows up to a billion per record. */
 export const AMOUNT_MAX = 1_000_000_000;
@@ -64,6 +64,86 @@ export const voidSchema = z.object({
     .pipe(z.string().min(1).max(NOTE_MAX)),
 });
 export type VoidInput = z.input<typeof voidSchema>;
+
+/**
+ * A payment (Phase 7, task 2): money in for one order, subscription or
+ * manual sale, or out when negative (a refund). An edit keeps its item.
+ */
+export const paymentSchema = z
+  .object({
+    id: z.uuid().nullable(),
+    orderId: z.uuid().nullable(),
+    subscriptionId: z.uuid().nullable(),
+    saleId: z.uuid().nullable(),
+    paidOn: z.iso.date(),
+    accountId: z.uuid(),
+    amountIqd: z
+      .number()
+      .int()
+      .min(-AMOUNT_MAX)
+      .max(AMOUNT_MAX)
+      .refine((value) => value !== 0),
+    note: trimmed(NOTE_MAX),
+  })
+  .refine(
+    (value) =>
+      value.id !== null ||
+      [value.orderId, value.subscriptionId, value.saleId].filter(Boolean).length === 1,
+    { path: ["orderId"] },
+  );
+export type PaymentInput = z.input<typeof paymentSchema>;
+
+/** A discount on an order or a subscription, in the books only, with a reason. */
+export const discountSchema = z
+  .object({
+    id: z.uuid().nullable(),
+    orderId: z.uuid().nullable(),
+    subscriptionId: z.uuid().nullable(),
+    amountIqd: amountSchema,
+    reason: z
+      .string()
+      .transform((value) => value.trim())
+      .pipe(z.string().min(1).max(NOTE_MAX)),
+  })
+  .refine(
+    (value) =>
+      value.id !== null || [value.orderId, value.subscriptionId].filter(Boolean).length === 1,
+    { path: ["orderId"] },
+  );
+export type DiscountInput = z.input<typeof discountSchema>;
+
+export const SALE_NAME_MAX = 80;
+export const SALE_SERVICE_MAX = 120;
+export const SALE_PLACE_MAX = 120;
+
+/**
+ * Work outside the app (phone bookings, hotels and مواكب, outside Karbala).
+ * The phone is E.164 or empty; `paidAccountId` (a new sale only) records the
+ * whole amount as paid into that box.
+ */
+export const manualSaleSchema = z
+  .object({
+    id: z.uuid().nullable(),
+    soldOn: z.iso.date(),
+    customerName: z
+      .string()
+      .transform((value) => value.trim())
+      .pipe(z.string().min(2).max(SALE_NAME_MAX)),
+    customerPhone: z.union([z.literal(""), z.string().regex(/^\+9647[3-9][0-9]{8}$/)]),
+    service: z
+      .string()
+      .transform((value) => value.trim())
+      .pipe(z.string().min(2).max(SALE_SERVICE_MAX)),
+    place: trimmed(SALE_PLACE_MAX),
+    amountIqd: amountSchema,
+    crewId: z.uuid().nullable(),
+    note: trimmed(NOTE_MAX),
+    paidAccountId: z.uuid().nullable(),
+  })
+  .refine((value) => value.id === null || value.paidAccountId === null, {
+    path: ["paidAccountId"],
+  });
+export type ManualSaleInput = z.input<typeof manualSaleSchema>;
 
 /** A new box (id null), or a change to one; a crew box has no name of its own. */
 export const financeAccountSchema = z.object({

@@ -83,6 +83,9 @@ export const AUDIT_ENTITIES = [
   "expense_categories",
   "expenses",
   "finance_transfers",
+  "finance_payments",
+  "finance_discounts",
+  "manual_sales",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -155,14 +158,25 @@ const FINANCE_ENTITIES = new Set<string>([
   "expense_categories",
   "expenses",
   "finance_transfers",
+  "finance_payments",
+  "finance_discounts",
+  "manual_sales",
 ]);
 
-/** Crew ids a log row names: a crew row, or an order's old and new crew. */
+/** Crew ids a log row names: a crew row, an order's old and new crew, or a manual sale's. */
 function crewIdsIn(entry: AuditEntry): string[] {
   if (entry.entity === "crews") return [entry.entityId];
-  if (entry.action !== "order.assign_crew") return [];
   const diff = entry.diff;
   if (typeof diff !== "object" || diff === null || Array.isArray(diff)) return [];
+  if (entry.entity === "manual_sales") {
+    const crew = diff.crew_id;
+    const values =
+      typeof crew === "object" && crew !== null && !Array.isArray(crew)
+        ? [crew.from, crew.to]
+        : [crew];
+    return values.filter((id): id is string => typeof id === "string");
+  }
+  if (entry.action !== "order.assign_crew") return [];
   return [diff.from, diff.to].filter((id): id is string => typeof id === "string");
 }
 

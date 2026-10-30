@@ -132,6 +132,11 @@ export const routes = {
   adminFinance: "/admin/finance",
   /** Expenses (A16), filtered by its query string; `?expense=` opens the drawer. */
   adminExpenses: "/admin/finance/expenses",
+  /**
+   * Revenue and debts (A18): who owes, customer credit, the month's payments
+   * and manual sales; `?month=`, `?customer=`, `?payment=`, `?sale=`.
+   */
+  adminRevenue: "/admin/finance/revenue",
   /** Accounts settings (A17): the start day, the boxes and the expense categories. */
   adminFinanceSettings: "/admin/finance/settings",
 } as const;

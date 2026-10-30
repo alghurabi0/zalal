@@ -649,6 +649,211 @@ export type Database = {
           },
         ];
       };
+      finance_discounts: {
+        Row: {
+          amount_iqd: number;
+          created_at: string;
+          created_by: string;
+          id: string;
+          order_id: string | null;
+          reason: string | null;
+          subscription_id: string | null;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_iqd: number;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          order_id?: string | null;
+          reason?: string | null;
+          subscription_id?: string | null;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          amount_iqd?: number;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          order_id?: string | null;
+          reason?: string | null;
+          subscription_id?: string | null;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_discounts_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_discounts_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_discounts_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
+          {
+            foreignKeyName: "finance_discounts_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_discounts_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscriptions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_discounts_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      finance_payments: {
+        Row: {
+          account_id: string;
+          amount_iqd: number;
+          automatic: boolean;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          note: string | null;
+          order_id: string | null;
+          paid_on: string;
+          sale_id: string | null;
+          subscription_id: string | null;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_id: string;
+          amount_iqd: number;
+          automatic?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          note?: string | null;
+          order_id?: string | null;
+          paid_on: string;
+          sale_id?: string | null;
+          subscription_id?: string | null;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          amount_iqd?: number;
+          automatic?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          note?: string | null;
+          order_id?: string | null;
+          paid_on?: string;
+          sale_id?: string | null;
+          subscription_id?: string | null;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_payments_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "finance_payments_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_payments_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_payments_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_payments_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["next_order_id"];
+          },
+          {
+            foreignKeyName: "finance_payments_sale_id_fkey";
+            columns: ["sale_id"];
+            isOneToOne: false;
+            referencedRelation: "manual_sales";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_payments_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_overview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_payments_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscriptions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_payments_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       finance_settings: {
         Row: {
           id: boolean;
@@ -804,6 +1009,83 @@ export type Database = {
             isOneToOne: true;
             referencedRelation: "subscription_overview";
             referencedColumns: ["next_order_id"];
+          },
+        ];
+      };
+      manual_sales: {
+        Row: {
+          amount_iqd: number;
+          created_at: string;
+          created_by: string;
+          crew_id: string | null;
+          customer_name: string;
+          customer_phone: string | null;
+          id: string;
+          note: string | null;
+          place: string | null;
+          service: string;
+          sold_on: string;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_iqd: number;
+          created_at?: string;
+          created_by: string;
+          crew_id?: string | null;
+          customer_name: string;
+          customer_phone?: string | null;
+          id?: string;
+          note?: string | null;
+          place?: string | null;
+          service: string;
+          sold_on: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          amount_iqd?: number;
+          created_at?: string;
+          created_by?: string;
+          crew_id?: string | null;
+          customer_name?: string;
+          customer_phone?: string | null;
+          id?: string;
+          note?: string | null;
+          place?: string | null;
+          service?: string;
+          sold_on?: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "manual_sales_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "manual_sales_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: false;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "manual_sales_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -1910,6 +2192,46 @@ export type Database = {
         };
         Relationships: [];
       };
+      finance_customer_balances: {
+        Row: {
+          amount_iqd: number | null;
+          balance_iqd: number | null;
+          customer_id: string | null;
+          customer_name: string | null;
+          customer_phone: string | null;
+          items: number | null;
+          kind: string | null;
+          last_revenue_on: string | null;
+          paid_iqd: number | null;
+          sale_id: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [];
+      };
+      finance_receivables: {
+        Row: {
+          amount_iqd: number | null;
+          balance_iqd: number | null;
+          counted: boolean | null;
+          crew_id: string | null;
+          customer_id: string | null;
+          customer_name: string | null;
+          customer_phone: string | null;
+          discount_iqd: number | null;
+          item_id: string | null;
+          kind: string | null;
+          order_id: string | null;
+          order_number: number | null;
+          paid_iqd: number | null;
+          revenue_on: string | null;
+          sale_id: string | null;
+          service: string | null;
+          subscription_id: string | null;
+          total_iqd: number | null;
+        };
+        ComputedFields: never;
+        Relationships: [];
+      };
       subscription_overview: {
         Row: {
           activated_at: string | null;
@@ -2031,6 +2353,20 @@ export type Database = {
         Args: { p_reason: string; p_subscription_id: string };
         Returns: undefined;
       };
+      admin_expense_summary: {
+        Args: {
+          p_account_id?: string;
+          p_category_id?: number;
+          p_from: string;
+          p_to: string;
+          p_voided?: boolean;
+          p_words?: string;
+        };
+        Returns: {
+          count: number;
+          total: number;
+        }[];
+      };
       admin_rating_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -2040,6 +2376,16 @@ export type Database = {
       };
       admin_remove_admin: { Args: { p_user_id: string }; Returns: undefined };
       admin_reorder_categories: { Args: { p_ids: number[] }; Returns: undefined };
+      admin_revenue_summary: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          credit_iqd: number;
+          discounts_iqd: number;
+          owed_iqd: number;
+          received_iqd: number;
+          revenue_iqd: number;
+        }[];
+      };
       admin_save_article: {
         Args: {
           p_body_md?: string;
@@ -2063,6 +2409,16 @@ export type Database = {
           p_name?: string;
         };
         Returns: number;
+      };
+      admin_save_discount: {
+        Args: {
+          p_amount_iqd?: number;
+          p_id?: string;
+          p_order_id?: string;
+          p_reason?: string;
+          p_subscription_id?: string;
+        };
+        Returns: string;
       };
       admin_save_expense: {
         Args: {
@@ -2091,6 +2447,34 @@ export type Database = {
           p_kind?: Database["public"]["Enums"]["finance_account_kind"];
           p_name?: string;
           p_opening_balance_iqd?: number;
+        };
+        Returns: string;
+      };
+      admin_save_manual_sale: {
+        Args: {
+          p_amount_iqd?: number;
+          p_crew_id?: string;
+          p_customer_name?: string;
+          p_customer_phone?: string;
+          p_id?: string;
+          p_note?: string;
+          p_paid_account_id?: string;
+          p_place?: string;
+          p_service?: string;
+          p_sold_on?: string;
+        };
+        Returns: string;
+      };
+      admin_save_payment: {
+        Args: {
+          p_account_id?: string;
+          p_amount_iqd?: number;
+          p_id?: string;
+          p_note?: string;
+          p_order_id?: string;
+          p_paid_on?: string;
+          p_sale_id?: string;
+          p_subscription_id?: string;
         };
         Returns: string;
       };
@@ -2170,7 +2554,10 @@ export type Database = {
         Args: { p_active: boolean; p_capacity: number; p_slot_id: number; p_weekdays: number[] };
         Returns: undefined;
       };
+      admin_void_discount: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_expense: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_manual_sale: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_payment: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_transfer: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       assign_crew: { Args: { p_crew_id: string; p_order_id: string }; Returns: undefined };
       attach_job_media: {

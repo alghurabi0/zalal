@@ -24,7 +24,6 @@ export const activateSubscriptionSchema = z.object({
   visits: z.number().int().min(1).max(12),
   tanks: z.number().int().min(1).max(MAX_SUBSCRIPTION_TANKS),
   priceIqd: z.number().int().min(1).max(10_000_000),
-  paid: z.boolean(),
   note: z
     .string()
     .transform((value) => value.trim())

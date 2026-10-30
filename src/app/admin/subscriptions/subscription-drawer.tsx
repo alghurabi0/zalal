@@ -4,10 +4,12 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { Drawer } from "@/components/admin/drawer";
+import { ItemAccountCard } from "@/components/admin/item-account";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { financeStartOn } from "@/lib/admin/finance-queries";
 import { getAdminSubscription } from "@/lib/admin/subscription-queries";
 import { addDays, baghdadToday, formatDay, formatDayTime } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
@@ -35,7 +37,10 @@ export async function SubscriptionDrawer({
   const t = await getTranslations("Admin.subscriptions");
   const tUI = await getTranslations("UI");
   const tLabels = await getTranslations("Location.labels");
-  const subscription = await getAdminSubscription(subscriptionId);
+  const [subscription, startOn] = await Promise.all([
+    getAdminSubscription(subscriptionId),
+    financeStartOn(),
+  ]);
 
   if (!subscription) {
     return (
@@ -51,6 +56,10 @@ export async function SubscriptionDrawer({
 
   const { customer, address } = subscription;
   const activated = subscription.startsOn !== null;
+  // Activated on or after the books' start: its payments set "paid" (spec §8.3).
+  const inBooks =
+    subscription.activatedAt !== null &&
+    baghdadToday(new Date(subscription.activatedAt)) >= startOn;
   const row = (label: string, value: ReactNode) => (
     <div className="flex flex-col gap-0.5">
       <dt className="text-13 text-muted">{label}</dt>
@@ -143,11 +152,14 @@ export async function SubscriptionDrawer({
         </Button>
       )}
 
+      {activated && <ItemAccountCard item={{ kind: "subscription", id: subscription.id }} />}
+
       {/* No key: a refresh (another admin's change) keeps what is being typed. */}
       <SubscriptionActions
         subscriptionId={subscription.id}
         state={subscription.state}
         paid={subscription.paid}
+        paidFromBooks={inBooks}
         plan={{ visits: plan.visits, tanks: plan.tanks, priceIqd: plan.priceIqd }}
         today={baghdadToday()}
         // A renewal starts the day after the subscription it follows.

@@ -5,7 +5,10 @@ import * as Sentry from "@sentry/nextjs";
 import { type AdminEditResult, editFailure } from "@/lib/admin/edit-errors";
 import { requireViewer } from "@/lib/auth/viewer";
 import { routes } from "@/lib/routes";
+import { normalizeIraqiMobile } from "@/lib/phone";
 import {
+  type DiscountInput,
+  discountSchema,
   type ExpenseCategoryInput,
   expenseCategoryIdSchema,
   expenseCategorySchema,
@@ -15,6 +18,10 @@ import {
   financeAccountSchema,
   type FinanceSettingsInput,
   financeSettingsSchema,
+  type ManualSaleInput,
+  manualSaleSchema,
+  type PaymentInput,
+  paymentSchema,
   type TransferInput,
   transferSchema,
   type VoidInput,
@@ -22,9 +29,9 @@ import {
 } from "@/lib/schemas/finance";
 import { createClient } from "@/lib/supabase/server";
 
-// The accounting actions (spec §8.3 A15–A17), as the admin: the audited
-// admin RPCs check the role, the day, switched-off boxes and categories and
-// voided records, and write the audit log.
+// The accounting actions (spec §8.3 A15–A18), as the admin: the audited
+// admin RPCs check the role, the day, switched-off boxes and categories,
+// voided records, refunds and discounts, and write the audit log.
 
 const report = (message: string) => Sentry.captureMessage(message, "error");
 
@@ -134,4 +141,99 @@ export async function saveFinanceSettings(input: FinanceSettingsInput): Promise<
     p_start_on: parsed.data.startOn,
   });
   return error ? editFailure("admin_update_finance_settings", error, report) : { status: "done" };
+}
+
+export async function savePayment(input: PaymentInput): Promise<AdminEditResult> {
+  const parsed = paymentSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminRevenue);
+  const { id, orderId, subscriptionId, saleId, paidOn, accountId, amountIqd, note } = parsed.data;
+  const { error } = await supabase.rpc("admin_save_payment", {
+    p_id: id ?? undefined,
+    p_order_id: orderId ?? undefined,
+    p_subscription_id: subscriptionId ?? undefined,
+    p_sale_id: saleId ?? undefined,
+    p_paid_on: paidOn,
+    p_account_id: accountId,
+    p_amount_iqd: amountIqd,
+    p_note: note === "" ? undefined : note,
+  });
+  return error ? editFailure("admin_save_payment", error, report) : { status: "done" };
+}
+
+export async function voidPayment(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminRevenue);
+  const { error } = await supabase.rpc("admin_void_payment", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_payment", error, report) : { status: "done" };
+}
+
+export async function saveDiscount(input: DiscountInput): Promise<AdminEditResult> {
+  const parsed = discountSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminRevenue);
+  const { id, orderId, subscriptionId, amountIqd, reason } = parsed.data;
+  const { error } = await supabase.rpc("admin_save_discount", {
+    p_id: id ?? undefined,
+    p_order_id: orderId ?? undefined,
+    p_subscription_id: subscriptionId ?? undefined,
+    p_amount_iqd: amountIqd,
+    p_reason: reason,
+  });
+  return error ? editFailure("admin_save_discount", error, report) : { status: "done" };
+}
+
+export async function voidDiscount(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminRevenue);
+  const { error } = await supabase.rpc("admin_void_discount", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_discount", error, report) : { status: "done" };
+}
+
+export async function saveManualSale(
+  input: ManualSaleInput,
+): Promise<AdminEditResult | { status: "done"; id: string }> {
+  // The form sends the phone as typed (07…); the database stores E.164.
+  const phone = input.customerPhone.trim();
+  const parsed = manualSaleSchema.safeParse({
+    ...input,
+    customerPhone: phone === "" ? "" : (normalizeIraqiMobile(phone) ?? phone),
+  });
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminRevenue);
+  const d = parsed.data;
+  const { data, error } = await supabase.rpc("admin_save_manual_sale", {
+    p_id: d.id ?? undefined,
+    p_sold_on: d.soldOn,
+    p_customer_name: d.customerName,
+    p_customer_phone: d.customerPhone === "" ? undefined : d.customerPhone,
+    p_service: d.service,
+    p_place: d.place === "" ? undefined : d.place,
+    p_amount_iqd: d.amountIqd,
+    p_crew_id: d.crewId ?? undefined,
+    p_note: d.note === "" ? undefined : d.note,
+    p_paid_account_id: d.paidAccountId ?? undefined,
+  });
+  if (error) return editFailure("admin_save_manual_sale", error, report);
+  // A new sale opens again to take more payments; an edit closes.
+  return d.id ? { status: "done" } : { status: "done", id: data };
+}
+
+export async function voidManualSale(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminRevenue);
+  const { error } = await supabase.rpc("admin_void_manual_sale", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_manual_sale", error, report) : { status: "done" };
 }
