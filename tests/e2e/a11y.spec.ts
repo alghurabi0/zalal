@@ -148,7 +148,9 @@ test.describe("admin", () => {
     await logInAsAdmin(page);
     for (const url of [
       "/admin",
+      `/admin?period=${baghdadDate(0).slice(0, 7)}`,
       "/admin/orders",
+      `/admin/orders?status=all&from=${baghdadDate(0)}`,
       `/admin/orders?order=${order.id}`,
       "/admin/orders/board",
       "/admin/live",

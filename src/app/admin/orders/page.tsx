@@ -20,6 +20,7 @@ import {
 } from "@/lib/admin/orders-query";
 import { type CrewOption, listAdminOrders, listCrews } from "@/lib/admin/queries";
 import { requireViewer } from "@/lib/auth/viewer";
+import { formatDay } from "@/lib/dates";
 import { routes } from "@/lib/routes";
 
 import { OrderDrawer } from "./order-drawer";
@@ -53,7 +54,13 @@ async function Orders({ searchParams }: PageProps<"/admin/orders">) {
   const query = parseAdminOrdersQuery(await searchParams);
   const [crews, { orders, more }] = await Promise.all([listCrews(), listAdminOrders(query)]);
   const filtered =
-    query.status !== "active" || !!query.date || !!query.district || !!query.crew || !!query.slot;
+    query.status !== "active" ||
+    !!query.date ||
+    !!query.from ||
+    !!query.to ||
+    !!query.district ||
+    !!query.crew ||
+    !!query.slot;
   const listHref = (patch: Partial<AdminOrdersQuery>) => adminOrdersHref({ ...query, ...patch });
 
   return (
@@ -69,6 +76,22 @@ async function Orders({ searchParams }: PageProps<"/admin/orders">) {
           {t("slotFiltered")}
           <Button href={listHref({ slot: undefined, order: undefined })} variant="link" size="sm">
             {t("clearSlot")}
+          </Button>
+        </p>
+      )}
+      {(query.from || query.to) && (
+        <p className="flex flex-wrap items-center gap-2 text-14 text-muted">
+          {query.from && query.to
+            ? t("rangeFiltered", { from: formatDay(query.from), to: formatDay(query.to) })
+            : query.from
+              ? t("rangeFrom", { from: formatDay(query.from) })
+              : t("rangeTo", { to: formatDay(query.to ?? "") })}
+          <Button
+            href={listHref({ from: undefined, to: undefined, order: undefined })}
+            variant="link"
+            size="sm"
+          >
+            {t("clearRange")}
           </Button>
         </p>
       )}
@@ -183,6 +206,8 @@ async function Filters({ query, crews }: { query: AdminOrdersQuery; crews: CrewO
         )}
       </Field>
       {query.slot && <input type="hidden" name="slot" value={query.slot} />}
+      {query.from && <input type="hidden" name="from" value={query.from} />}
+      {query.to && <input type="hidden" name="to" value={query.to} />}
       <div className="col-span-full flex gap-2 md:justify-end">
         <Button type="submit" size="sm" className="flex-1 md:flex-none">
           <ListFilter aria-hidden className="size-4" />

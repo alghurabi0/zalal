@@ -5,8 +5,10 @@ import { CURRENT_STATUSES } from "@/lib/orders/status";
 
 // A2's filters and the open drawer, kept in the URL so a filtered list can
 // be shared and survives a reload: `/admin/orders?status=confirmed&date=
-// 2026-10-26&district=حي&crew=<id>&slot=3&n=100&order=<id>`. Bad values fall
-// back to the defaults instead of failing the page.
+// 2026-10-26&district=حي&crew=<id>&slot=3&n=100&order=<id>`. `from` and `to`
+// bound the service day (A1's period cards link with them; either may be
+// left open). Bad values fall back to the defaults instead of failing the
+// page.
 
 type OrderStatus = Database["public"]["Enums"]["order_status"];
 
@@ -57,6 +59,8 @@ export function pageSizeSchema(page: number, max: number) {
 export const adminOrdersQuerySchema = z.object({
   status: z.enum(STATUS_FILTERS).catch("active").default("active"),
   date: z.iso.date().optional().catch(undefined),
+  from: z.iso.date().optional().catch(undefined),
+  to: z.iso.date().optional().catch(undefined),
   district: optionalText(60),
   crew: z
     .union([z.literal("none"), z.uuid()])
@@ -88,11 +92,13 @@ export function statusesFor(filter: StatusFilter): readonly OrderStatus[] {
 }
 
 /**
- * Upcoming work reads soonest first (the active view, or one day);
+ * Upcoming work reads soonest first (the active view, or a day or a range);
  * everything else newest first.
  */
-export function soonestFirst(query: Pick<AdminOrdersQuery, "status" | "date">): boolean {
-  if (query.date) return true;
+export function soonestFirst(
+  query: Pick<AdminOrdersQuery, "status" | "date" | "from" | "to">,
+): boolean {
+  if (query.date || query.from || query.to) return true;
   return (
     (CURRENT_STATUSES as readonly string[]).includes(query.status) || query.status === "active"
   );
@@ -103,6 +109,8 @@ export function adminOrdersHref(query: Partial<AdminOrdersQuery>, base = "/admin
   const params = new URLSearchParams();
   if (query.status && query.status !== "active") params.set("status", query.status);
   if (query.date) params.set("date", query.date);
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
   if (query.district) params.set("district", query.district);
   if (query.crew) params.set("crew", query.crew);
   if (query.slot) params.set("slot", String(query.slot));
