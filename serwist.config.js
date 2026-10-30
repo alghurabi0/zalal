@@ -14,10 +14,13 @@ const buildId = readFileSync(".next/BUILD_ID", "utf8").trim();
 export default serwist({
   swSrc: "src/app/sw.ts",
   swDest: "public/sw.js",
-  // Precache only what the offline page needs: the page itself, the CSS and
-  // the Cairo font files. Pages are never precached (see sw.ts), and the
+  // Precache only what the offline page needs: the page itself, its logo,
+  // the CSS and the Cairo font files. Pages are never precached (see sw.ts), and the
   // other build files are cached at runtime as they are used.
   precachePrerendered: false,
   globPatterns: [".next/static/**/*.{css,woff2}"],
-  additionalPrecacheEntries: [{ url: "/~offline", revision: buildId }],
+  additionalPrecacheEntries: [
+    { url: "/~offline", revision: buildId },
+    { url: "/brand/logo.svg", revision: buildId },
+  ],
 });

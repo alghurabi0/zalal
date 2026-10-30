@@ -15,8 +15,8 @@ export type ButtonSize = "lg" | "footer" | "md" | "card" | "sm";
 const variantClasses: Record<ButtonVariant, string> = {
   // Navy, the default call to action.
   primary: "bg-navy font-extrabold text-white",
-  // Aqua on navy screens (Welcome).
-  accent: "bg-aqua font-extrabold text-navy focus-visible:outline-aqua",
+  // The logo's sun on navy screens (Welcome) and navy chat bubbles.
+  accent: "bg-sun font-extrabold text-navy focus-visible:outline-aqua",
   // White with a border, next to a primary button (مساعدة, مشاركة).
   secondary: "border border-border bg-surface font-bold text-navy",
   // White text on navy screens (تصفح بدون تسجيل).

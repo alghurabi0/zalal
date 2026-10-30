@@ -92,8 +92,8 @@ async function ChatHeader({ support, back }: { support: SupportInfo; back: strin
   return (
     <header className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-4 py-3.5">
       <BackButton href={back} variant="soft" />
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-input bg-navy">
-        <LogoMark className="h-5.5 w-6.5" />
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-input border border-border bg-surface">
+        <LogoMark className="w-8.5" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
         <h1 className="text-16 font-black">{t("title")}</h1>

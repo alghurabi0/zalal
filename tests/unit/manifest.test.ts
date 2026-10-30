@@ -36,8 +36,8 @@ describe("web app manifest", () => {
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#0b2545",
-      theme_color: "#0b2545",
+      background_color: "#0a2a5e",
+      theme_color: "#0a2a5e",
     });
   });
 

@@ -8,7 +8,7 @@ export const themeScales = {
   text: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "22", "24", "26", "28", "44"],
   radius: ["chip", "input", "button", "card", "sheet", "4", "8", "10", "20", "30"],
   leading: ["display", "tight", "snug", "normal", "relaxed", "body"],
-  tracking: ["wordmark", "phone"],
+  tracking: ["phone"],
   shadow: ["card", "float", "sheet", "fab", "pin", "segment", "knob", "logo"],
   container: ["phone"],
 };

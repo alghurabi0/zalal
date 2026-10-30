@@ -17,12 +17,7 @@ export default function WelcomePage() {
       <WelcomeWaves className="absolute inset-x-0 bottom-0" />
       <div className="relative flex flex-1 flex-col items-center justify-center gap-5.5 px-8">
         <LogoTile />
-        <div className="flex flex-col items-center gap-0.5">
-          <h1 className="text-44 leading-display font-black">{t("name")}</h1>
-          <span lang="en" className="text-14 font-bold tracking-wordmark text-aqua">
-            {t("wordmark")}
-          </span>
-        </div>
+        <h1 className="text-44 leading-display font-black">{t("name")}</h1>
         <p className="text-center text-17 text-on-dark-body">{t("tagline")}</p>
       </div>
       <div className="relative flex flex-col gap-3 px-6 pb-safe-10">
