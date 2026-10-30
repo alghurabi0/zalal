@@ -26,6 +26,17 @@ export const adminCancelSchema = z.object({ orderId: z.uuid(), reason: staffReas
 
 export const adminNoShowSchema = z.object({ orderId: z.uuid(), reason: staffReasonSchema });
 
+/** Postponing takes an optional note (blank = none). */
+export const adminPostponeSchema = z.object({
+  orderId: z.uuid(),
+  reason: z
+    .string()
+    .trim()
+    .max(STAFF_NOTE_MAX)
+    .transform((value) => value || undefined)
+    .optional(),
+});
+
 export const adminRescheduleSchema = z.object({
   orderId: z.uuid(),
   serviceDate: z.iso.date(),
@@ -42,5 +53,6 @@ export type ConfirmOrderInput = z.input<typeof confirmOrderSchema>;
 export type AssignCrewInput = z.input<typeof assignCrewSchema>;
 export type AdminCancelInput = z.input<typeof adminCancelSchema>;
 export type AdminNoShowInput = z.input<typeof adminNoShowSchema>;
+export type AdminPostponeInput = z.input<typeof adminPostponeSchema>;
 export type AdminRescheduleInput = z.input<typeof adminRescheduleSchema>;
 export type OverrideInput = z.input<typeof overrideSchema>;

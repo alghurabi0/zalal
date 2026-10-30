@@ -25,12 +25,13 @@ export type TimelineEntry =
   | { id: number; at: string; kind: "booked" }
   | { id: number; at: string; kind: "rescheduled"; by: TimelineActor; toDate: string | null }
   | { id: number; at: string; kind: "cancelled"; by: TimelineActor; reason: CancelReason | null }
+  | { id: number; at: string; kind: "postponed"; by: TimelineActor }
   | {
       id: number;
       at: string;
       kind: "status";
       by: TimelineActor;
-      status: Exclude<OrderStatus, "cancelled">;
+      status: Exclude<OrderStatus, "cancelled" | "postponed">;
     };
 
 function actorOf(role: AppRole | null): TimelineActor {
@@ -61,13 +62,16 @@ export function buildTimeline(events: OrderEventRow[]): TimelineEntry[] {
         if (
           !event.is_override &&
           event.to_status === "pending_confirmation" &&
-          (event.from_status === "pending_confirmation" || event.from_status === "confirmed")
+          (event.from_status === "pending_confirmation" ||
+            event.from_status === "confirmed" ||
+            event.from_status === "postponed")
         ) {
           return { ...base, kind: "rescheduled", by, toDate: newDate(event.details) };
         }
         if (event.to_status === "cancelled") {
           return { ...base, kind: "cancelled", by, reason: event.cancel_reason };
         }
+        if (event.to_status === "postponed") return { ...base, kind: "postponed", by };
         return { ...base, kind: "status", by, status: event.to_status };
       })
   );

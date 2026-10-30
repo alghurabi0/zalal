@@ -11,7 +11,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { adminThread } from "@/lib/admin/chat-queries";
 import { requireViewer } from "@/lib/auth/viewer";
-import { getSupportInfo, getThreadContext } from "@/lib/chat/queries";
+import { getThreadContext } from "@/lib/chat/queries";
 import { formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
@@ -76,13 +76,7 @@ async function Thread({ params }: PageProps<"/admin/chat/[threadId]">) {
 
   const supabase = await createClient();
   const now = new Date();
-  const support = await getSupportInfo(supabase);
-  const context = await getThreadContext(
-    thread.id,
-    thread.userId,
-    { now, cutoffHours: support.cutoffHours },
-    supabase,
-  );
+  const context = await getThreadContext(thread.id, thread.userId, { now }, supabase);
 
   return (
     <div className="flex min-w-0 flex-1 flex-col xl:min-h-0 xl:flex-row">

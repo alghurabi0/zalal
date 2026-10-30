@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
-import { adminOrdersHref, ORDER_STATUSES } from "@/lib/admin/orders-query";
+import { adminOrdersHref, DATED_STATUSES } from "@/lib/admin/orders-query";
 import { chatInbox, unreadThreads } from "@/lib/admin/chat-queries";
 import {
   type OverviewPeriod,
@@ -27,7 +27,12 @@ import {
   pickerMonth,
   shiftMonth,
 } from "@/lib/admin/overview-period";
-import { openTickets, orderCounts, pendingConfirmations } from "@/lib/admin/queries";
+import {
+  openTickets,
+  orderCounts,
+  pendingConfirmations,
+  postponedCount,
+} from "@/lib/admin/queries";
 import { subscriptionRequests } from "@/lib/admin/subscription-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { ticketNumber } from "@/lib/certificates/format";
@@ -70,8 +75,9 @@ async function Overview({ searchParams }: PageProps<"/admin">) {
   const today = baghdadToday(now);
   const tLabels = await getTranslations("Location.labels");
   const range = periodRange(period, today);
-  const [counts, pending, tickets, unreadIds, inbox, requests] = await Promise.all([
+  const [counts, postponed, pending, tickets, unreadIds, inbox, requests] = await Promise.all([
     orderCounts(range),
+    postponedCount(),
     pendingConfirmations(PENDING_SHOWN),
     openTickets(TICKETS_SHOWN),
     unreadThreads(),
@@ -79,7 +85,7 @@ async function Overview({ searchParams }: PageProps<"/admin">) {
     subscriptionRequests(REQUESTS_SHOWN),
   ]);
   const unreadChats = inbox.filter((row) => row.admin_unread > 0);
-  const total = ORDER_STATUSES.reduce((sum, status) => sum + counts[status], 0);
+  const total = DATED_STATUSES.reduce((sum, status) => sum + counts[status], 0);
   // One day keeps A2's day filter; a range uses from/to (open-ended from today on).
   const rangeFilter =
     range.from === range.to
@@ -113,7 +119,7 @@ async function Overview({ searchParams }: PageProps<"/admin">) {
           </Button>
         </div>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {ORDER_STATUSES.map((status) => (
+          {DATED_STATUSES.map((status) => (
             <li key={status}>
               <Card
                 href={adminOrdersHref({ status, ...rangeFilter })}
@@ -127,6 +133,19 @@ async function Overview({ searchParams }: PageProps<"/admin">) {
             </li>
           ))}
         </ul>
+        {/* Postponed orders have no date, so they are counted whatever the period. */}
+        <Card
+          href={adminOrdersHref({ status: "postponed" })}
+          className="flex items-center justify-between gap-3 p-4"
+        >
+          <span className="flex flex-col items-start gap-1">
+            <StatusBadge status="postponed" label={t("postponedCard")} />
+            <span className="text-13 text-muted">{t("postponedCardBody")}</span>
+          </span>
+          <span className="text-28 font-black" data-testid="count-postponed">
+            {postponed}
+          </span>
+        </Card>
       </section>
 
       <section aria-labelledby="pending" className="flex flex-col gap-3">
@@ -399,7 +418,7 @@ function OverviewSkeleton() {
       <Skeleton className="h-11 w-96 max-w-full rounded-full" />
       <Skeleton className="h-7 w-64" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {ORDER_STATUSES.map((status) => (
+        {DATED_STATUSES.map((status) => (
           <Skeleton key={status} className="h-24 rounded-card" />
         ))}
       </div>

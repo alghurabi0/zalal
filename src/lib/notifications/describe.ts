@@ -97,10 +97,12 @@ export function describeNotification(
     case "order_rescheduled":
     case "new_booking":
     case "customer_rescheduled":
+    case "customer_postponed":
     case "new_job": {
       const order = orderValues(data, t);
       return order ? { item: type, values: order } : UNKNOWN;
     }
+    case "order_postponed":
     case "order_cancelled":
     case "crew_on_the_way":
     case "crew_arrived":
@@ -217,6 +219,7 @@ export function notificationHref(notification: NotificationInput): string {
   switch (type) {
     case "order_confirmed":
     case "order_rescheduled":
+    case "order_postponed":
     case "order_cancelled":
       return orderId ? routes.order(orderId) : routes.orders;
     case "crew_on_the_way":
@@ -247,6 +250,7 @@ export function notificationHref(notification: NotificationInput): string {
     }
     case "new_booking":
     case "customer_rescheduled":
+    case "customer_postponed":
     case "customer_cancelled":
       return orderId ? routes.adminOrder(orderId) : routes.adminOrders;
     case "customer_message": {

@@ -60,7 +60,11 @@ export async function OrderDrawer({
     );
   }
 
-  const canReschedule = order.status === "pending_confirmation" || order.status === "confirmed";
+  // A postponed order gets its date back through the reschedule.
+  const canReschedule =
+    order.status === "pending_confirmation" ||
+    order.status === "confirmed" ||
+    order.status === "postponed";
   const days = canReschedule ? adminRescheduleDays(board, now) : [];
   const crewName = new Map(crews.map((crew) => [crew.id, crew.name]));
 
@@ -253,11 +257,13 @@ async function Details({ order }: { order: AdminOrderDetails }) {
         )}
         {row(
           t("when"),
-          tOrder("whenValue", {
-            weekday,
-            day,
-            slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
-          }),
+          order.status === "postponed"
+            ? t("postponed", { when: tOrder("dayDate", { weekday, day }) })
+            : tOrder("whenValue", {
+                weekday,
+                day,
+                slot: tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at)),
+              }),
         )}
         {row(
           t("address"),
@@ -323,7 +329,10 @@ async function Details({ order }: { order: AdminOrderDetails }) {
 async function SubscriptionSection({ order }: { order: AdminOrderDetails }) {
   const t = await getTranslations("Admin.drawer.subscription");
   const tStates = await getTranslations("Admin.subscriptions.states");
-  const waiting = order.status === "pending_confirmation" || order.status === "confirmed";
+  const waiting =
+    order.status === "pending_confirmation" ||
+    order.status === "confirmed" ||
+    order.status === "postponed";
   if (!order.subscription_id && !waiting) return null;
   const subscriptions = await listSubscriptions(order.customer_id);
   const own = subscriptions.find((s) => s.id === order.subscription_id) ?? null;

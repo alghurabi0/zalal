@@ -8,20 +8,23 @@ import { routes } from "@/lib/routes";
 import {
   type CancelOrderInput,
   cancelOrderSchema,
+  type PostponeOrderInput,
+  postponeOrderSchema,
   type RescheduleOrderInput,
   rescheduleOrderSchema,
 } from "@/lib/schemas/order";
 import { createClient } from "@/lib/supabase/server";
 
-// Cancel (N6) and reschedule (N7), through transition_order() as the
-// customer (spec §6). The database checks that the order is theirs, that it
-// is still pending or confirmed, the 2 h cutoff and the new slot.
+// Cancel (N6), reschedule and postpone (N7), through transition_order() as
+// the customer (spec §6). The database checks that the order is theirs, that
+// it is still pending or confirmed (or postponed, for a cancel), that its
+// slot hasn't started, and the new slot.
 
 export type OrderChangeResult = { status: "done" } | { status: "error"; error: OrderChangeError };
 
 async function transition(
   orderId: string,
-  toStatus: "cancelled" | "pending_confirmation",
+  toStatus: "cancelled" | "pending_confirmation" | "postponed",
   payload: Record<string, string | number>,
 ): Promise<OrderChangeResult> {
   const supabase = await createClient();
@@ -55,4 +58,11 @@ export async function rescheduleOrder(input: RescheduleOrderInput): Promise<Orde
     service_date: parsed.data.serviceDate,
     slot_id: parsed.data.slotId,
   });
+}
+
+export async function postponeOrder(input: PostponeOrderInput): Promise<OrderChangeResult> {
+  const parsed = postponeOrderSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", error: "failed" };
+  await requireViewer(routes.order(parsed.data.orderId));
+  return transition(parsed.data.orderId, "postponed", {});
 }

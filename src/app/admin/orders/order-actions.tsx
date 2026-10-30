@@ -21,18 +21,22 @@ import {
   confirmOrder,
   markNoShow,
   overrideStatus,
+  postponeOrderAsAdmin,
   rescheduleOrderAsAdmin,
 } from "./actions";
 
-type Mode = "confirm" | "crew" | "reschedule" | "cancel" | "no_show" | "override";
+type Mode = "confirm" | "crew" | "reschedule" | "postpone" | "cancel" | "no_show" | "override";
 
 /** Which actions the order's status offers (spec §6); the database checks again. */
 function modesFor(status: OrderStatus): Mode[] {
   switch (status) {
     case "pending_confirmation":
-      return ["confirm", "crew", "reschedule", "cancel", "override"];
+      return ["confirm", "crew", "reschedule", "postpone", "cancel", "override"];
     case "confirmed":
-      return ["crew", "reschedule", "cancel", "no_show", "override"];
+      return ["crew", "reschedule", "postpone", "cancel", "no_show", "override"];
+    // No date and no crew: the reschedule gives it its date back.
+    case "postponed":
+      return ["reschedule", "cancel", "override"];
     case "on_the_way":
       return ["crew", "no_show", "override"];
     case "arrived":
@@ -46,7 +50,8 @@ const REASON_MAX = 500;
 
 /**
  * The A2 drawer's actions: confirm (with a crew), assign crew, reschedule
- * (any slot that hasn't started), cancel and no-show (reason required) and
+ * (any slot that hasn't started; for a postponed order, its date back),
+ * postpone (an optional note), cancel and no-show (reason required) and
  * override (any status, reason required). Reasons are staff notes; the
  * customer never sees them.
  */
@@ -172,10 +177,26 @@ export function OrderActions({
         <Panel>
           <Reschedule
             days={days}
-            current={current}
+            // A postponed order may go back to the date it had.
+            current={status === "postponed" ? null : current}
             pending={pending}
             onConfirm={(serviceDate, slotId) =>
               run(() => rescheduleOrderAsAdmin({ orderId, serviceDate, slotId }))
+            }
+          />
+        </Panel>
+      )}
+
+      {mode === "postpone" && (
+        <Panel>
+          <p className="text-13 text-muted">{t("postponeHint")}</p>
+          <ReasonForm
+            label={t("postponeNote")}
+            submit={t("postpone")}
+            optional
+            pending={pending}
+            onSubmit={(reason) =>
+              run(() => postponeOrderAsAdmin({ orderId, reason: reason || undefined }))
             }
           />
         </Panel>
@@ -283,12 +304,15 @@ function ReasonForm({
   label,
   submit,
   danger,
+  optional,
   pending,
   onSubmit,
 }: {
   label: string;
   submit: string;
   danger?: boolean;
+  /** The note may be left blank (postpone). */
+  optional?: boolean;
   pending: boolean;
   onSubmit: (reason: string) => void;
 }) {
@@ -300,14 +324,14 @@ function ReasonForm({
       className="flex flex-col gap-3"
       onSubmit={(event) => {
         event.preventDefault();
-        if (trimmed) onSubmit(trimmed);
+        if (trimmed || optional) onSubmit(trimmed);
       }}
     >
       <Field label={label} variant="compact" hint={t("internal")}>
         {(control) => (
           <Textarea
             {...control}
-            required
+            required={!optional}
             maxLength={REASON_MAX}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -318,7 +342,7 @@ function ReasonForm({
         type="submit"
         size="card"
         loading={pending}
-        disabled={!trimmed}
+        disabled={!trimmed && !optional}
         className={cn(danger && trimmed && "bg-danger")}
       >
         {submit}
@@ -334,7 +358,8 @@ function Reschedule({
   onConfirm,
 }: {
   days: DayOption[];
-  current: { serviceDate: string; slotId: number };
+  /** Null for a postponed order, whose old slot may be picked again. */
+  current: { serviceDate: string; slotId: number } | null;
   pending: boolean;
   onConfirm: (serviceDate: string, slotId: number) => void;
 }) {
@@ -342,10 +367,13 @@ function Reschedule({
   const [serviceDate, setServiceDate] = useState<string | null>(null);
   const [slotId, setSlotId] = useState<number | null>(null);
   const chosen = findSlot(days, serviceDate, slotId);
-  const isCurrent = serviceDate === current.serviceDate && slotId === current.slotId;
+  const isCurrent =
+    current !== null && serviceDate === current.serviceDate && slotId === current.slotId;
   return (
     <>
-      <p className="text-13 text-muted">{t("rescheduleHint")}</p>
+      <p className="text-13 text-muted">
+        {current ? t("rescheduleHint") : t("reschedulePostponedHint")}
+      </p>
       <DaySlotPicker
         days={days}
         serviceDate={serviceDate}
@@ -355,7 +383,7 @@ function Reschedule({
           setSlotId(null);
         }}
         onSlotChange={setSlotId}
-        current={current}
+        current={current ?? undefined}
         showRemaining
       />
       <Button

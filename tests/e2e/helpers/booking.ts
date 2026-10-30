@@ -146,7 +146,7 @@ type TestLine = {
 /**
  * An order for this customer at their first address, written directly, as
  * booking and staff would have left it: its booking event, a place in the
- * slot unless cancelled, and an event for a status past pending.
+ * slot unless cancelled or postponed, and an event for a status past pending.
  * `startAt` overrides the slot's start time (to sit near the cutoff).
  */
 export async function createOrder(
@@ -231,7 +231,7 @@ export async function createOrder(
       })
       .throwOnError();
   }
-  if (status !== "cancelled") {
+  if (status !== "cancelled" && status !== "postponed") {
     const { data: taken } = await admin
       .from("slot_bookings")
       .select("seat")

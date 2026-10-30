@@ -12,8 +12,9 @@ import { serviceDayParts, slotParts } from "@/lib/dates";
 
 /**
  * Chat's order picker (spec §5.16): تغيير موعد and إلغاء طلب ask which
- * order, from the customer's pending and confirmed ones, soonest first.
- * Orders inside the 2-hour cutoff are listed too: the message then asks
+ * order, from the customer's pending, confirmed and postponed ones, soonest
+ * first. Orders whose slot has started are listed too, and so is a postponed
+ * order under تغيير موعد (support sets its date): the message then asks
  * support, without the in-app button.
  */
 export function OrderPicker({
@@ -71,11 +72,13 @@ export function OrderPicker({
                         })}
                       </span>
                       <span className="text-13 text-muted">
-                        {t("when", {
-                          weekday,
-                          day,
-                          slot: tBooking("slot", slotParts(order.slotStartAt, order.slotEndAt)),
-                        })}
+                        {order.status === "postponed"
+                          ? t("postponed")
+                          : t("when", {
+                              weekday,
+                              day,
+                              slot: tBooking("slot", slotParts(order.slotStartAt, order.slotEndAt)),
+                            })}
                       </span>
                     </button>
                   </li>

@@ -14,8 +14,8 @@ import {
 } from "./helpers/booking";
 import { admin } from "./helpers/supabase";
 
-// Orders (spec §5.12), Order details (N4), Cancel (N6), Reschedule (N7) and
-// Home's live cards (§5.5).
+// Orders (spec §5.12), Order details (N4), Cancel (N6), Reschedule and
+// postpone (N7) and Home's live cards (§5.5).
 
 const { Orders, Order, Home, Tanks } = messages;
 const HOUR = 60 * 60 * 1000;
@@ -145,17 +145,27 @@ test("Order details: summary and timeline, then cancel with a reason", async ({ 
   });
 });
 
-test("cancel and reschedule are blocked 1 h 59 min before the slot", async ({ page }) => {
+test("cancel and reschedule are open until the slot starts, then blocked", async ({ page }) => {
   slot = await createSlot();
   const phone = await signUp(page);
-  const order = await createOrder(phone, {
+  // No 2-hour rule (settled Oct 29, 2026): half an hour before is still fine.
+  const soon = await createOrder(phone, {
     slot,
     date: baghdadDate(0),
     status: "confirmed",
-    startAt: new Date(Date.now() + 2 * HOUR - 60_000),
+    startAt: new Date(Date.now() + HOUR / 2),
+  });
+  const started = await createOrder(phone, {
+    slot,
+    date: baghdadDate(0),
+    status: "confirmed",
+    startAt: new Date(Date.now() - 60_000),
   });
 
-  await page.goto(`/orders/${order.id}`);
+  await page.goto(`/orders/${soon.id}`);
+  await expect(visible(page).getByText(Order.changeHint)).toBeVisible();
+
+  await page.goto(`/orders/${started.id}`);
   const main = visible(page);
   await expect(main.getByText(Order.tooLateHint)).toBeVisible();
 
@@ -168,11 +178,11 @@ test("cancel and reschedule are blocked 1 h 59 min before the slot", async ({ pa
     await expect(sheet).toBeHidden();
   }
 
-  const { data } = await admin.from("orders").select("status").eq("id", order.id).single();
+  const { data } = await admin.from("orders").select("status").eq("id", started.id).single();
   expect(data?.status).toBe("confirmed");
 });
 
-test("a cancel sent after the cutoff passed is refused by the database", async ({ page }) => {
+test("a cancel sent after the slot started is refused by the database", async ({ page }) => {
   slot = await createSlot();
   const phone = await signUp(page);
   const order = await createOrder(phone, {
@@ -186,10 +196,10 @@ test("a cancel sent after the cutoff passed is refused by the database", async (
   const sheet = page.getByRole("dialog", { name: Order.cancelSheet.title });
   await sheet.locator("label").filter({ hasText: Order.reasons.plans_changed }).click();
 
-  // Meanwhile the slot is only 1 h 59 min away.
+  // Meanwhile the slot has started.
   await admin
     .from("orders")
-    .update({ slot_start_at: new Date(Date.now() + 2 * HOUR - 60_000).toISOString() })
+    .update({ slot_start_at: new Date(Date.now() - 60_000).toISOString() })
     .eq("id", order.id)
     .throwOnError();
   await sheet.getByRole("button", { name: Order.cancelSheet.confirm }).click();
@@ -199,6 +209,65 @@ test("a cancel sent after the cutoff passed is refused by the database", async (
   ).toBeVisible();
   const { data } = await admin.from("orders").select("status").eq("id", order.id).single();
   expect(data?.status).toBe("pending_confirmation");
+});
+
+test("postpone from the reschedule sheet, then cancel the postponed order", async ({ page }) => {
+  slot = await createSlot();
+  const phone = await signUp(page);
+  const order = await createOrder(phone, { slot, date: baghdadDate(2), status: "confirmed" });
+
+  await page.goto(`/orders/${order.id}`);
+  const main = visible(page);
+  await main.getByRole("button", { name: Order.reschedule }).click();
+  const sheet = page.getByRole("dialog", { name: Order.rescheduleSheet.title });
+  await expect(sheet.getByText(Order.rescheduleSheet.postponeQuestion)).toBeVisible();
+  await sheet.getByRole("button", { name: Order.rescheduleSheet.postpone }).click();
+  const confirm = page.getByRole("dialog", { name: Order.postponeSheet.title });
+  await expect(confirm.getByText(Order.postponeSheet.body)).toBeVisible();
+  await screenshot(page, "order-postpone");
+  // Back to the picker, then postpone for real.
+  await confirm.getByRole("button", { name: Order.postponeSheet.back }).click();
+  await page
+    .getByRole("dialog", { name: Order.rescheduleSheet.title })
+    .getByRole("button", { name: Order.rescheduleSheet.postpone })
+    .click();
+  await page
+    .getByRole("dialog", { name: Order.postponeSheet.title })
+    .getByRole("button", { name: Order.postponeSheet.confirm })
+    .click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  // No date, no reschedule: the company sets the date; cancel stays.
+  await expect(main.getByText(Orders.status.postponed).first()).toBeVisible();
+  await expect(main.getByText(Order.whenPostponed)).toBeVisible();
+  await expect(main.getByText("أجّلت الطلب")).toBeVisible();
+  await expect(main.getByText(Order.postponedHint)).toBeVisible();
+  await expect(main.getByRole("button", { name: Order.reschedule })).toHaveCount(0);
+  await screenshot(page, "order-postponed");
+
+  const { data: postponed } = await admin
+    .from("orders")
+    .select("status, slot_bookings(seat)")
+    .eq("id", order.id)
+    .single()
+    .throwOnError();
+  expect(postponed.status).toBe("postponed");
+  expect(postponed.slot_bookings).toBeNull();
+
+  // Orders lists it under الحالية, without a date.
+  await page.goto("/orders");
+  const card = visible(page)
+    .getByRole("list", { name: Orders.title })
+    .getByRole("listitem")
+    .filter({ hasText: `#${order.number}` });
+  await expect(card).toContainText(Orders.whenPostponed);
+
+  await page.goto(`/orders/${order.id}`);
+  await visible(page).getByRole("button", { name: Order.cancel }).click();
+  const cancel = page.getByRole("dialog", { name: Order.cancelSheet.title });
+  await cancel.locator("label").filter({ hasText: Order.reasons.plans_changed }).click();
+  await cancel.getByRole("button", { name: Order.cancelSheet.confirm }).click();
+  await expect(visible(page).getByText(Orders.status.cancelled)).toBeVisible();
 });
 
 test("reschedule moves the order to a new day and back to pending", async ({ page }) => {

@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import {
   CalendarCheck,
+  CalendarClock,
   Clock,
   House,
   type LucideIcon,
@@ -63,11 +64,13 @@ export async function HomeCards() {
   );
 }
 
-type ActiveStatus = "pending_confirmation" | "confirmed" | "on_the_way" | "arrived" | "in_progress";
+type ActiveStatus =
+  "pending_confirmation" | "confirmed" | "postponed" | "on_the_way" | "arrived" | "in_progress";
 
 const activeLook: Record<ActiveStatus, { icon: LucideIcon; well: string }> = {
   pending_confirmation: { icon: Clock, well: "bg-selected text-teal" },
   confirmed: { icon: CalendarCheck, well: "bg-selected text-teal" },
+  postponed: { icon: CalendarClock, well: "bg-warn-bg text-warn-icon" },
   on_the_way: { icon: Truck, well: "bg-warn-bg text-warn-icon" },
   arrived: { icon: House, well: "bg-warn-bg text-warn-icon" },
   in_progress: { icon: Sparkles, well: "bg-warn-bg text-warn-icon" },

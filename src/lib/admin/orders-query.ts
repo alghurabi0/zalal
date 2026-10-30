@@ -15,6 +15,7 @@ type OrderStatus = Database["public"]["Enums"]["order_status"];
 export const ORDER_STATUSES = [
   "pending_confirmation",
   "confirmed",
+  "postponed",
   "on_the_way",
   "arrived",
   "in_progress",
@@ -25,8 +26,8 @@ export const ORDER_STATUSES = [
 
 /**
  * "active" = every status before the end states (the default view);
- * "booked" = every order holding a place (all but cancelled), as the board
- * counts them.
+ * "booked" = every order holding a place (all but cancelled and postponed),
+ * as the board counts them.
  */
 export const STATUS_FILTERS = ["active", "booked", "all", ...ORDER_STATUSES] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -87,7 +88,8 @@ export function parseAdminOrdersQuery(
 export function statusesFor(filter: StatusFilter): readonly OrderStatus[] {
   if (filter === "active") return CURRENT_STATUSES;
   if (filter === "all") return ORDER_STATUSES;
-  if (filter === "booked") return ORDER_STATUSES.filter((s) => s !== "cancelled");
+  if (filter === "booked")
+    return ORDER_STATUSES.filter((s) => s !== "cancelled" && s !== "postponed");
   return [filter];
 }
 
@@ -126,16 +128,26 @@ export function likePattern(text: string): string {
 }
 
 /**
- * Statuses an override can move an order to: any other one. From pending or
- * confirmed, going back to pending is a reschedule (it needs a new slot), so
- * it is left to the reschedule action.
+ * Statuses an override can move an order to: any other one. From pending,
+ * confirmed or postponed, going back to pending is a reschedule (it needs a
+ * new slot), so it is left to the reschedule action; from pending or
+ * confirmed, postponing has its own action too.
  */
 export function overrideTargets(status: OrderStatus): OrderStatus[] {
-  const reschedule = status === "pending_confirmation" || status === "confirmed";
+  const changeable = status === "pending_confirmation" || status === "confirmed";
+  const reschedule = changeable || status === "postponed";
   return ORDER_STATUSES.filter(
-    (s) => s !== status && !(reschedule && s === "pending_confirmation"),
+    (s) =>
+      s !== status &&
+      !(reschedule && s === "pending_confirmation") &&
+      !(changeable && s === "postponed"),
   );
 }
+
+/** A postponed order has no date: day filters and day counts leave it out. */
+export const DATED_STATUSES = ORDER_STATUSES.filter(
+  (s): s is Exclude<OrderStatus, "postponed"> => s !== "postponed",
+);
 
 /** Whether the order is still before the end states. */
 export function isActive(status: OrderStatus): boolean {

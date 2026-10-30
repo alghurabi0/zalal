@@ -79,14 +79,17 @@ describe("filters", () => {
     expect(statusesFor("active")).toEqual([
       "pending_confirmation",
       "confirmed",
+      "postponed",
       "on_the_way",
       "arrived",
       "in_progress",
     ]);
-    expect(statusesFor("all")).toHaveLength(8);
+    expect(statusesFor("all")).toHaveLength(9);
     expect(statusesFor("cancelled")).toEqual(["cancelled"]);
+    // Postponed and cancelled orders hold no place.
     expect(statusesFor("booked")).toHaveLength(7);
     expect(statusesFor("booked")).not.toContain("cancelled");
+    expect(statusesFor("booked")).not.toContain("postponed");
   });
 
   it("sorts upcoming work soonest first and the rest newest first", () => {
@@ -130,7 +133,12 @@ describe("filters", () => {
     expect(overrideTargets("confirmed")).not.toContain("pending_confirmation");
     expect(overrideTargets("confirmed")).not.toContain("confirmed");
     expect(overrideTargets("cancelled")).toContain("pending_confirmation");
-    expect(overrideTargets("completed")).toHaveLength(7);
+    expect(overrideTargets("completed")).toHaveLength(8);
+    // Postponing and giving a postponed order its date have their own actions.
+    expect(overrideTargets("pending_confirmation")).not.toContain("postponed");
+    expect(overrideTargets("postponed")).not.toContain("pending_confirmation");
+    expect(overrideTargets("on_the_way")).toContain("postponed");
+    expect(isActive("postponed")).toBe(true);
     expect(isActive("arrived")).toBe(true);
     expect(isActive("no_show")).toBe(false);
   });

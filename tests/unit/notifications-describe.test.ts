@@ -56,6 +56,13 @@ describe("describeNotification", () => {
     ["work_started", order, "بدأ الشغل", "طلب #1024 · تكدر تشوف الصور أول بأول."],
     ["order_completed", order, "شهادة التعقيم جاهزة", "طلب #1024 · شوف الشهادة وقيّم الشغل."],
     ["order_no_show", order, "ما لكينا أحد بالبيت", "طلب #1024 · راسلنا حتى نرتب موعد ثاني."],
+    [
+      "order_postponed",
+      order,
+      "تأجل طلبك #1024",
+      "نحدد وياك موعد جديد بعدين. إذا عندك سؤال راسلنا بالمحادثة.",
+    ],
+    ["customer_postponed", order, "الزبون أجّل طلب #1024", `كان موعده ${when} · يحتاج موعد جديد`],
     ["new_booking", order, "حجز جديد #1024", `${when} · حي الحسين`],
     [
       "customer_rescheduled",
@@ -186,6 +193,8 @@ describe("notificationHref", () => {
   it.each([
     ["order_confirmed", "/orders/o-1"],
     ["order_cancelled", "/orders/o-1"],
+    ["order_postponed", "/orders/o-1"],
+    ["customer_postponed", "/admin/orders?order=o-1"],
     ["crew_on_the_way", "/orders/o-1/track"],
     ["crew_arrived", "/orders/o-1/live"],
     ["work_started", "/orders/o-1/live"],

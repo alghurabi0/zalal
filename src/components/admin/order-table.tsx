@@ -64,10 +64,19 @@ export function OrderTable({
                   </Link>
                 </td>
                 <td className="px-3 py-2.5 whitespace-nowrap">
-                  <span className="block font-bold">{t("day", { weekday, day })}</span>
-                  <span className="text-13 text-muted">
-                    {tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at))}
-                  </span>
+                  {order.status === "postponed" ? (
+                    <>
+                      <span className="block font-bold">{t("postponed")}</span>
+                      <span className="text-13 text-muted">{t("wasDay", { weekday, day })}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="block font-bold">{t("day", { weekday, day })}</span>
+                      <span className="text-13 text-muted">
+                        {tBooking("slot", slotParts(order.slot_start_at, order.slot_end_at))}
+                      </span>
+                    </>
+                  )}
                 </td>
                 <td className="px-3 py-2.5">
                   <span className="block font-bold">

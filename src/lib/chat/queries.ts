@@ -25,7 +25,10 @@ export type ChatOrder = {
   slotId: number;
   slotStartAt: string;
   slotEndAt: string;
-  /** cancel and reschedule from Chat: allowed, too late (2 h rule) or closed. */
+  /**
+   * Cancel and reschedule from Chat: allowed (until the slot starts), too
+   * late, postponed (cancel only; support sets the date) or closed.
+   */
   change: ReturnType<typeof changeState>;
 };
 
@@ -65,7 +68,7 @@ export async function getSupportInfo(client?: Client): Promise<SupportInfo> {
 export type ThreadContext = {
   messages: ChatMessage[];
   hasOlder: boolean;
-  /** The tagged orders and, for the picker, the customer's pending and confirmed ones. */
+  /** The tagged orders and, for the picker, the customer's pending, confirmed and postponed ones. */
   orders: Record<string, ChatOrder>;
   /** Ticket numbers and sources by id, for ticket messages. */
   tickets: Record<string, ChatTicket>;
@@ -73,18 +76,18 @@ export type ThreadContext = {
 
 /**
  * A thread's newest messages with the orders and tickets they name. `now`
- * is the server's clock, for the 2-hour rule.
+ * is the server's clock, for what an order still allows.
  */
 export async function getThreadContext(
   threadId: string,
   customerId: string,
-  { now, cutoffHours, extraOrderId }: { now: Date; cutoffHours: number; extraOrderId?: string },
+  { now, extraOrderId }: { now: Date; extraOrderId?: string },
   client?: Client,
 ): Promise<ThreadContext> {
   const supabase = client ?? (await createClient());
   const { messages, hasOlder } = await fetchMessages(supabase, threadId);
   const [orders, tickets] = await Promise.all([
-    chatOrders(supabase, customerId, messages, { now, cutoffHours, extraOrderId }),
+    chatOrders(supabase, customerId, messages, { now, extraOrderId }),
     ticketNumbers(supabase, messages),
   ]);
   return { messages, hasOlder, orders, tickets };
@@ -94,7 +97,7 @@ export async function chatOrders(
   supabase: Client,
   customerId: string,
   messages: ChatMessage[],
-  { now, cutoffHours, extraOrderId }: { now: Date; cutoffHours: number; extraOrderId?: string },
+  { now, extraOrderId }: { now: Date; extraOrderId?: string },
 ): Promise<Record<string, ChatOrder>> {
   const ids = [
     ...new Set([
@@ -102,7 +105,7 @@ export async function chatOrders(
       ...(extraOrderId ? [extraOrderId] : []),
     ]),
   ];
-  const changeable = "status.in.(pending_confirmation,confirmed)";
+  const changeable = "status.in.(pending_confirmation,confirmed,postponed)";
   const { data, error } = await supabase
     .from("orders")
     .select("id, number, status, service_date, slot_id, slot_start_at, slot_end_at")
@@ -121,7 +124,7 @@ export async function chatOrders(
         slotId: order.slot_id,
         slotStartAt: order.slot_start_at,
         slotEndAt: order.slot_end_at,
-        change: changeState(order.status, order.slot_start_at, now, cutoffHours),
+        change: changeState(order.status, order.slot_start_at, now),
       },
     ]),
   );

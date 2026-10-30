@@ -13,6 +13,8 @@ import {
   adminCancelSchema,
   type AdminNoShowInput,
   adminNoShowSchema,
+  type AdminPostponeInput,
+  adminPostponeSchema,
   type AdminRescheduleInput,
   adminRescheduleSchema,
   type AssignCrewInput,
@@ -117,6 +119,16 @@ export async function markNoShow(input: AdminNoShowInput): Promise<AdminOrderRes
   const parsed = adminNoShowSchema.safeParse(input);
   if (!parsed.success) return { status: "error", error: "reason_required" };
   return transition(parsed.data.orderId, "no_show", { reason: parsed.data.reason });
+}
+
+export async function postponeOrderAsAdmin(input: AdminPostponeInput): Promise<AdminOrderResult> {
+  const parsed = adminPostponeSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", error: "failed" };
+  return transition(
+    parsed.data.orderId,
+    "postponed",
+    parsed.data.reason ? { reason: parsed.data.reason } : {},
+  );
 }
 
 export async function rescheduleOrderAsAdmin(
