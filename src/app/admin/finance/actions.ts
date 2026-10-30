@@ -222,9 +222,9 @@ export async function saveManualSale(
     p_note: d.note === "" ? undefined : d.note,
     p_paid_account_id: d.paidAccountId ?? undefined,
   });
-  return error
-    ? editFailure("admin_save_manual_sale", error, report)
-    : { status: "done", id: data };
+  if (error) return editFailure("admin_save_manual_sale", error, report);
+  // A new sale opens again to take more payments; an edit closes.
+  return d.id ? { status: "done" } : { status: "done", id: data };
 }
 
 export async function voidManualSale(input: VoidInput): Promise<AdminEditResult> {

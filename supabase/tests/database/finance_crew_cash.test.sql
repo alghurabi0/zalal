@@ -11,7 +11,8 @@
 -- completed. An admin corrects it like any payment.
 --
 -- The start day: an order completed before it has no automatic payment;
--- moving the start earlier records the ones now in the books; moving it past
+-- moving the start earlier records the ones now in the books (by their last
+-- completion's cash tick; an order with no completion event is skipped); moving it past
 -- a live payment or manual sale is refused (ZL046 records_before_start).
 begin;
 \ir _helpers.psql
@@ -19,7 +20,7 @@ begin;
 create function tests.today() returns date language sql stable
 as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 
-select plan(19);
+select plan(21);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -37,7 +38,20 @@ insert into tests.ids values
   ('sub', tests.create_subscription(tests.user_id('+9647802222222'))),
   ('past', tests.create_order(tests.user_id('+9647801111111'), 'completed', now() - interval '40 days', tests.id('crew')));
 update public.orders set subscription_id = tests.id('sub') where id = tests.id('covered');
-update public.orders set cash_collected = true where id = tests.id('past');
+-- Completed with cash 40 days ago, then again 35 days ago without: the last completion decides.
+insert into tests.ids values
+  ('recash', tests.create_order(tests.user_id('+9647801111111'), 'completed', now() - interval '40 days', tests.id('crew'))),
+  -- Completed with cash but no completion event (older data): skipped, never an error.
+  ('legacy', tests.create_order(tests.user_id('+9647801111111'), 'completed', now() - interval '40 days', tests.id('crew')));
+update public.orders set cash_collected = true where id in (tests.id('past'), tests.id('recash'), tests.id('legacy'));
+insert into public.order_events (order_id, from_status, to_status, actor_id, actor_role, details, created_at)
+values
+  (tests.id('recash'), 'in_progress', 'completed', tests.user_id('+9647703333333'), 'crew',
+    '{"cash_collected": true}', now() - interval '40 days'),
+  (tests.id('recash'), 'completed', 'in_progress', tests.user_id('+9647504444444'), 'admin',
+    '{}', now() - interval '36 days'),
+  (tests.id('recash'), 'in_progress', 'completed', tests.user_id('+9647504444444'), 'admin',
+    '{"cash_collected": false}', now() - interval '35 days');
 insert into public.order_events (order_id, from_status, to_status, actor_id, actor_role, details, created_at)
 values (tests.id('past'), 'in_progress', 'completed', tests.user_id('+9647703333333'), 'crew',
   '{"cash_collected": true}', now() - interval '40 days');
@@ -124,6 +138,14 @@ select results_eq(
   $$ select paid_on, amount_iqd, created_by from tests.auto(tests.id('past')) $$,
   $$ values (tests.today() - 40, 35000, tests.user_id('+9647703333333')) $$,
   'moving the start earlier records the cash of the orders now in the books'
+);
+select is_empty(
+  $$ select * from tests.auto(tests.id('recash')) $$,
+  'but not for an order whose last completion collected no cash'
+);
+select is_empty(
+  $$ select * from tests.auto(tests.id('legacy')) $$,
+  'nor one with no completion event'
 );
 select throws_ok(
   $$ select public.admin_update_finance_settings(tests.today()) $$,

@@ -12,13 +12,14 @@
 --    one per item, so the boxes, the lists and task 3's reports sum one
 --    table. An item's live payments never total below zero (ZL050). A
 --    covered order takes none (the subscription is paid), nor an item
---    outside the books (ZL049); an order not yet completed may be paid
---    ahead.
+--    outside the books (ZL049), though either can refund what it holds; an
+--    order not yet completed may be paid ahead.
 --
 -- 3. The automatic payment: a move to completed with "cash collected" (the
 --    crew's C4, or an admin override that ticks it) records the order's
 --    total into the order's crew box, dated on the completion day, by
---    whoever completed it (finance_payments.automatic). A trigger on
+--    whoever completed it (finance_payments.automatic); the last completion
+--    decides, as orders.cash_collected stays true once set. A trigger on
 --    order_events rather than a seventh copy of transition_order: the event
 --    already records cash_collected, and every path to completed writes
 --    one. Once per order (a unique index over voided rows too), so an
@@ -380,26 +381,26 @@ begin
   if not coalesce((select private.is_admin()), false) then
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
+  -- One pass over the receivables (code review).
   return query
+  with r as materialized (
+    select x.customer_id, x.sale_id, x.revenue_on, x.amount_iqd, x.discount_iqd, x.balance_iqd
+    from public.finance_receivables as x
+  ),
+  balances as (
+    select sum(r.balance_iqd) as balance from r where r.customer_id is not null group by r.customer_id
+    union all
+    select r.balance_iqd from r where r.sale_id is not null
+  )
   select
-    coalesce((
-      select sum(r.amount_iqd) from public.finance_receivables as r
-      where r.revenue_on between p_from and p_to
-    ), 0)::bigint,
-    coalesce((
-      select sum(r.discount_iqd) from public.finance_receivables as r
-      where r.revenue_on between p_from and p_to
-    ), 0)::bigint,
+    coalesce((select sum(r.amount_iqd) from r where r.revenue_on between p_from and p_to), 0)::bigint,
+    coalesce((select sum(r.discount_iqd) from r where r.revenue_on between p_from and p_to), 0)::bigint,
     coalesce((
       select sum(p.amount_iqd) from public.finance_payments as p
       where p.voided_at is null and p.paid_on between p_from and p_to
     ), 0)::bigint,
-    coalesce((
-      select sum(b.balance_iqd) from public.finance_customer_balances as b where b.balance_iqd > 0
-    ), 0)::bigint,
-    coalesce((
-      select -sum(b.balance_iqd) from public.finance_customer_balances as b where b.balance_iqd < 0
-    ), 0)::bigint;
+    coalesce((select sum(b.balance) from balances as b where b.balance > 0), 0)::bigint,
+    coalesce((select -sum(b.balance) from balances as b where b.balance < 0), 0)::bigint;
 end;
 $$;
 
@@ -566,9 +567,10 @@ end;
 $$;
 
 -- The automatic payment of a completed order's cash: its total into its crew
--- box, on its last completion day, by whoever completed it. Nothing for a
--- covered order, one with no crew, one completed before the books, or one
--- that already has its automatic payment (voided or not).
+-- box, on its last completion day, by whoever completed it, when that
+-- completion ticked cash collected. Nothing for a covered order, one with no
+-- crew, one completed before the books, or one that already has its
+-- automatic payment (voided or not).
 create function private.record_crew_cash(p_order_id uuid)
 returns void
 language plpgsql
@@ -589,6 +591,11 @@ begin
   where e.order_id = p_order_id and e.to_status = 'completed'
   order by e.created_at desc, e.id desc
   limit 1;
+  -- The last completion decides: orders.cash_collected stays true once set,
+  -- so a later completion without cash must not count (code review).
+  if not found or v_event.details ->> 'cash_collected' is distinct from 'true' then
+    return;
+  end if;
   v_day := (v_event.created_at at time zone 'Asia/Baghdad')::date;
   if v_day < (select s.start_on from public.finance_settings as s where s.id) then
     return;
@@ -621,7 +628,8 @@ for each row
 when (new.to_status = 'completed' and new.details ->> 'cash_collected' = 'true')
 execute function private.order_events_record_crew_cash();
 
--- The orders completed in the books before this migration.
+-- The orders completed in the books before this migration (record_crew_cash
+-- checks their last completion's cash tick).
 select private.record_crew_cash(o.id)
 from public.orders as o
 where o.status = 'completed' and o.cash_collected and o.subscription_id is null and o.crew_id is not null;
@@ -682,7 +690,9 @@ begin
   end if;
   select * into v_item from private.lock_finance_item(v_order_id, v_sub_id, v_sale_id);
   if p_id is null then
-    if not v_item.payable then
+    -- A refund is always allowed (up to what was paid): credit on an item
+    -- that left the books or got covered goes back this way (code review).
+    if not v_item.payable and p_amount_iqd > 0 then
       raise exception using errcode = 'ZL049', message = 'payment_not_allowed';
     end if;
   else
@@ -808,6 +818,8 @@ begin
   if p_amount_iqd is null or p_amount_iqd < 1 then
     raise exception using errcode = '22023', message = 'invalid_amount';
   end if;
+  -- The settings row first (share lock), then the item, as every finance RPC.
+  perform 1 from public.finance_settings as s where s.id for share;
   if p_id is not null then
     select * into v_old from public.finance_discounts as d where d.id = p_id;
     if not found then
@@ -888,6 +900,7 @@ begin
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
   v_reason := private.void_reason(p_reason);
+  perform 1 from public.finance_settings as s where s.id for share;
   select * into v_old from public.finance_discounts as d where d.id = p_id;
   if not found then
     raise exception using errcode = 'P0002', message = 'discount_not_found';

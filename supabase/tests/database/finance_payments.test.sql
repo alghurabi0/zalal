@@ -11,7 +11,8 @@
 -- A covered order, an order completed before the books' start day and a
 -- subscription activated before it take no payment (ZL049
 -- payment_not_allowed); an order not yet completed may be paid ahead. A
--- voided sale takes none (ZL047). An edit keeps the target (22023
+-- voided sale takes none (ZL047). A refund is allowed on any item holding
+-- payments, so credit outside the books goes back. An edit keeps the target (22023
 -- invalid_target). Logs payment.create / payment.update / payment.void.
 --
 -- A subscription in the books (activated on or after the start day) is
@@ -25,7 +26,7 @@ begin;
 create function tests.today() returns date language sql stable
 as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 
-select plan(57);
+select plan(59);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -249,6 +250,25 @@ select throws_ok(
   $$ select public.admin_save_payment(null, tests.id('done'), null, null, tests.today(), tests.cash(), -1, null) $$,
   'ZL050', 'refund_too_large', 'never past what was paid'
 );
+
+-- Credit on an item outside the books goes back as a refund.
+select tests.clear_authentication();
+insert into tests.ids values ('pre', tests.create_order(tests.user_id('+9647802222222'), 'confirmed'));
+insert into public.finance_payments (paid_on, order_id, account_id, amount_iqd, created_by)
+values (tests.today(), tests.id('pre'), tests.cash(), 10000, tests.user_id('+9647504444444'));
+update public.orders set subscription_id = tests.id('sub') where id = tests.id('pre');
+select tests.authenticate_as(tests.user_id('+9647504444444'));
+select throws_ok(
+  $$ select public.admin_save_payment(null, tests.id('pre'), null, null, tests.today(), tests.cash(), 1000, null) $$,
+  'ZL049', 'payment_not_allowed', 'an order paid ahead and then covered takes no more'
+);
+select lives_ok(
+  $$ select public.admin_save_payment(null, tests.id('pre'), null, null, tests.today(), tests.cash(), -10000, null) $$,
+  'but refunds what it holds'
+);
+select tests.clear_authentication();
+delete from public.finance_payments where order_id = tests.id('pre');
+select tests.authenticate_as(tests.user_id('+9647504444444'));
 
 -- Edit and void ------------------------------------------------------------------------------
 

@@ -25,6 +25,7 @@ import { listCrews } from "@/lib/admin/queries";
 import {
   type CustomerBalance,
   customerBalances,
+  customerContact,
   customerReceivables,
   getManualSale,
   getPayment,
@@ -508,13 +509,19 @@ async function CustomerDrawer({
   closeHref: string;
 }) {
   const t = await getTranslations("Admin.finance");
-  const items = await customerReceivables(customerId);
-  const name = items[0]?.customerName ?? t("revenue.deletedCustomer");
+  const [items, contact, boxes, startOn] = await Promise.all([
+    customerReceivables(customerId),
+    customerContact(customerId),
+    financeAccounts(),
+    financeStartOn(),
+  ]);
+  const books = { boxes, startOn };
+  const name = contact?.name ?? t("revenue.deletedCustomer");
   return (
     <Drawer closeHref={closeHref} title={t("revenue.customerTitle", { name })}>
-      {items[0]?.customerPhone && (
+      {contact?.phone && (
         <p dir="ltr" className="text-end text-14 text-muted">
-          {formatPhone(items[0].customerPhone)}
+          {formatPhone(contact.phone)}
         </p>
       )}
       <Link
@@ -538,7 +545,7 @@ async function CustomerDrawer({
                   num: (chunks) => <span dir="ltr">{chunks}</span>,
                 })}
               </Link>
-              <ItemAccountCard item={{ kind: "order", id: item.orderId }} />
+              <ItemAccountCard item={{ kind: "order", id: item.orderId }} books={books} />
             </section>
           ) : item.subscriptionId ? (
             <section key={item.subscriptionId} className="flex flex-col gap-2">
@@ -548,7 +555,10 @@ async function CustomerDrawer({
               >
                 {t("revenue.subscriptionLink")}
               </Link>
-              <ItemAccountCard item={{ kind: "subscription", id: item.subscriptionId }} />
+              <ItemAccountCard
+                item={{ kind: "subscription", id: item.subscriptionId }}
+                books={books}
+              />
             </section>
           ) : null,
         )

@@ -142,7 +142,7 @@ export async function listExpenses(
   const supabase = await createClient();
   const { from, to } = monthRange(month);
   // PostgREST reads * as %, so it goes too; the summary takes the words as typed.
-  const words = query.q?.replace(/\*/g, "");
+  const words = query.q?.replace(/\*/g, "").trim();
   let builder = supabase
     .from("expenses")
     .select(EXPENSE_COLUMNS)

@@ -5,7 +5,7 @@ import { accountName, Money } from "@/components/admin/finance";
 import { ItemAccountActions } from "@/components/admin/revenue-forms";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { financeAccounts, financeStartOn } from "@/lib/admin/finance-queries";
+import { type FinanceAccount, financeAccounts, financeStartOn } from "@/lib/admin/finance-queries";
 import { adminRevenueHref } from "@/lib/admin/finance-query";
 import { itemAccount, type ItemRef } from "@/lib/admin/revenue-queries";
 import { baghdadToday, formatDay } from "@/lib/dates";
@@ -18,16 +18,24 @@ import { baghdadToday, formatDay } from "@/lib/dates";
  * "استرجاع" and "خصم". A2's order drawer, A7's subscription drawer and
  * A18's sale drawer show it.
  */
-export async function ItemAccountCard({ item }: { item: ItemRef }) {
+export async function ItemAccountCard({
+  item,
+  books,
+}: {
+  item: ItemRef;
+  /** The boxes and the start day, when the page already has them (a list of cards). */
+  books?: { boxes: FinanceAccount[]; startOn: string };
+}) {
   const t = await getTranslations("Admin.finance");
   const [account, boxes, startOn] = await Promise.all([
     itemAccount(item),
-    financeAccounts(),
-    financeStartOn(),
+    books?.boxes ?? financeAccounts(),
+    books?.startOn ?? financeStartOn(),
   ]);
-  const { order } = account;
-  // A covered order is paid through its subscription.
-  if (order?.covered) {
+  const { order, receivable, payments, discount } = account;
+  // A covered order is paid through its subscription; one paid before it was
+  // covered still shows those payments, to refund them.
+  if (order?.covered && payments.length === 0) {
     return (
       <Card className="flex flex-col gap-2 p-4">
         <h2 className="text-16 font-extrabold">{t("account.title")}</h2>
@@ -35,7 +43,6 @@ export async function ItemAccountCard({ item }: { item: ItemRef }) {
       </Card>
     );
   }
-  const { receivable, payments, discount } = account;
   // A cancelled order or a no-show with no money on it has no account.
   if ((order?.status === "cancelled" || order?.status === "no_show") && payments.length === 0) {
     return null;
@@ -48,7 +55,7 @@ export async function ItemAccountCard({ item }: { item: ItemRef }) {
   const beforeBooks =
     (item.kind === "order" && order?.status === "completed" && !counted) ||
     (item.kind === "subscription" && !counted);
-  const canPay = !beforeBooks;
+  const canPay = !beforeBooks && !order?.covered;
   const balance = receivable?.balanceIqd ?? 0;
   const paid = receivable?.paidIqd ?? 0;
 
@@ -57,11 +64,13 @@ export async function ItemAccountCard({ item }: { item: ItemRef }) {
       <h2 className="text-16 font-extrabold">{t("account.title")}</h2>
       {!counted && (
         <p className="text-14 text-body-2">
-          {beforeBooks
-            ? item.kind === "subscription"
-              ? t("account.subscriptionBeforeBooks")
-              : t("account.beforeBooks")
-            : t("account.notYet")}
+          {order?.covered
+            ? t("account.covered")
+            : beforeBooks
+              ? item.kind === "subscription"
+                ? t("account.subscriptionBeforeBooks")
+                : t("account.beforeBooks")
+              : t("account.notYet")}
         </p>
       )}
       {(counted || paid !== 0) && (

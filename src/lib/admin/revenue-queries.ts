@@ -282,7 +282,21 @@ export async function customerBalances(
   };
 }
 
-/** A customer's items in the books with a balance, oldest first (at most 100). */
+/** A customer's name and phone, for their account drawer; null when missing. */
+export async function customerContact(
+  customerId: string,
+): Promise<{ name: string | null; phone: string | null } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name, phone")
+    .eq("id", customerId)
+    .maybeSingle();
+  if (error) throw new Error(`Customer read failed: ${error.message}`);
+  return data ? { name: data.full_name, phone: data.phone } : null;
+}
+
+/** A customer's items in the books with a balance, oldest first (at most 30). */
 export async function customerReceivables(customerId: string): Promise<Receivable[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -291,7 +305,7 @@ export async function customerReceivables(customerId: string): Promise<Receivabl
     .eq("customer_id", customerId)
     .neq("balance_iqd", 0)
     .order("revenue_on", { ascending: true, nullsFirst: true })
-    .limit(100);
+    .limit(30);
   if (error) throw new Error(`Receivables read failed: ${error.message}`);
   return data.map(toReceivable);
 }
