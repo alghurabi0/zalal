@@ -1,11 +1,12 @@
 -- create_order() (spec §5.9-5.11, §6 "(new) -> pending_confirmation", §7).
 -- Only a customer books, for their own live address, which must still be in
 -- an active service area (ZL001). The slot must be bookable (ZL004): active,
--- on its weekday, not blocked, inside the window, and starting at least
--- cancel_cutoff_hours from now. It takes a place or fails with ZL005, so a
+-- on its weekday, not blocked, on any future day (no booking window since
+-- migration `no_booking_limits`), and starting at least cancel_cutoff_hours
+-- from now. It takes a place or fails with ZL005, so a
 -- slot is never overbooked. Lines are saved tanks on that address or new
 -- tanks, which are saved to it (one tank per line; qty stays on the line);
--- at most max_tanks_per_order tanks (ZL007). Prices and the address are
+-- any number of tanks (no limit since migration `no_booking_limits`). Prices and the address are
 -- copied onto the order. Up to 4 finished uploads from the caller's own
 -- folder in order-media (ZL008, ZL009). The same request id returns the same
 -- order instead of booking twice. Parallel bookings are tested in
@@ -13,7 +14,7 @@
 begin;
 \ir _helpers.psql
 
-select plan(46);
+select plan(48);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -233,11 +234,22 @@ select tests.authenticate_as(tests.user_id('+9647801111111'));
 
 -- Tanks -------------------------------------------------------------------------
 
+select lives_ok(
+  $$ select tests.book('55 tanks', jsonb_build_array(
+       tests.line('tank_a_home', 25), '{"tank_type": "roof", "size": "s", "qty": 30}'::jsonb
+     ), tests.today() + 20) $$,
+  'any number of tanks can be booked, with more than 20 on a line'
+);
+select results_eq(
+  $$ select sum(i.qty)::int from public.order_items as i
+     join public.orders as o on o.id = i.order_id
+     where o.client_request_id = md5('55 tanks')::uuid $$,
+  $$ values (55) $$,
+  'and every line keeps its quantity'
+);
 select throws_ok(
-  $$ select tests.book('7 tanks', jsonb_build_array(
-       tests.line('tank_a_home', 4), '{"tank_type": "roof", "size": "s", "qty": 3}'::jsonb
-     ), tests.today() + 2) $$,
-  'ZL007', 'too_many_tanks', 'more than 6 tanks is refused'
+  $$ select tests.book('huge', jsonb_build_array(tests.line('tank_a_home', 40000)), tests.today() + 21) $$,
+  '22023', 'invalid_items', 'a quantity too big to store is refused as invalid input'
 );
 select throws_ok(
   $$ select tests.book('qty 0', jsonb_build_array(tests.line('tank_a_home', 0)), tests.today() + 2) $$,
@@ -303,9 +315,9 @@ select lives_ok(
   $$ select tests.book('last day', '[{"tank_type": "roof", "size": "s", "qty": 1}]', tests.today() + 13) $$,
   'the 14th day (today + 13) can be booked'
 );
-select throws_ok(
-  $$ select tests.book('past window', '[{"tank_type": "roof", "size": "s", "qty": 1}]', tests.today() + 14) $$,
-  'ZL004', 'slot_unavailable', 'a day past the window is refused'
+select lives_ok(
+  $$ select tests.book('far ahead', '[{"tank_type": "roof", "size": "s", "qty": 1}]', tests.today() + 400) $$,
+  'a day long after the old 14-day window can be booked'
 );
 select throws_ok(
   $$ select tests.book('yesterday', '[{"tank_type": "roof", "size": "s", "qty": 1}]', tests.today() - 1) $$,

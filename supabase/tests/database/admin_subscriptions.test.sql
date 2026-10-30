@@ -5,8 +5,8 @@
 --
 -- admin_activate_subscription(id, starts_on, visits, tanks, price, paid,
 -- note): a request becomes active from starts_on (not before today in
--- Baghdad) to 12 months later less a day, with 1–12 visits, 1 to
--- max_tanks_per_order tanks and a positive price; another status is ZL036
+-- Baghdad) to 12 months later less a day, with 1–12 visits, at least 1 tank
+-- (no upper limit since migration `no_booking_limits`) and a positive price; another status is ZL036
 -- invalid_subscription_status; an overlap with the address's other active
 -- subscription is ZL035. The customer is told (subscription_activated).
 -- admin_set_subscription_paid(id, paid): the paid tick of an active one.
@@ -38,14 +38,15 @@ as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 create function tests.left(p_id uuid) returns int language sql stable
 as $$ select visits_left from public.subscription_overview where id = p_id $$;
 
-update public.settings as s set max_tanks_per_order = 6 where s.id;
 insert into tests.ids values
   ('home', tests.create_address(tests.a(), 'home')),
-  ('family', tests.create_address(tests.a(), 'family'));
+  ('family', tests.create_address(tests.a(), 'family')),
+  ('work', tests.create_address(tests.a(), 'work'));
 update public.addresses set is_default = (id = tests.id('home')) where user_id = tests.a();
 insert into tests.ids values
   ('request', tests.create_subscription(tests.a(), 'requested', p_address_id => tests.id('home'))),
-  ('family_request', tests.create_subscription(tests.a(), 'requested', p_address_id => tests.id('family')));
+  ('family_request', tests.create_subscription(tests.a(), 'requested', p_address_id => tests.id('family'))),
+  ('work_request', tests.create_subscription(tests.a(), 'requested', p_address_id => tests.id('work')));
 
 -- Who ------------------------------------------------------------------------------------------
 
@@ -81,15 +82,12 @@ select throws_ok(
   '22023', 'invalid_visits', 'at least one visit'
 );
 select throws_ok(
-  $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 7, 60000, true) $$,
-  '22023', 'invalid_tanks', 'no more tanks than an order may hold'
+  $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 0, 60000, true) $$,
+  '22023', 'invalid_tanks', 'at least one tank'
 );
-select tests.clear_authentication();
-update public.settings as s set max_tanks_per_order = 10 where s.id;
-select tests.authenticate_as(tests.admin());
-select throws_ok(
-  $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 7, 60000, true) $$,
-  '22023', 'invalid_tanks', 'and never more than 6, whatever the order limit'
+select lives_ok(
+  $$ select public.admin_activate_subscription(tests.id('work_request'), tests.today(), 2, 40, 60000, true) $$,
+  'a subscription may cover any number of tanks'
 );
 select throws_ok(
   $$ select public.admin_activate_subscription(tests.id('request'), tests.today(), 2, 1, 0, true) $$,
