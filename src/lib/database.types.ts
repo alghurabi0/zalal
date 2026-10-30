@@ -497,6 +497,266 @@ export type Database = {
           },
         ];
       };
+      expense_categories: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: number;
+          kind: Database["public"]["Enums"]["expense_category_kind"];
+          name: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: never;
+          kind?: Database["public"]["Enums"]["expense_category_kind"];
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: never;
+          kind?: Database["public"]["Enums"]["expense_category_kind"];
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      expenses: {
+        Row: {
+          account_id: string;
+          amount_iqd: number;
+          category_id: number;
+          created_at: string;
+          created_by: string;
+          id: string;
+          note: string | null;
+          spent_on: string;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_id: string;
+          amount_iqd: number;
+          category_id: number;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          note?: string | null;
+          spent_on: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          amount_iqd?: number;
+          category_id?: number;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          note?: string | null;
+          spent_on?: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "expenses_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "expenses_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "expense_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      finance_accounts: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          crew_id: string | null;
+          id: string;
+          kind: Database["public"]["Enums"]["finance_account_kind"];
+          name: string | null;
+          opening_balance_iqd: number;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          crew_id?: string | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["finance_account_kind"];
+          name?: string | null;
+          opening_balance_iqd?: number;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          crew_id?: string | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["finance_account_kind"];
+          name?: string | null;
+          opening_balance_iqd?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_accounts_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: true;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      finance_settings: {
+        Row: {
+          id: boolean;
+          start_on: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: boolean;
+          start_on: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: boolean;
+          start_on?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      finance_transfers: {
+        Row: {
+          amount_iqd: number;
+          created_at: string;
+          created_by: string;
+          from_account_id: string;
+          id: string;
+          moved_on: string;
+          note: string | null;
+          to_account_id: string;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_iqd: number;
+          created_at?: string;
+          created_by: string;
+          from_account_id: string;
+          id?: string;
+          moved_on: string;
+          note?: string | null;
+          to_account_id: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          amount_iqd?: number;
+          created_at?: string;
+          created_by?: string;
+          from_account_id?: string;
+          id?: string;
+          moved_on?: string;
+          note?: string | null;
+          to_account_id?: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_transfers_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_transfers_from_account_id_fkey";
+            columns: ["from_account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "finance_transfers_from_account_id_fkey";
+            columns: ["from_account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_transfers_to_account_id_fkey";
+            columns: ["to_account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "finance_transfers_to_account_id_fkey";
+            columns: ["to_account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "finance_transfers_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       job_reports: {
         Row: {
           created_at: string;
@@ -1634,6 +1894,22 @@ export type Database = {
       };
     };
     Views: {
+      finance_account_balances: {
+        Row: {
+          account_id: string;
+          balance_iqd: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_id?: string | null;
+          balance_iqd?: never;
+        };
+        Update: {
+          account_id?: string | null;
+          balance_iqd?: never;
+        };
+        Relationships: [];
+      };
       subscription_overview: {
         Row: {
           activated_at: string | null;
@@ -1750,6 +2026,7 @@ export type Database = {
       };
       admin_delete_article: { Args: { p_id: string }; Returns: string };
       admin_delete_category: { Args: { p_id: number }; Returns: undefined };
+      admin_delete_expense_category: { Args: { p_id: number }; Returns: undefined };
       admin_end_subscription: {
         Args: { p_reason: string; p_subscription_id: string };
         Returns: undefined;
@@ -1787,9 +2064,50 @@ export type Database = {
         };
         Returns: number;
       };
+      admin_save_expense: {
+        Args: {
+          p_account_id?: string;
+          p_amount_iqd?: number;
+          p_category_id?: number;
+          p_id?: string;
+          p_note?: string;
+          p_spent_on?: string;
+        };
+        Returns: string;
+      };
+      admin_save_expense_category: {
+        Args: {
+          p_active?: boolean;
+          p_id?: number;
+          p_kind?: Database["public"]["Enums"]["expense_category_kind"];
+          p_name?: string;
+        };
+        Returns: number;
+      };
+      admin_save_finance_account: {
+        Args: {
+          p_active?: boolean;
+          p_id?: string;
+          p_kind?: Database["public"]["Enums"]["finance_account_kind"];
+          p_name?: string;
+          p_opening_balance_iqd?: number;
+        };
+        Returns: string;
+      };
       admin_save_service_area: {
         Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
         Returns: Record<string, unknown>;
+      };
+      admin_save_transfer: {
+        Args: {
+          p_amount_iqd?: number;
+          p_from_account_id?: string;
+          p_id?: string;
+          p_moved_on?: string;
+          p_note?: string;
+          p_to_account_id?: string;
+        };
+        Returns: string;
       };
       admin_schedule_conflicts: {
         Args: Record<PropertyKey, never>;
@@ -1845,12 +2163,15 @@ export type Database = {
         Args: { p_active: boolean; p_crew_id: string; p_name: string };
         Returns: number;
       };
+      admin_update_finance_settings: { Args: { p_start_on: string }; Returns: undefined };
       admin_update_prices: { Args: { p_prices: Json }; Returns: number };
       admin_update_settings: { Args: { p_patch: Json }; Returns: undefined };
       admin_update_slot: {
         Args: { p_active: boolean; p_capacity: number; p_slot_id: number; p_weekdays: number[] };
         Returns: undefined;
       };
+      admin_void_expense: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_transfer: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       assign_crew: { Args: { p_crew_id: string; p_order_id: string }; Returns: undefined };
       attach_job_media: {
         Args: {
@@ -2038,6 +2359,8 @@ export type Database = {
       chat_author: "customer" | "admin" | "system";
       chat_message_kind: "message" | "auto_reply" | "no_show" | "ticket";
       chat_topic: "reschedule" | "cancel" | "price" | "complaint";
+      expense_category_kind: "general" | "wages" | "equipment";
+      finance_account_kind: "cash" | "zain_cash" | "bank" | "crew";
       media_type: "photo" | "video";
       notification_type:
         | "order_confirmed"
@@ -2204,6 +2527,8 @@ export const Constants = {
       chat_author: ["customer", "admin", "system"],
       chat_message_kind: ["message", "auto_reply", "no_show", "ticket"],
       chat_topic: ["reschedule", "cancel", "price", "complaint"],
+      expense_category_kind: ["general", "wages", "equipment"],
+      finance_account_kind: ["cash", "zain_cash", "bank", "crew"],
       media_type: ["photo", "video"],
       notification_type: [
         "order_confirmed",
