@@ -40,6 +40,8 @@ export const expenseSchema = z.object({
   accountId: z.uuid(),
   amountIqd: amountSchema,
   note: trimmed(NOTE_MAX),
+  /** The worker a wage pays (payroll, task 4); only on a wages category. */
+  workerId: z.uuid().nullable().optional(),
 });
 export type ExpenseInput = z.input<typeof expenseSchema>;
 
@@ -181,6 +183,82 @@ export const monthReopenSchema = z.object({
     .pipe(z.string().min(1).max(NOTE_MAX)),
 });
 export type MonthReopenInput = z.input<typeof monthReopenSchema>;
+
+// Payroll (Phase 7, task 4; A21). ------------------------------------------------------------
+
+export const WORKER_NAME_MAX = 60;
+export const WORKER_PAY_TYPES = ["per_visit", "per_day", "monthly", "none"] as const;
+export type WorkerPayType = (typeof WORKER_PAY_TYPES)[number];
+export const PAYROLL_ADJUSTMENT_KINDS = ["bonus", "deduction"] as const;
+export type PayrollAdjustmentKind = (typeof PAYROLL_ADJUSTMENT_KINDS)[number];
+
+const reason = z
+  .string()
+  .transform((value) => value.trim())
+  .pipe(z.string().min(1).max(NOTE_MAX));
+
+/** A worker: internal records for the books, no login. The phone is E.164 or empty. */
+export const workerSchema = z.object({
+  id: z.uuid().nullable(),
+  name: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(z.string().min(2).max(WORKER_NAME_MAX)),
+  phone: z.union([z.literal(""), z.string().regex(/^\+9647[3-9][0-9]{8}$/)]),
+  note: trimmed(NOTE_MAX),
+  openingBalanceIqd: z.number().int().min(-AMOUNT_MAX).max(AMOUNT_MAX),
+  active: z.boolean(),
+});
+export type WorkerInput = z.input<typeof workerSchema>;
+
+/** From `on`, the worker is in `crewId` (null: in no crew). */
+export const workerMoveSchema = z.object({
+  workerId: z.uuid(),
+  crewId: z.uuid().nullable(),
+  on: z.iso.date(),
+});
+export type WorkerMoveInput = z.input<typeof workerMoveSchema>;
+
+/** A membership row, a rate or a bonus by its id. */
+export const payrollIdSchema = z.number().int().positive();
+
+/** A rate from its day; "none" pays nothing, every other type something. */
+export const workerRateSchema = z
+  .object({
+    workerId: z.uuid(),
+    effectiveOn: z.iso.date(),
+    payType: z.enum(WORKER_PAY_TYPES),
+    amountIqd: z.number().int().min(0).max(AMOUNT_MAX),
+  })
+  .refine((value) => (value.payType === "none") === (value.amountIqd === 0), {
+    path: ["amountIqd"],
+  });
+export type WorkerRateInput = z.input<typeof workerRateSchema>;
+
+export const payrollAdjustmentSchema = z.object({
+  workerId: z.uuid(),
+  adjustedOn: z.iso.date(),
+  kind: z.enum(PAYROLL_ADJUSTMENT_KINDS),
+  amountIqd: amountSchema,
+  reason,
+});
+export type PayrollAdjustmentInput = z.input<typeof payrollAdjustmentSchema>;
+
+/** Voiding a rate or a bonus (their ids are numbers). */
+export const payrollVoidSchema = z.object({ id: payrollIdSchema, reason });
+export type PayrollVoidInput = z.input<typeof payrollVoidSchema>;
+
+/** The month's ticked days ("2026-10"), each in that month. */
+export const workerDaysSchema = z
+  .object({
+    workerId: z.uuid(),
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    days: z.array(z.iso.date()).max(31),
+  })
+  .refine((value) => value.days.every((day) => day.startsWith(`${value.month}-`)), {
+    path: ["days"],
+  });
+export type WorkerDaysInput = z.input<typeof workerDaysSchema>;
 
 /**
  * A typed amount ("45,000", "45000", or with Arabic-Indic digits and the

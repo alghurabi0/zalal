@@ -7,6 +7,7 @@ import { createCrew, createCustomer, logInAsAdmin, logInAsCrew } from "./helpers
 import { createArticle, createCategory } from "./helpers/articles";
 import { signUp } from "./helpers/auth";
 import { baghdadDate, createCertificate, createOrder, createSlot } from "./helpers/booking";
+import { createWorker } from "./helpers/payroll";
 
 // Accessibility across every surface (Phase 6, task 4): axe (WCAG 2.2 A/AA
 // and best practices) on each route, touch targets of at least 44 px (24 px
@@ -173,7 +174,9 @@ test.describe("admin", () => {
     const order = await createOrder(customer.phone, { slot, date: baghdadDate(1) });
     const category = await createCategory();
     const article = await createArticle({ categoryId: category.id, status: "draft" });
-    await logInAsAdmin(page);
+    const crew = await createCrew();
+    const { id: adminId } = await logInAsAdmin(page);
+    const worker = await createWorker({ createdBy: adminId, crewId: crew.id });
     for (const url of [
       "/admin",
       `/admin?period=${baghdadDate(0).slice(0, 7)}`,
@@ -209,6 +212,10 @@ test.describe("admin", () => {
       "/admin/finance/overview",
       "/admin/finance/reports",
       "/admin/finance/reports?year=2026",
+      "/admin/finance/payroll",
+      "/admin/finance/payroll?worker=new",
+      `/admin/finance/payroll?worker=${worker.id}`,
+      `/admin/finance/expenses?expense=new&worker=${worker.id}`,
     ]) {
       await audit(page, url, { linkMin: 24 });
     }

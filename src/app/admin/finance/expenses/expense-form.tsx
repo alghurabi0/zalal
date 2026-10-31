@@ -18,6 +18,7 @@ import { expenseSchema, NOTE_MAX, parseAmount } from "@/lib/schemas/finance";
 import { saveExpense, voidExpense } from "../actions";
 
 type Option = { id: string; label: string; active: boolean };
+type WorkerOption = { id: string; name: string; active: boolean };
 
 /**
  * A16's expense drawer: record an expense, or edit or void one. A
@@ -28,6 +29,8 @@ export function ExpenseForm({
   expense,
   accounts,
   categories,
+  workers,
+  payWorker,
   today,
   firstDay,
   closed = false,
@@ -36,6 +39,10 @@ export function ExpenseForm({
   expense: Expense | null;
   accounts: Option[];
   categories: ExpenseCategory[];
+  /** Workers a wage can pay (A21). */
+  workers: WorkerOption[];
+  /** A new wage for this worker (A21's "ادفع له"), with what they're owed. */
+  payWorker?: { id: string; owedIqd: number } | null;
   today: string;
   /** The first day a record may take: the start day, or the day after the last closed month. */
   firstDay: string;
@@ -49,9 +56,24 @@ export function ExpenseForm({
   const edit = useAdminEdit();
   const defaultAccount = accounts.find((account) => account.active)?.id ?? "";
   const [spentOn, setSpentOn] = useState(expense?.spentOn ?? today);
-  const [categoryId, setCategoryId] = useState(expense ? String(expense.categoryId) : "");
+  const wagesCategory = categories.find((c) => c.active && c.kind === "wages");
+  const [categoryId, setCategoryId] = useState(
+    expense
+      ? String(expense.categoryId)
+      : payWorker && wagesCategory
+        ? String(wagesCategory.id)
+        : "",
+  );
   const [accountId, setAccountId] = useState(expense?.accountId ?? defaultAccount);
-  const [amount, setAmount] = useState(expense ? formatIQD(expense.amountIqd) : "");
+  const [amount, setAmount] = useState(
+    expense
+      ? formatIQD(expense.amountIqd)
+      : payWorker && payWorker.owedIqd > 0
+        ? formatIQD(payWorker.owedIqd)
+        : "",
+  );
+  const [workerId, setWorkerId] = useState(expense?.workerId ?? payWorker?.id ?? "");
+  const isWages = categories.find((c) => String(c.id) === categoryId)?.kind === "wages";
   const [note, setNote] = useState(expense?.note ?? "");
   const [tried, setTried] = useState(false);
 
@@ -62,6 +84,14 @@ export function ExpenseForm({
           [t("expense.date"), formatDay(expense.spentOn)],
           [t("expense.category"), categories.find((c) => c.id === expense.categoryId)?.name],
           [t("expense.account"), accounts.find((a) => a.id === expense.accountId)?.label],
+          ...(expense.workerId
+            ? [
+                [t("expense.worker"), workers.find((w) => w.id === expense.workerId)?.name] as [
+                  string,
+                  string | undefined,
+                ],
+              ]
+            : []),
           [t("amount"), <Money key="amount" amount={expense.amountIqd} />],
           [t("expense.note"), expense.note ?? t("none")],
         ]}
@@ -79,6 +109,7 @@ export function ExpenseForm({
     accountId,
     amountIqd: parseAmount(amount) ?? 0,
     note,
+    workerId: isWages && workerId ? workerId : null,
   };
   const valid = expenseSchema.safeParse(input).success;
   const dayOk = spentOn >= firstDay && spentOn <= today;
@@ -175,6 +206,27 @@ export function ExpenseForm({
             )}
           </Field>
         </div>
+        {isWages && (
+          <Field label={t("expense.worker")} variant="compact" hint={t("expense.workerHint")}>
+            {(control) => (
+              <Select
+                {...control}
+                variant="compact"
+                value={workerId}
+                onChange={(event) => setWorkerId(event.target.value)}
+              >
+                <option value="">{t("expense.noWorker")}</option>
+                {workers
+                  .filter((w) => w.active || w.id === expense?.workerId || w.id === payWorker?.id)
+                  .map((worker) => (
+                    <option key={worker.id} value={worker.id}>
+                      {worker.name}
+                    </option>
+                  ))}
+              </Select>
+            )}
+          </Field>
+        )}
         <AmountField value={amount} onChange={setAmount} showError={tried} />
         <Field label={t("expense.note")} variant="compact" hint={t("noteHint")}>
           {(control) => (

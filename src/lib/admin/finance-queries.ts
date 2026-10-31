@@ -111,12 +111,14 @@ export type Expense = Voidable & {
   accountId: string;
   amountIqd: number;
   note: string | null;
+  /** The worker a wage paid (payroll, A21). */
+  workerId: string | null;
   createdAt: string;
   createdBy: string | null;
 };
 
 const EXPENSE_COLUMNS =
-  "id, spent_on, category_id, account_id, amount_iqd, note, created_at, voided_at, void_reason, " +
+  "id, spent_on, category_id, account_id, amount_iqd, note, worker_id, created_at, voided_at, void_reason, " +
   "creator:profiles!expenses_created_by_fkey(full_name), voider:profiles!expenses_voided_by_fkey(full_name)";
 
 type ExpenseRow = {
@@ -126,6 +128,7 @@ type ExpenseRow = {
   account_id: string;
   amount_iqd: number;
   note: string | null;
+  worker_id: string | null;
   created_at: string;
   voided_at: string | null;
   void_reason: string | null;
@@ -140,6 +143,7 @@ const toExpense = (row: ExpenseRow): Expense => ({
   accountId: row.account_id,
   amountIqd: row.amount_iqd,
   note: row.note,
+  workerId: row.worker_id,
   createdAt: row.created_at,
   createdBy: row.creator?.full_name ?? null,
   voidedAt: row.voided_at,
@@ -225,7 +229,7 @@ const TRANSFER_COLUMNS =
   "creator:profiles!finance_transfers_created_by_fkey(full_name), " +
   "voider:profiles!finance_transfers_voided_by_fkey(full_name)";
 
-type TransferRow = Omit<ExpenseRow, "spent_on" | "category_id" | "account_id"> & {
+type TransferRow = Omit<ExpenseRow, "spent_on" | "category_id" | "account_id" | "worker_id"> & {
   moved_on: string;
   from_account_id: string;
   to_account_id: string;

@@ -539,6 +539,7 @@ export type Database = {
           void_reason: string | null;
           voided_at: string | null;
           voided_by: string | null;
+          worker_id: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -554,6 +555,7 @@ export type Database = {
           void_reason?: string | null;
           voided_at?: string | null;
           voided_by?: string | null;
+          worker_id?: string | null;
         };
         Update: {
           account_id?: string;
@@ -568,6 +570,7 @@ export type Database = {
           void_reason?: string | null;
           voided_at?: string | null;
           voided_by?: string | null;
+          worker_id?: string | null;
         };
         Relationships: [
           {
@@ -603,6 +606,13 @@ export type Database = {
             columns: ["voided_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_worker_id_fkey";
+            columns: ["worker_id"];
+            isOneToOne: false;
+            referencedRelation: "workers";
             referencedColumns: ["id"];
           },
         ];
@@ -1533,6 +1543,74 @@ export type Database = {
         };
         Relationships: [];
       };
+      payroll_adjustments: {
+        Row: {
+          adjusted_on: string;
+          amount_iqd: number;
+          created_at: string;
+          created_by: string;
+          id: number;
+          kind: Database["public"]["Enums"]["payroll_adjustment_kind"];
+          reason: string;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+          worker_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          adjusted_on: string;
+          amount_iqd: number;
+          created_at?: string;
+          created_by: string;
+          id?: never;
+          kind: Database["public"]["Enums"]["payroll_adjustment_kind"];
+          reason: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          worker_id: string;
+        };
+        Update: {
+          adjusted_on?: string;
+          amount_iqd?: number;
+          created_at?: string;
+          created_by?: string;
+          id?: never;
+          kind?: Database["public"]["Enums"]["payroll_adjustment_kind"];
+          reason?: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          worker_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payroll_adjustments_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payroll_adjustments_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payroll_adjustments_worker_id_fkey";
+            columns: ["worker_id"];
+            isOneToOne: false;
+            referencedRelation: "workers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       price_list: {
         Row: {
           price_iqd: number;
@@ -2180,6 +2258,198 @@ export type Database = {
           },
         ];
       };
+      worker_crews: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          crew_id: string;
+          from_on: string;
+          id: number;
+          to_on: string | null;
+          updated_at: string;
+          worker_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          crew_id: string;
+          from_on: string;
+          id?: never;
+          to_on?: string | null;
+          updated_at?: string;
+          worker_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          crew_id?: string;
+          from_on?: string;
+          id?: never;
+          to_on?: string | null;
+          updated_at?: string;
+          worker_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "worker_crews_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worker_crews_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: false;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worker_crews_worker_id_fkey";
+            columns: ["worker_id"];
+            isOneToOne: false;
+            referencedRelation: "workers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      worker_days: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          worked_on: string;
+          worker_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          worked_on: string;
+          worker_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          worked_on?: string;
+          worker_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "worker_days_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worker_days_worker_id_fkey";
+            columns: ["worker_id"];
+            isOneToOne: false;
+            referencedRelation: "workers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      worker_rates: {
+        Row: {
+          amount_iqd: number;
+          created_at: string;
+          created_by: string;
+          effective_on: string;
+          id: number;
+          pay_type: Database["public"]["Enums"]["worker_pay_type"];
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+          worker_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_iqd: number;
+          created_at?: string;
+          created_by: string;
+          effective_on: string;
+          id?: never;
+          pay_type: Database["public"]["Enums"]["worker_pay_type"];
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          worker_id: string;
+        };
+        Update: {
+          amount_iqd?: number;
+          created_at?: string;
+          created_by?: string;
+          effective_on?: string;
+          id?: never;
+          pay_type?: Database["public"]["Enums"]["worker_pay_type"];
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          worker_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "worker_rates_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worker_rates_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worker_rates_worker_id_fkey";
+            columns: ["worker_id"];
+            isOneToOne: false;
+            referencedRelation: "workers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workers: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: string;
+          name: string;
+          note: string | null;
+          opening_balance_iqd: number;
+          phone: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          name: string;
+          note?: string | null;
+          opening_balance_iqd?: number;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          note?: string | null;
+          opening_balance_iqd?: number;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       finance_account_balances: {
@@ -2356,6 +2626,7 @@ export type Database = {
       admin_delete_article: { Args: { p_id: string }; Returns: string };
       admin_delete_category: { Args: { p_id: number }; Returns: undefined };
       admin_delete_expense_category: { Args: { p_id: number }; Returns: undefined };
+      admin_delete_worker_crew: { Args: { p_id: number }; Returns: undefined };
       admin_end_subscription: {
         Args: { p_reason: string; p_subscription_id: string };
         Returns: undefined;
@@ -2380,6 +2651,28 @@ export type Database = {
           category_id: number;
           month: string;
           total_iqd: number;
+        }[];
+      };
+      admin_move_worker: {
+        Args: { p_crew_id: string; p_on: string; p_worker_id: string };
+        Returns: undefined;
+      };
+      admin_payroll: {
+        Args: { p_from: string; p_to: string; p_worker_id?: string };
+        Returns: {
+          balance_iqd: number;
+          base_iqd: number;
+          bonuses_iqd: number;
+          crew_id: string;
+          days: number;
+          deductions_iqd: number;
+          earned_iqd: number;
+          month: string;
+          paid_iqd: number;
+          pay_type: Database["public"]["Enums"]["worker_pay_type"];
+          rate_iqd: number;
+          visits: number;
+          worker_id: string;
         }[];
       };
       admin_profit_and_loss: {
@@ -2464,6 +2757,7 @@ export type Database = {
           p_id?: string;
           p_note?: string;
           p_spent_on?: string;
+          p_worker_id?: string;
         };
         Returns: string;
       };
@@ -2514,6 +2808,17 @@ export type Database = {
         };
         Returns: string;
       };
+      admin_save_payroll_adjustment: {
+        Args: {
+          p_adjusted_on?: string;
+          p_amount_iqd?: number;
+          p_id?: number;
+          p_kind?: Database["public"]["Enums"]["payroll_adjustment_kind"];
+          p_reason?: string;
+          p_worker_id?: string;
+        };
+        Returns: number;
+      };
       admin_save_service_area: {
         Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
         Returns: Record<string, unknown>;
@@ -2528,6 +2833,37 @@ export type Database = {
           p_to_account_id?: string;
         };
         Returns: string;
+      };
+      admin_save_worker: {
+        Args: {
+          p_active?: boolean;
+          p_id?: string;
+          p_name?: string;
+          p_note?: string;
+          p_opening_balance_iqd?: number;
+          p_phone?: string;
+        };
+        Returns: string;
+      };
+      admin_save_worker_crew: {
+        Args: {
+          p_crew_id?: string;
+          p_from_on?: string;
+          p_id?: number;
+          p_to_on?: string;
+          p_worker_id?: string;
+        };
+        Returns: number;
+      };
+      admin_save_worker_rate: {
+        Args: {
+          p_amount_iqd?: number;
+          p_effective_on?: string;
+          p_id?: number;
+          p_pay_type?: Database["public"]["Enums"]["worker_pay_type"];
+          p_worker_id?: string;
+        };
+        Returns: number;
       };
       admin_schedule_conflicts: {
         Args: Record<PropertyKey, never>;
@@ -2565,6 +2901,10 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["ticket_status"]; p_ticket_id: string };
         Returns: undefined;
       };
+      admin_set_worker_days: {
+        Args: { p_days: string[]; p_month: string; p_worker_id: string };
+        Returns: undefined;
+      };
       admin_slot_board: {
         Args: { p_from: string; p_to: string };
         Returns: {
@@ -2594,7 +2934,13 @@ export type Database = {
       admin_void_expense: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_manual_sale: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_payment: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_payroll_adjustment: {
+        Args: { p_id: number; p_reason: string };
+        Returns: undefined;
+      };
       admin_void_transfer: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_worker_rate: { Args: { p_id: number; p_reason: string }; Returns: undefined };
+      admin_worker_crew_days: { Args: { p_month: string; p_worker_id: string }; Returns: string[] };
       assign_crew: { Args: { p_crew_id: string; p_order_id: string }; Returns: undefined };
       attach_job_media: {
         Args: {
@@ -2823,6 +3169,7 @@ export type Database = {
         | "no_show";
       otp_channel: "whatsapp" | "sms";
       payment_method: "cash";
+      payroll_adjustment_kind: "bonus" | "deduction";
       rating_tag: "on_time" | "clean_work" | "respectful" | "clear_photos";
       reminder_kind: "week" | "due";
       subscription_status: "requested" | "active" | "declined" | "cancelled";
@@ -2831,6 +3178,7 @@ export type Database = {
       ticket_category: "leak" | "smell" | "late" | "staff" | "payment" | "other";
       ticket_source: "app" | "rating";
       ticket_status: "open" | "in_progress" | "closed";
+      worker_pay_type: "per_visit" | "per_day" | "monthly" | "none";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -2993,6 +3341,7 @@ export const Constants = {
       ],
       otp_channel: ["whatsapp", "sms"],
       payment_method: ["cash"],
+      payroll_adjustment_kind: ["bonus", "deduction"],
       rating_tag: ["on_time", "clean_work", "respectful", "clear_photos"],
       reminder_kind: ["week", "due"],
       subscription_status: ["requested", "active", "declined", "cancelled"],
@@ -3001,6 +3350,7 @@ export const Constants = {
       ticket_category: ["leak", "smell", "late", "staff", "payment", "other"],
       ticket_source: ["app", "rating"],
       ticket_status: ["open", "in_progress", "closed"],
+      worker_pay_type: ["per_visit", "per_day", "monthly", "none"],
     },
   },
 } as const;

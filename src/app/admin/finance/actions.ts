@@ -25,11 +25,24 @@ import {
   type MonthReopenInput,
   monthReopenSchema,
   type PaymentInput,
+  type PayrollAdjustmentInput,
+  payrollAdjustmentSchema,
+  payrollIdSchema,
+  type PayrollVoidInput,
+  payrollVoidSchema,
   paymentSchema,
   type TransferInput,
   transferSchema,
   type VoidInput,
   voidSchema,
+  type WorkerDaysInput,
+  workerDaysSchema,
+  type WorkerInput,
+  type WorkerMoveInput,
+  workerMoveSchema,
+  type WorkerRateInput,
+  workerRateSchema,
+  workerSchema,
 } from "@/lib/schemas/finance";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,7 +63,7 @@ export async function saveExpense(input: ExpenseInput): Promise<AdminEditResult>
   const parsed = expenseSchema.safeParse(input);
   if (!parsed.success) return invalid;
   const supabase = await admin(routes.adminExpenses);
-  const { id, spentOn, categoryId, accountId, amountIqd, note } = parsed.data;
+  const { id, spentOn, categoryId, accountId, amountIqd, note, workerId } = parsed.data;
   const { error } = await supabase.rpc("admin_save_expense", {
     p_id: id ?? undefined,
     p_spent_on: spentOn,
@@ -58,6 +71,7 @@ export async function saveExpense(input: ExpenseInput): Promise<AdminEditResult>
     p_account_id: accountId,
     p_amount_iqd: amountIqd,
     p_note: note === "" ? undefined : note,
+    p_worker_id: workerId ?? undefined,
   });
   return error ? editFailure("admin_save_expense", error, report) : { status: "done" };
 }
@@ -261,4 +275,116 @@ export async function reopenFinanceMonth(input: MonthReopenInput): Promise<Admin
     p_reason: parsed.data.reason,
   });
   return error ? editFailure("admin_reopen_finance_month", error, report) : { status: "done" };
+}
+
+// Payroll (A21) ------------------------------------------------------------------------------
+
+export async function saveWorker(
+  input: WorkerInput,
+): Promise<AdminEditResult | { status: "done"; id: string }> {
+  // The form sends the phone as typed (07…); the database stores E.164.
+  const phone = input.phone.trim();
+  const parsed = workerSchema.safeParse({
+    ...input,
+    phone: phone === "" ? "" : (normalizeIraqiMobile(phone) ?? phone),
+  });
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const d = parsed.data;
+  const { data, error } = await supabase.rpc("admin_save_worker", {
+    p_id: d.id ?? undefined,
+    p_name: d.name,
+    p_phone: d.phone === "" ? undefined : d.phone,
+    p_note: d.note === "" ? undefined : d.note,
+    p_opening_balance_iqd: d.openingBalanceIqd,
+    p_active: d.active,
+  });
+  if (error) return editFailure("admin_save_worker", error, report);
+  return { status: "done", id: data };
+}
+
+export async function moveWorker(input: WorkerMoveInput): Promise<AdminEditResult> {
+  const parsed = workerMoveSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const { error } = await supabase.rpc("admin_move_worker", {
+    p_worker_id: parsed.data.workerId,
+    // A null crew means "leaves crews": the RPC takes the SQL null.
+    p_crew_id: parsed.data.crewId as string,
+    p_on: parsed.data.on,
+  });
+  return error ? editFailure("admin_move_worker", error, report) : { status: "done" };
+}
+
+export async function deleteWorkerCrew(id: number): Promise<AdminEditResult> {
+  const parsed = payrollIdSchema.safeParse(id);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const { error } = await supabase.rpc("admin_delete_worker_crew", { p_id: parsed.data });
+  return error ? editFailure("admin_delete_worker_crew", error, report) : { status: "done" };
+}
+
+export async function saveWorkerRate(input: WorkerRateInput): Promise<AdminEditResult> {
+  const parsed = workerRateSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const d = parsed.data;
+  const { error } = await supabase.rpc("admin_save_worker_rate", {
+    p_worker_id: d.workerId,
+    p_effective_on: d.effectiveOn,
+    p_pay_type: d.payType,
+    p_amount_iqd: d.amountIqd,
+  });
+  return error ? editFailure("admin_save_worker_rate", error, report) : { status: "done" };
+}
+
+export async function voidWorkerRate(input: PayrollVoidInput): Promise<AdminEditResult> {
+  const parsed = payrollVoidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const { error } = await supabase.rpc("admin_void_worker_rate", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_worker_rate", error, report) : { status: "done" };
+}
+
+export async function savePayrollAdjustment(
+  input: PayrollAdjustmentInput,
+): Promise<AdminEditResult> {
+  const parsed = payrollAdjustmentSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const d = parsed.data;
+  const { error } = await supabase.rpc("admin_save_payroll_adjustment", {
+    p_worker_id: d.workerId,
+    p_adjusted_on: d.adjustedOn,
+    p_kind: d.kind,
+    p_amount_iqd: d.amountIqd,
+    p_reason: d.reason,
+  });
+  return error ? editFailure("admin_save_payroll_adjustment", error, report) : { status: "done" };
+}
+
+export async function voidPayrollAdjustment(input: PayrollVoidInput): Promise<AdminEditResult> {
+  const parsed = payrollVoidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const { error } = await supabase.rpc("admin_void_payroll_adjustment", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_payroll_adjustment", error, report) : { status: "done" };
+}
+
+export async function setWorkerDays(input: WorkerDaysInput): Promise<AdminEditResult> {
+  const parsed = workerDaysSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPayroll);
+  const { error } = await supabase.rpc("admin_set_worker_days", {
+    p_worker_id: parsed.data.workerId,
+    p_month: `${parsed.data.month}-01`,
+    p_days: parsed.data.days,
+  });
+  return error ? editFailure("admin_set_worker_days", error, report) : { status: "done" };
 }

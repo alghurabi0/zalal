@@ -1,6 +1,6 @@
 import { subscriptionReasonFor } from "@/lib/subscriptions/errors";
 
-// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A20 admin RPCs (codes in
+// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A21 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
 export const ADMIN_EDIT_ERRORS = [
@@ -46,6 +46,11 @@ export const ADMIN_EDIT_ERRORS = [
   "close_not_allowed",
   "reopen_not_allowed",
   "books_closed",
+  "worker_inactive",
+  "worker_not_allowed",
+  "membership_overlap",
+  "rate_exists",
+  "same_crew",
   "invalid",
   "not_found",
   "failed",
@@ -82,6 +87,9 @@ const byCode: Record<string, AdminEditError> = {
   ZL053: "paid_set_by_finance",
   ZL054: "month_closed",
   ZL056: "books_closed",
+  ZL057: "worker_not_allowed",
+  ZL058: "membership_overlap",
+  ZL059: "rate_exists",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.
@@ -102,13 +110,15 @@ export function adminEditErrorFor(
     if (error.message === "invalid_start") return "invalid_start";
     if (error.message === "invalid_adjustment") return "invalid_adjustment";
     if (error.message === "same_account") return "same_account";
+    if (error.message === "same_crew") return "same_crew";
     return "invalid";
   }
   // ZL034 and ZL011 carry the reason in the message (A7, A2).
   if (error.code === "ZL034") return subscriptionReasonFor(error.message);
   if (error.code === "ZL011" && error.message === "reason_required") return "reason_required";
-  // A switched-off box or category (A15, A16).
+  // A switched-off box, category (A15, A16) or worker (A21).
   if (error.code === "ZL044") {
+    if (error.message === "worker_inactive") return "worker_inactive";
     return error.message === "category_inactive" ? "category_inactive" : "account_inactive";
   }
   // A20's month close: which way it was refused.

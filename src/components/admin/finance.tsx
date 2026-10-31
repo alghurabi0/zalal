@@ -8,7 +8,7 @@ import { formatMonthYear } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { routes } from "@/lib/routes";
 
-// Pieces the accounting screens share (spec §8.3 A15–A20).
+// Pieces the accounting screens share (spec §8.3 A15–A21).
 
 /**
  * An IQD amount, "45,000 د.ع". The number sits in a left-to-right isolate so
@@ -37,6 +37,7 @@ const TABS = [
   { key: "boxes", href: routes.adminFinance },
   { key: "expenses", href: routes.adminExpenses },
   { key: "revenue", href: routes.adminRevenue },
+  { key: "payroll", href: routes.adminPayroll },
   { key: "reports", href: routes.adminFinanceReports },
   { key: "settings", href: routes.adminFinanceSettings },
 ] as const;
@@ -73,15 +74,22 @@ export function MonthPicker({
   nextHref,
 }: {
   month: string;
-  prevHref: string;
+  /** Null at the first month there is (A21 stops at the books' start). */
+  prevHref: string | null;
   nextHref: string | null;
 }) {
   const t = useTranslations("Admin.finance");
   return (
     <div className="flex items-center gap-1">
-      <Button href={prevHref} variant="secondary" size="sm" aria-label={t("prevMonth")}>
-        <ChevronRight aria-hidden className="size-4" />
-      </Button>
+      {prevHref ? (
+        <Button href={prevHref} variant="secondary" size="sm" aria-label={t("prevMonth")}>
+          <ChevronRight aria-hidden className="size-4" />
+        </Button>
+      ) : (
+        <Button variant="secondary" size="sm" aria-label={t("prevMonth")} disabled>
+          <ChevronRight aria-hidden className="size-4" />
+        </Button>
+      )}
       <span className="flex min-h-11 items-center rounded-full border-2 border-navy bg-navy px-4 text-14 font-bold text-white">
         {formatMonthYear(`${month}-15T12:00:00Z`)}
       </span>
