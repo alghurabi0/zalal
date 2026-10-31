@@ -9,8 +9,10 @@
 -- out of completed is refused, since its revenue would leave that month.
 -- Records in open months, and a payment dated today for an item whose
 -- revenue is in a closed month, still go through. Account deletion still
--- blanks a customer's notes there (no amount moves). Orders with no revenue
--- (covered, or completed before the books) reopen freely, and a
+-- blanks a customer's notes there (no amount moves). A covered order has no
+-- revenue but is a visit for per-visit pay, so it stays completed too
+-- (migration finance_payroll); orders completed before the books reopen
+-- freely, and a
 -- subscription activated into a closed month (a close at midnight) is
 -- refused like a completion.
 begin;
@@ -187,9 +189,10 @@ select lives_ok(
 -- Every writer obeys it ----------------------------------------------------------------------
 
 select tests.clear_authentication();
-select lives_ok(
+select throws_ok(
   format($$ update public.orders set status = 'in_progress' where id = %L $$, tests.id('covered')),
-  'a covered order completed in a closed month still reopens (it has no revenue)'
+  'ZL054', 'month_closed',
+  'a covered order completed in a closed month stays completed too: it is a visit for per-visit pay (task 4)'
 );
 select lives_ok(
   format($$ update public.orders set status = 'in_progress' where id = %L $$, tests.id('before_books')),
