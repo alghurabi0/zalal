@@ -185,3 +185,32 @@ export function adminPayrollHref(query: Partial<AdminPayrollQuery>): string {
   const search = params.toString();
   return search ? `${routes.adminPayroll}?${search}` : routes.adminPayroll;
 }
+
+export const adminPartnersQuerySchema = z.object({
+  /** The month whose end the balance sheet shows. */
+  month: monthSchema,
+  /** A partner's drawer: "new", or the partner's id. */
+  partner: drawerSchema,
+  /** The shares drawer. */
+  shares: z.literal("1").optional().catch(undefined),
+  /** An equipment item's drawer: "new" (owned at the start), or the item's id. */
+  equipment: drawerSchema,
+});
+
+export type AdminPartnersQuery = z.output<typeof adminPartnersQuerySchema>;
+
+export function parseAdminPartnersQuery(
+  params: Record<string, string | string[] | undefined>,
+): AdminPartnersQuery {
+  return adminPartnersQuerySchema.parse(firstValues(params));
+}
+
+export function adminPartnersHref(query: Partial<AdminPartnersQuery>): string {
+  const params = new URLSearchParams();
+  if (query.month) params.set("month", query.month);
+  if (query.partner) params.set("partner", query.partner);
+  if (query.shares) params.set("shares", query.shares);
+  if (query.equipment) params.set("equipment", query.equipment);
+  const search = params.toString();
+  return search ? `${routes.adminPartners}?${search}` : routes.adminPartners;
+}

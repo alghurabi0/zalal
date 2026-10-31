@@ -42,6 +42,8 @@ export const expenseSchema = z.object({
   note: trimmed(NOTE_MAX),
   /** The worker a wage pays (payroll, task 4); only on a wages category. */
   workerId: z.uuid().nullable().optional(),
+  /** A purchase in an equipment category, spread over this many months (task 5). */
+  usefulLifeMonths: z.number().int().min(1).max(240).nullable().optional(),
 });
 export type ExpenseInput = z.input<typeof expenseSchema>;
 
@@ -271,4 +273,115 @@ export function parseAmount(text: string): number | null {
     .replace(/^\u2212/, "-");
   if (!/^-?\d{1,10}$/.test(digits)) return null;
   return Number(digits);
+}
+
+// Partners, equipment and the balance sheet (Phase 7, task 5; A22). ---------------------------
+
+export const PARTNER_NAME_MAX = 60;
+export const EQUIPMENT_NAME_MAX = 60;
+/** Months a purchase is spread over: 1–240; A16 suggests 36. */
+export const LIFE_MAX = 240;
+export const DEFAULT_LIFE_MONTHS = 36;
+/** A share in hundredths of a percent: 10000 is all of it. */
+export const SHARES_TOTAL = 10000;
+export const PARTNER_MOVEMENT_KINDS = ["capital", "withdrawal"] as const;
+export type PartnerMovementKind = (typeof PARTNER_MOVEMENT_KINDS)[number];
+
+const life = z.number().int().min(1).max(LIFE_MAX);
+
+/** A partner: a record in the books, no login. The phone is E.164 or empty. */
+export const partnerSchema = z.object({
+  id: z.uuid().nullable(),
+  name: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(z.string().min(2).max(PARTNER_NAME_MAX)),
+  phone: z.union([z.literal(""), z.string().regex(/^\+9647[3-9][0-9]{8}$/)]),
+  note: trimmed(NOTE_MAX),
+  openingCapitalIqd: z.number().int().min(-AMOUNT_MAX).max(AMOUNT_MAX),
+  active: z.boolean(),
+});
+export type PartnerInput = z.input<typeof partnerSchema>;
+
+/** A month's shares ("2026-10"): each partner's in hundredths of a percent, 100% in all, or none. */
+export const partnerSharesSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    shares: z
+      .array(z.object({ partnerId: z.uuid(), shareBp: z.number().int().min(1).max(SHARES_TOTAL) }))
+      .max(50),
+  })
+  .refine(
+    (value) =>
+      value.shares.length === 0 ||
+      value.shares.reduce((total, share) => total + share.shareBp, 0) === SHARES_TOTAL,
+    { path: ["shares"] },
+  )
+  .refine((value) => new Set(value.shares.map((s) => s.partnerId)).size === value.shares.length, {
+    path: ["shares"],
+  });
+export type PartnerSharesInput = z.input<typeof partnerSharesSchema>;
+
+export const partnerMovementSchema = z.object({
+  id: z.uuid().nullable(),
+  partnerId: z.uuid(),
+  movedOn: z.iso.date(),
+  kind: z.enum(PARTNER_MOVEMENT_KINDS),
+  accountId: z.uuid(),
+  amountIqd: amountSchema,
+  note: trimmed(NOTE_MAX),
+});
+export type PartnerMovementInput = z.input<typeof partnerMovementSchema>;
+
+/** What the company owned at the books' start: its value then and the months left. */
+export const openingEquipmentSchema = z.object({
+  id: z.uuid().nullable(),
+  name: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(z.string().min(2).max(EQUIPMENT_NAME_MAX)),
+  valueIqd: amountSchema,
+  monthsLeft: life,
+  note: trimmed(NOTE_MAX),
+});
+export type OpeningEquipmentInput = z.input<typeof openingEquipmentSchema>;
+
+/** A write-off of a purchase or opening equipment, with a sale price into a box or neither. */
+export const equipmentDisposalSchema = z
+  .object({
+    expenseId: z.uuid().nullable(),
+    openingEquipmentId: z.uuid().nullable(),
+    disposedOn: z.iso.date(),
+    accountId: z.uuid().nullable(),
+    proceedsIqd: z.number().int().min(0).max(AMOUNT_MAX),
+    note: trimmed(NOTE_MAX),
+  })
+  .refine((value) => (value.expenseId === null) !== (value.openingEquipmentId === null), {
+    path: ["expenseId"],
+  })
+  .refine((value) => value.proceedsIqd > 0 === (value.accountId !== null), {
+    path: ["accountId"],
+  });
+export type EquipmentDisposalInput = z.input<typeof equipmentDisposalSchema>;
+
+/**
+ * A typed percentage ("66.67", "66,67" or Arabic-Indic digits) as hundredths
+ * of a percent; null unless it has at most two decimals.
+ */
+export function parseShare(text: string): number | null {
+  const digits = toWesternDigits(text)
+    .trim()
+    .replace(/[\u066B,]/, ".");
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(digits)) return null;
+  const [whole = "0", fraction = ""] = digits.split(".");
+  return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+}
+
+/** Hundredths of a percent as people write it: 6667 → "66.67", 5000 → "50". */
+export function formatShare(shareBp: number): string {
+  const whole = Math.floor(shareBp / 100);
+  const fraction = shareBp % 100;
+  return fraction === 0
+    ? String(whole)
+    : `${whole}.${String(fraction).padStart(2, "0").replace(/0$/, "")}`;
 }

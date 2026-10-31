@@ -113,12 +113,14 @@ export type Expense = Voidable & {
   note: string | null;
   /** The worker a wage paid (payroll, A21). */
   workerId: string | null;
+  /** A purchase spread over this many months (A22); null: a whole expense. */
+  usefulLifeMonths: number | null;
   createdAt: string;
   createdBy: string | null;
 };
 
 const EXPENSE_COLUMNS =
-  "id, spent_on, category_id, account_id, amount_iqd, note, worker_id, created_at, voided_at, void_reason, " +
+  "id, spent_on, category_id, account_id, amount_iqd, note, worker_id, useful_life_months, created_at, voided_at, void_reason, " +
   "creator:profiles!expenses_created_by_fkey(full_name), voider:profiles!expenses_voided_by_fkey(full_name)";
 
 type ExpenseRow = {
@@ -129,6 +131,7 @@ type ExpenseRow = {
   amount_iqd: number;
   note: string | null;
   worker_id: string | null;
+  useful_life_months: number | null;
   created_at: string;
   voided_at: string | null;
   void_reason: string | null;
@@ -144,6 +147,7 @@ const toExpense = (row: ExpenseRow): Expense => ({
   amountIqd: row.amount_iqd,
   note: row.note,
   workerId: row.worker_id,
+  usefulLifeMonths: row.useful_life_months,
   createdAt: row.created_at,
   createdBy: row.creator?.full_name ?? null,
   voidedAt: row.voided_at,

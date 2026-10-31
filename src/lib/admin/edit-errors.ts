@@ -1,6 +1,6 @@
 import { subscriptionReasonFor } from "@/lib/subscriptions/errors";
 
-// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A21 admin RPCs (codes in
+// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A22 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
 export const ADMIN_EDIT_ERRORS = [
@@ -51,6 +51,10 @@ export const ADMIN_EDIT_ERRORS = [
   "membership_overlap",
   "rate_exists",
   "same_crew",
+  "partner_inactive",
+  "life_not_allowed",
+  "shares_total",
+  "equipment_disposed",
   "invalid",
   "not_found",
   "failed",
@@ -90,6 +94,9 @@ const byCode: Record<string, AdminEditError> = {
   ZL057: "worker_not_allowed",
   ZL058: "membership_overlap",
   ZL059: "rate_exists",
+  ZL060: "life_not_allowed",
+  ZL061: "shares_total",
+  ZL062: "equipment_disposed",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.
@@ -119,6 +126,7 @@ export function adminEditErrorFor(
   // A switched-off box, category (A15, A16) or worker (A21).
   if (error.code === "ZL044") {
     if (error.message === "worker_inactive") return "worker_inactive";
+    if (error.message === "partner_inactive") return "partner_inactive";
     return error.message === "category_inactive" ? "category_inactive" : "account_inactive";
   }
   // A20's month close: which way it was refused.

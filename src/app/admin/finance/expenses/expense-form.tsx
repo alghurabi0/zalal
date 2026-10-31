@@ -13,7 +13,14 @@ import { Input, Select } from "@/components/ui/input";
 import type { Expense, ExpenseCategory } from "@/lib/admin/finance-queries";
 import { formatDay, formatDayTime } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
-import { expenseSchema, NOTE_MAX, parseAmount } from "@/lib/schemas/finance";
+import { toWesternDigits } from "@/lib/phone";
+import {
+  DEFAULT_LIFE_MONTHS,
+  expenseSchema,
+  LIFE_MAX,
+  NOTE_MAX,
+  parseAmount,
+} from "@/lib/schemas/finance";
 
 import { saveExpense, voidExpense } from "../actions";
 
@@ -73,7 +80,19 @@ export function ExpenseForm({
         : "",
   );
   const [workerId, setWorkerId] = useState(expense?.workerId ?? payWorker?.id ?? "");
-  const isWages = categories.find((c) => String(c.id) === categoryId)?.kind === "wages";
+  const kindOf = (id: string | number | undefined) =>
+    categories.find((c) => String(c.id) === String(id))?.kind;
+  const isWages = kindOf(categoryId) === "wages";
+  // A purchase in an equipment category is spread over its life (A22). One
+  // saved whole before that may stay whole; a new one needs a life.
+  const isEquipment = kindOf(categoryId) === "equipment";
+  const [life, setLife] = useState(
+    expense ? (expense.usefulLifeMonths?.toString() ?? "") : String(DEFAULT_LIFE_MONTHS),
+  );
+  const lifeOptional =
+    expense !== null &&
+    expense.usefulLifeMonths === null &&
+    kindOf(expense.categoryId) === "equipment";
   const [note, setNote] = useState(expense?.note ?? "");
   const [tried, setTried] = useState(false);
 
@@ -93,6 +112,14 @@ export function ExpenseForm({
               ]
             : []),
           [t("amount"), <Money key="amount" amount={expense.amountIqd} />],
+          ...(expense.usefulLifeMonths
+            ? [
+                [t("expense.life"), t("partners.months", { count: expense.usefulLifeMonths })] as [
+                  string,
+                  string,
+                ],
+              ]
+            : []),
           [t("expense.note"), expense.note ?? t("none")],
         ]}
         voidedAt={expense.voidedAt}
@@ -110,8 +137,17 @@ export function ExpenseForm({
     amountIqd: parseAmount(amount) ?? 0,
     note,
     workerId: isWages && workerId ? workerId : null,
+    usefulLifeMonths:
+      isEquipment && life.trim() !== "" ? Number(toWesternDigits(life.trim())) : null,
   };
-  const valid = expenseSchema.safeParse(input).success;
+  const lifeOk =
+    !isEquipment ||
+    (life.trim() === ""
+      ? lifeOptional
+      : /^\d{1,3}$/.test(toWesternDigits(life.trim())) &&
+        Number(toWesternDigits(life.trim())) >= 1 &&
+        Number(toWesternDigits(life.trim())) <= LIFE_MAX);
+  const valid = lifeOk && expenseSchema.safeParse(input).success;
   const dayOk = spentOn >= firstDay && spentOn <= today;
 
   return (
@@ -228,6 +264,28 @@ export function ExpenseForm({
           </Field>
         )}
         <AmountField value={amount} onChange={setAmount} showError={tried} />
+        {isEquipment && (
+          <Field
+            label={t("expense.life")}
+            variant="compact"
+            hint={lifeOptional ? t("expense.lifeOptional") : t("expense.lifeHint")}
+            error={tried && !lifeOk ? t("expense.lifeRange") : undefined}
+          >
+            {(control) => (
+              <Input
+                {...control}
+                variant="compact"
+                inputMode="numeric"
+                dir="ltr"
+                className="text-end"
+                maxLength={3}
+                required={!lifeOptional}
+                value={life}
+                onChange={(event) => setLife(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
         <Field label={t("expense.note")} variant="compact" hint={t("noteHint")}>
           {(control) => (
             <Input

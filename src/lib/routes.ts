@@ -142,6 +142,12 @@ export const routes = {
    * `?worker=new|<id>` opens the worker's drawer.
    */
   adminPayroll: "/admin/finance/payroll",
+  /**
+   * Partners and the balance sheet (A22): the balance sheet at a month's end,
+   * the partners and the equipment; `?month=`, `?partner=new|<id>`,
+   * `?shares=1`, `?equipment=new|<id>` (an equipment item's drawer).
+   */
+  adminPartners: "/admin/finance/partners",
   /** Accounts settings (A17): the start day, the boxes and the expense categories. */
   adminFinanceSettings: "/admin/finance/settings",
   /** Accounting overview (A19): boxes, the last 6 months, where the money went, crew cash. */

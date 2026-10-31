@@ -19,6 +19,7 @@ import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from 
 import {
   adminBoxesHref,
   adminExpensesHref,
+  adminPartnersHref,
   adminPayrollHref,
   adminRevenueHref,
 } from "@/lib/admin/finance-query";
@@ -44,6 +45,9 @@ import {
   EXPENSE_CATEGORY_KINDS,
   type ExpenseCategoryKind,
   FINANCE_ACCOUNT_KINDS,
+  formatShare,
+  PARTNER_MOVEMENT_KINDS,
+  type PartnerMovementKind,
   PAYROLL_ADJUSTMENT_KINDS,
   type PayrollAdjustmentKind,
   WORKER_PAY_TYPES,
@@ -402,6 +406,58 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
         <>{label}</>
       );
     }
+    case "partners":
+    case "partner_movements": {
+      // A partner's own row, or a movement that names its partner.
+      const partnerId =
+        entry.entity === "partners" ? entry.entityId : diffString(entry.diff, "partner_id");
+      const label =
+        (partnerId && names.partners.get(partnerId)) ??
+        diffString(entry.diff, "name") ??
+        t(`entities.${entry.entity as "partners" | "partner_movements"}`);
+      return partnerId ? (
+        <Link
+          href={adminPartnersHref({ partner: partnerId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <>{label}</>
+      );
+    }
+    case "partner_shares":
+      return (
+        <Link
+          href={adminPartnersHref({ shares: "1" })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {t("entities.partner_shares")} ·{" "}
+          {formatMonthYear(`${entry.entityId.slice(0, 7)}-15T12:00:00Z`)}
+        </Link>
+      );
+    case "opening_equipment":
+    case "equipment_disposals": {
+      // The item: opening equipment, or what a disposal names.
+      const itemId =
+        entry.entity === "opening_equipment"
+          ? entry.entityId
+          : (diffString(entry.diff, "expense_id") ??
+            diffString(entry.diff, "opening_equipment_id"));
+      const label =
+        diffString(entry.diff, "name") ??
+        t(`entities.${entry.entity as "opening_equipment" | "equipment_disposals"}`);
+      return itemId ? (
+        <Link
+          href={adminPartnersHref({ equipment: itemId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <>{label}</>
+      );
+    }
     case "subscriptions":
       return (
         <Link
@@ -426,6 +482,10 @@ function isCategoryKind(value: string): value is ExpenseCategoryKind {
 
 function isPayType(value: string): value is WorkerPayType {
   return (WORKER_PAY_TYPES as readonly string[]).includes(value);
+}
+
+function isMovementKind(value: string): value is PartnerMovementKind {
+  return (PARTNER_MOVEMENT_KINDS as readonly string[]).includes(value);
 }
 
 function isAdjustmentKind(value: string): value is PayrollAdjustmentKind {
@@ -515,6 +575,16 @@ const KNOWN_FIELDS = [
   "month",
   "added",
   "removed",
+  "opening_capital_iqd",
+  "shares",
+  "partner_id",
+  "useful_life_months",
+  "value_iqd",
+  "months_left",
+  "expense_id",
+  "opening_equipment_id",
+  "disposed_on",
+  "proceeds_iqd",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -596,7 +666,13 @@ async function Value({
   }
   if (value === null) return <>{t("none")}</>;
   if (typeof value === "boolean") return <>{value ? t("yes") : t("no")}</>;
-  if (field === "amount_iqd" || field === "opening_balance_iqd") {
+  if (
+    field === "amount_iqd" ||
+    field === "opening_balance_iqd" ||
+    field === "opening_capital_iqd" ||
+    field === "value_iqd" ||
+    field === "proceeds_iqd"
+  ) {
     if (typeof value === "number") return <Money amount={value} />;
   }
   if (
@@ -617,6 +693,36 @@ async function Value({
     if (action?.startsWith("expense_category.") && isCategoryKind(value)) {
       return <>{tFinance(`categoryKinds.${value}`)}</>;
     }
+  }
+  if (field === "partner_id" && typeof value === "string") {
+    return <>{names.partners.get(value) ?? value.slice(0, 8)}</>;
+  }
+  if (
+    field === "kind" &&
+    action?.startsWith("partner_movement.") &&
+    typeof value === "string" &&
+    isMovementKind(value)
+  ) {
+    return <>{tFinance(`partner.kinds.${value}`)}</>;
+  }
+  if (field === "shares" && typeof value === "object" && !Array.isArray(value)) {
+    const shares = Object.entries(value).filter(
+      (entry): entry is [string, number] => typeof entry[1] === "number",
+    );
+    if (shares.length === 0) return <>{t("none")}</>;
+    return (
+      <>
+        {shares
+          .map(
+            ([id, share]) =>
+              `${names.partners.get(id) ?? id.slice(0, 8)} ${tFinance("partners.share", { share: formatShare(share) })}`,
+          )
+          .join("، ")}
+      </>
+    );
+  }
+  if ((field === "expense_id" || field === "opening_equipment_id") && typeof value === "string") {
+    return <bdi dir="ltr">{value.slice(0, 8)}</bdi>;
   }
   if (field === "worker_id" && typeof value === "string") {
     return <>{names.workers.get(value) ?? value.slice(0, 8)}</>;
@@ -661,7 +767,8 @@ async function Value({
       field === "from_on" ||
       field === "to_on" ||
       field === "effective_on" ||
-      field === "adjusted_on") &&
+      field === "adjusted_on" ||
+      field === "disposed_on") &&
     typeof value === "string"
   ) {
     return <>{formatDay(value)}</>;
