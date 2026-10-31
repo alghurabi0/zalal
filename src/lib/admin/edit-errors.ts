@@ -1,6 +1,6 @@
 import { subscriptionReasonFor } from "@/lib/subscriptions/errors";
 
-// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A18 admin RPCs (codes in
+// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A20 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
 export const ADMIN_EDIT_ERRORS = [
@@ -42,6 +42,10 @@ export const ADMIN_EDIT_ERRORS = [
   "discount_not_allowed",
   "discount_exists",
   "paid_set_by_finance",
+  "month_closed",
+  "close_not_allowed",
+  "reopen_not_allowed",
+  "books_closed",
   "invalid",
   "not_found",
   "failed",
@@ -76,6 +80,8 @@ const byCode: Record<string, AdminEditError> = {
   ZL051: "discount_not_allowed",
   ZL052: "discount_exists",
   ZL053: "paid_set_by_finance",
+  ZL054: "month_closed",
+  ZL056: "books_closed",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.
@@ -104,6 +110,10 @@ export function adminEditErrorFor(
   // A switched-off box or category (A15, A16).
   if (error.code === "ZL044") {
     return error.message === "category_inactive" ? "category_inactive" : "account_inactive";
+  }
+  // A20's month close: which way it was refused.
+  if (error.code === "ZL055") {
+    return error.message === "reopen_not_allowed" ? "reopen_not_allowed" : "close_not_allowed";
   }
   // A phone whose account was deleted (A10, A14): Auth still holds it.
   if (error.code === "P0002" && error.message === "account_not_found") return "account_deleted";

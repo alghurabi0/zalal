@@ -49,7 +49,7 @@ export function PaymentForm({
   defaultAmount,
   boxes,
   today,
-  startOn,
+  firstDay,
   done,
 }: {
   target: RevenueTarget;
@@ -68,7 +68,8 @@ export function PaymentForm({
   defaultAmount: number | null;
   boxes: BoxOption[];
   today: string;
-  startOn: string;
+  /** The first day a record may take: the start day, or the day after the last closed month. */
+  firstDay: string;
   done: Done;
 }) {
   const t = useTranslations("Admin.finance");
@@ -95,7 +96,7 @@ export function PaymentForm({
     note,
   };
   const valid = typed > 0 && paymentSchema.safeParse(input).success;
-  const dayOk = paidOn >= startOn && paidOn <= today;
+  const dayOk = paidOn >= firstDay && paidOn <= today;
   const title = payment
     ? negative
       ? t("payment.editRefundTitle")
@@ -127,7 +128,7 @@ export function PaymentForm({
           variant="compact"
           error={
             tried && !dayOk
-              ? t("dayRange", { from: formatDay(startOn), to: formatDay(today) })
+              ? t("dayRange", { from: formatDay(firstDay), to: formatDay(today) })
               : undefined
           }
         >
@@ -136,7 +137,7 @@ export function PaymentForm({
               {...control}
               type="date"
               variant="compact"
-              min={startOn}
+              min={firstDay}
               max={today}
               required
               value={paidOn}
@@ -369,7 +370,7 @@ export function ItemAccountActions({
   discountMax,
   boxes,
   today,
-  startOn,
+  firstDay,
 }: {
   target: RevenueTarget;
   canPay: boolean;
@@ -382,7 +383,8 @@ export function ItemAccountActions({
   discountMax: number | null;
   boxes: BoxOption[];
   today: string;
-  startOn: string;
+  /** The first day a record may take: the start day, or the day after the last closed month. */
+  firstDay: string;
 }) {
   const t = useTranslations("Admin.finance");
   const [open, setOpen] = useState<"payment" | "refund" | "discount" | null>(null);
@@ -398,7 +400,7 @@ export function ItemAccountActions({
           defaultAmount={open === "refund" ? paid : owed > 0 ? owed : null}
           boxes={boxes}
           today={today}
-          startOn={startOn}
+          firstDay={firstDay}
           done={{ onDone: close }}
         />
       </div>

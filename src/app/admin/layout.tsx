@@ -19,7 +19,7 @@ import { routes } from "@/lib/routes";
  */
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
-    <div className="flex min-h-dvh flex-col bg-bg lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-bg lg:flex-row print:bg-surface">
       <Suspense
         fallback={
           <div className="h-28 shrink-0 bg-navy lg:h-dvh lg:w-60">

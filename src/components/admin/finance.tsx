@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
@@ -8,7 +8,7 @@ import { formatMonthYear } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { routes } from "@/lib/routes";
 
-// Pieces the accounting screens share (spec §8.3 A15–A18).
+// Pieces the accounting screens share (spec §8.3 A15–A20).
 
 /**
  * An IQD amount, "45,000 د.ع". The number sits in a left-to-right isolate so
@@ -33,9 +33,11 @@ export function accountName(
 }
 
 const TABS = [
+  { key: "overview", href: routes.adminFinanceOverview },
   { key: "boxes", href: routes.adminFinance },
   { key: "expenses", href: routes.adminExpenses },
   { key: "revenue", href: routes.adminRevenue },
+  { key: "reports", href: routes.adminFinanceReports },
   { key: "settings", href: routes.adminFinanceSettings },
 ] as const;
 
@@ -43,7 +45,7 @@ const TABS = [
 export function FinanceTabs({ current }: { current: (typeof TABS)[number]["key"] }) {
   const t = useTranslations("Admin.finance.tabs");
   return (
-    <nav aria-label={t("label")} className="flex flex-wrap gap-2">
+    <nav aria-label={t("label")} className="flex flex-wrap gap-2 print:hidden">
       {TABS.map((tab) => {
         const on = tab.key === current;
         return (
@@ -93,5 +95,16 @@ export function MonthPicker({
         </Button>
       )}
     </div>
+  );
+}
+
+/** "الشهر مقفل" beside a closed month (A15, A16, A18, A20). */
+export function ClosedBadge() {
+  const t = useTranslations("Admin.finance");
+  return (
+    <span className="flex min-h-8 items-center gap-1.5 rounded-full bg-well px-3 text-13 font-bold text-body-2">
+      <Lock aria-hidden className="size-3.5" />
+      {t("closedBadge")}
+    </span>
   );
 }

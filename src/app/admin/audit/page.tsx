@@ -446,6 +446,7 @@ const KNOWN_FIELDS = [
   "icon",
   "order",
   "start_on",
+  "closed_through",
   "kind",
   "opening_balance_iqd",
   "spent_on",
@@ -583,6 +584,7 @@ async function Value({
     (field === "spent_on" ||
       field === "moved_on" ||
       field === "start_on" ||
+      field === "closed_through" ||
       field === "paid_on" ||
       field === "sold_on") &&
     typeof value === "string"

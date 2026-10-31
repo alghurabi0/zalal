@@ -132,15 +132,20 @@ export function VoidForm({
   );
 }
 
-/** A voided record, read only: its values, then who voided it, when and why. */
-export function VoidedNote({
+/**
+ * A record shown, not edited: its values under a banner that says why. A
+ * voided record names who voided it, when and why; one dated in a closed
+ * month (A20) says the month is closed.
+ */
+export function ReadOnlyRecord({
   rows,
   voidedAt,
   voidedBy,
   reason,
 }: {
   rows: [string, ReactNode][];
-  voidedAt: string;
+  /** Null for a live record in a closed month. */
+  voidedAt: string | null;
   voidedBy: string | null;
   reason: string | null;
 }) {
@@ -148,15 +153,21 @@ export function VoidedNote({
   return (
     <div className="flex flex-col gap-4">
       <p className="rounded-chip bg-warn-bg px-3 py-2 text-14 font-bold text-warn-fg">
-        {t("voidedBanner", {
-          name: voidedBy ?? t("unknownAdmin"),
-          when: formatDayTime(voidedAt),
-        })}
-        {reason && (
+        {voidedAt ? (
           <>
-            <br />
-            {t("voidedReason", { reason })}
+            {t("voidedBanner", {
+              name: voidedBy ?? t("unknownAdmin"),
+              when: formatDayTime(voidedAt),
+            })}
+            {reason && (
+              <>
+                <br />
+                {t("voidedReason", { reason })}
+              </>
+            )}
           </>
+        ) : (
+          t("closedRecord")
         )}
       </p>
       <Card className="p-4">

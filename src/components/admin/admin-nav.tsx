@@ -39,7 +39,8 @@ const items = [
   { href: routes.adminTickets, key: "tickets", icon: MessageSquareWarning },
   { href: routes.adminRatings, key: "ratings", icon: Star },
   { href: routes.adminSubscriptions, key: "subscriptions", icon: Repeat },
-  { href: routes.adminFinance, key: "finance", icon: Wallet },
+  // Opens the overview (A19); every accounting page marks it.
+  { href: routes.adminFinanceOverview, key: "finance", icon: Wallet, match: routes.adminFinance },
   { href: routes.adminBoard, key: "board", icon: CalendarRange },
   { href: routes.adminLive, key: "live", icon: MapPinned },
   { href: routes.adminPrices, key: "prices", icon: Tag },
@@ -58,7 +59,7 @@ const items = [
  */
 function activeHref(pathname: string): string | undefined {
   return items
-    .map((item) => item.href as string)
+    .map((item) => ("match" in item ? item.match : item.href) as string)
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
     .sort((a, b) => b.length - a.length)[0];
 }
@@ -88,7 +89,7 @@ export function AdminNav({
   const unread = useUnreadThreads(chatUnread);
 
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 bg-navy px-4 py-3 text-white lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:flex-col lg:flex-nowrap lg:items-stretch lg:px-3 lg:py-5">
+    <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 bg-navy px-4 py-3 text-white lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:flex-col lg:flex-nowrap lg:items-stretch lg:px-3 lg:py-5 print:hidden">
       <div className="flex min-w-0 flex-1 flex-col lg:flex-none lg:px-3">
         <span className="text-18 font-black">{t("title")}</span>
         {name && <span className="truncate text-13 text-on-dark-muted">{name}</span>}
@@ -111,7 +112,7 @@ export function AdminNav({
       >
         <ul className="flex gap-1 lg:flex-col">
           {items.map((item) => {
-            const active = item.href === activeHref(pathname);
+            const active = ("match" in item ? item.match : item.href) === activeHref(pathname);
             const Icon = item.icon;
             return (
               <li key={item.key}>

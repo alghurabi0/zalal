@@ -20,6 +20,10 @@ import {
   financeSettingsSchema,
   type ManualSaleInput,
   manualSaleSchema,
+  type MonthCloseInput,
+  monthCloseSchema,
+  type MonthReopenInput,
+  monthReopenSchema,
   type PaymentInput,
   paymentSchema,
   type TransferInput,
@@ -29,7 +33,7 @@ import {
 } from "@/lib/schemas/finance";
 import { createClient } from "@/lib/supabase/server";
 
-// The accounting actions (spec §8.3 A15–A18), as the admin: the audited
+// The accounting actions (spec §8.3 A15–A20), as the admin: the audited
 // admin RPCs check the role, the day, switched-off boxes and categories,
 // voided records, refunds and discounts, and write the audit log.
 
@@ -236,4 +240,25 @@ export async function voidManualSale(input: VoidInput): Promise<AdminEditResult>
     p_reason: parsed.data.reason,
   });
   return error ? editFailure("admin_void_manual_sale", error, report) : { status: "done" };
+}
+
+export async function closeFinanceMonth(input: MonthCloseInput): Promise<AdminEditResult> {
+  const parsed = monthCloseSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminFinanceReports);
+  const { error } = await supabase.rpc("admin_close_finance_month", {
+    p_month: `${parsed.data.month}-01`,
+  });
+  return error ? editFailure("admin_close_finance_month", error, report) : { status: "done" };
+}
+
+export async function reopenFinanceMonth(input: MonthReopenInput): Promise<AdminEditResult> {
+  const parsed = monthReopenSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminFinanceReports);
+  const { error } = await supabase.rpc("admin_reopen_finance_month", {
+    p_month: `${parsed.data.month}-01`,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_reopen_finance_month", error, report) : { status: "done" };
 }

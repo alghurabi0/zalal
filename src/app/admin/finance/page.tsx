@@ -5,7 +5,13 @@ import { Suspense } from "react";
 
 import { Drawer } from "@/components/admin/drawer";
 import { AdminPage } from "@/components/admin/admin-page";
-import { accountName, FinanceTabs, Money, MonthPicker } from "@/components/admin/finance";
+import {
+  accountName,
+  ClosedBadge,
+  FinanceTabs,
+  Money,
+  MonthPicker,
+} from "@/components/admin/finance";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -14,16 +20,18 @@ import { addMonthsTo } from "@/lib/admin/calendar";
 import {
   type FinanceAccount,
   financeAccounts,
-  financeStartOn,
+  financeBooks,
   getTransfer,
   listTransfers,
   type Transfer,
 } from "@/lib/admin/finance-queries";
 import {
+  ADMIN_BOXES_PAGE,
   type AdminBoxesQuery,
   adminBoxesHref,
   parseAdminBoxesQuery,
 } from "@/lib/admin/finance-query";
+import { firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
 import { requireViewer } from "@/lib/auth/viewer";
 import { cn } from "@/lib/cn";
 import { baghdadToday, formatDay } from "@/lib/dates";
@@ -56,9 +64,13 @@ async function Boxes({ searchParams }: PageProps<"/admin/finance">) {
   const today = baghdadToday();
   const thisMonth = today.slice(0, 7);
   const month = query.month && query.month <= thisMonth ? query.month : thisMonth;
-  const [accounts, transfers] = await Promise.all([financeAccounts(), listTransfers(month)]);
+  const [accounts, { transfers, more }, books] = await Promise.all([
+    financeAccounts(),
+    listTransfers(month, query.n),
+    financeBooks(),
+  ]);
   const hrefFor = (patch: Partial<AdminBoxesQuery>) =>
-    adminBoxesHref({ month: query.month, ...patch });
+    adminBoxesHref({ month: query.month, n: query.n, ...patch });
   const nameOf = new Map(
     accounts.map((account) => [account.id, accountName(account, (crew) => t("crewBox", { crew }))]),
   );
@@ -111,11 +123,14 @@ async function Boxes({ searchParams }: PageProps<"/admin/finance">) {
           <h2 id="transfers" className="text-20 font-black">
             {t("boxes.transfersTitle")}
           </h2>
-          <MonthPicker
-            month={month}
-            prevHref={adminBoxesHref({ month: addMonthsTo(month, -1) })}
-            nextHref={month < thisMonth ? adminBoxesHref({ month: addMonthsTo(month, 1) }) : null}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <MonthPicker
+              month={month}
+              prevHref={adminBoxesHref({ month: addMonthsTo(month, -1) })}
+              nextHref={month < thisMonth ? adminBoxesHref({ month: addMonthsTo(month, 1) }) : null}
+            />
+            {isClosed(books, month) && <ClosedBadge />}
+          </div>
         </div>
         {transfers.length === 0 ? (
           <Card className="py-6">
@@ -132,6 +147,17 @@ async function Boxes({ searchParams }: PageProps<"/admin/finance">) {
           </Card>
         ) : (
           <TransferTable transfers={transfers} nameOf={nameOf} hrefFor={hrefFor} />
+        )}
+        {more && (
+          <Button
+            href={hrefFor({ n: query.n + ADMIN_BOXES_PAGE })}
+            variant="secondary"
+            size="sm"
+            scroll={false}
+            className="self-center"
+          >
+            {t("boxes.more")}
+          </Button>
         )}
       </section>
 
@@ -270,9 +296,9 @@ async function TransferDrawer({
 }) {
   const t = await getTranslations("Admin.finance");
   const isNew = query.transfer === "new";
-  const [transfer, startOn] = await Promise.all([
+  const [transfer, books] = await Promise.all([
     isNew || !query.transfer ? null : getTransfer(query.transfer),
-    financeStartOn(),
+    financeBooks(),
   ]);
 
   if (!isNew && !transfer) {
@@ -314,7 +340,8 @@ async function TransferDrawer({
           amount: from && from.balanceIqd > 0 ? from.balanceIqd : null,
         }}
         today={today}
-        startOn={startOn}
+        firstDay={firstOpenDay(books)}
+        closed={transfer !== null && isClosed(books, transfer.movedOn)}
         closeHref={closeHref}
       />
     </Drawer>

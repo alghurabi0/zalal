@@ -856,17 +856,20 @@ export type Database = {
       };
       finance_settings: {
         Row: {
+          closed_through: string | null;
           id: boolean;
           start_on: string;
           updated_at: string;
         };
         ComputedFields: never;
         Insert: {
+          closed_through?: string | null;
           id?: boolean;
           start_on: string;
           updated_at?: string;
         };
         Update: {
+          closed_through?: string | null;
           id?: boolean;
           start_on?: string;
           updated_at?: string;
@@ -1364,6 +1367,7 @@ export type Database = {
           address_id: string;
           cash_collected: boolean;
           client_request_id: string;
+          completed_on: string | null;
           created_at: string;
           crew_id: string | null;
           customer_id: string;
@@ -1390,6 +1394,7 @@ export type Database = {
           address_id: string;
           cash_collected?: boolean;
           client_request_id: string;
+          completed_on?: string | null;
           created_at?: string;
           crew_id?: string | null;
           customer_id: string;
@@ -1415,6 +1420,7 @@ export type Database = {
           address_id?: string;
           cash_collected?: boolean;
           client_request_id?: string;
+          completed_on?: string | null;
           created_at?: string;
           crew_id?: string | null;
           customer_id?: string;
@@ -2323,6 +2329,7 @@ export type Database = {
           user_id: string;
         }[];
       };
+      admin_close_finance_month: { Args: { p_month: string }; Returns: undefined };
       admin_create_crew: { Args: { p_name: string; p_phone: string }; Returns: string };
       admin_create_slot: {
         Args: {
@@ -2367,6 +2374,31 @@ export type Database = {
           total: number;
         }[];
       };
+      admin_expenses_by_category: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          category_id: number;
+          month: string;
+          total_iqd: number;
+        }[];
+      };
+      admin_profit_and_loss: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          closed: boolean;
+          discounts_iqd: number;
+          expenses_iqd: number;
+          month: string;
+          net_cash_iqd: number;
+          orders_iqd: number;
+          profit_iqd: number;
+          received_iqd: number;
+          refunded_iqd: number;
+          revenue_iqd: number;
+          sales_iqd: number;
+          subscriptions_iqd: number;
+        }[];
+      };
       admin_rating_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -2375,6 +2407,10 @@ export type Database = {
         }[];
       };
       admin_remove_admin: { Args: { p_user_id: string }; Returns: undefined };
+      admin_reopen_finance_month: {
+        Args: { p_month: string; p_reason: string };
+        Returns: undefined;
+      };
       admin_reorder_categories: { Args: { p_ids: number[] }; Returns: undefined };
       admin_revenue_summary: {
         Args: { p_from: string; p_to: string };

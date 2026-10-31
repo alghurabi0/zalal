@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Money } from "@/components/admin/finance";
-import { AmountField, VoidedNote, VoidForm } from "@/components/admin/finance-forms";
+import { AmountField, ReadOnlyRecord, VoidForm } from "@/components/admin/finance-forms";
 import { useAdminEdit } from "@/components/admin/use-admin-edit";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -29,14 +29,18 @@ export function ExpenseForm({
   accounts,
   categories,
   today,
-  startOn,
+  firstDay,
+  closed = false,
   closeHref,
 }: {
   expense: Expense | null;
   accounts: Option[];
   categories: ExpenseCategory[];
   today: string;
-  startOn: string;
+  /** The first day a record may take: the start day, or the day after the last closed month. */
+  firstDay: string;
+  /** The record is dated in a closed month: shown, not edited. */
+  closed?: boolean;
   closeHref: string;
 }) {
   const t = useTranslations("Admin.finance");
@@ -51,9 +55,9 @@ export function ExpenseForm({
   const [note, setNote] = useState(expense?.note ?? "");
   const [tried, setTried] = useState(false);
 
-  if (expense?.voidedAt) {
+  if (expense && (expense.voidedAt || closed)) {
     return (
-      <VoidedNote
+      <ReadOnlyRecord
         rows={[
           [t("expense.date"), formatDay(expense.spentOn)],
           [t("expense.category"), categories.find((c) => c.id === expense.categoryId)?.name],
@@ -77,7 +81,7 @@ export function ExpenseForm({
     note,
   };
   const valid = expenseSchema.safeParse(input).success;
-  const dayOk = spentOn >= startOn && spentOn <= today;
+  const dayOk = spentOn >= firstDay && spentOn <= today;
 
   return (
     <div className="flex flex-col gap-5">
@@ -100,7 +104,7 @@ export function ExpenseForm({
           variant="compact"
           error={
             tried && !dayOk
-              ? t("dayRange", { from: formatDay(startOn), to: formatDay(today) })
+              ? t("dayRange", { from: formatDay(firstDay), to: formatDay(today) })
               : undefined
           }
         >
@@ -109,7 +113,7 @@ export function ExpenseForm({
               {...control}
               type="date"
               variant="compact"
-              min={startOn}
+              min={firstDay}
               max={today}
               required
               value={spentOn}

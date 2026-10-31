@@ -43,6 +43,9 @@ const SPEC_COLORS: Record<string, string> = {
   "on-dark-body": "#C9D8EA",
   // WhatsApp's teal green, for its glyph on the support buttons (Oct 30, 2026).
   whatsapp: "#128C7E",
+  // The accounting overview's two chart series, fills only (A19, Oct 30, 2026).
+  "chart-revenue": "#1565C0",
+  "chart-expense": "#D4720B",
 };
 
 const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
