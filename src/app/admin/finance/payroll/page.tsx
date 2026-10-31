@@ -63,12 +63,12 @@ async function Payroll({ searchParams }: PageProps<"/admin/finance/payroll">) {
   const query = parseAdminPayrollQuery(await searchParams);
   const today = baghdadToday();
   const thisMonth = today.slice(0, 7);
-  const month = query.month && query.month <= thisMonth ? query.month : thisMonth;
-  const [rows, unlinked, books] = await Promise.all([
-    payrollMonth(month),
-    unlinkedWages(month),
-    financeBooks(),
-  ]);
+  const books = await financeBooks();
+  // Nothing before the books: those months would only show opening balances (code review).
+  const firstMonth = books.startOn.slice(0, 7);
+  const asked = query.month && query.month <= thisMonth ? query.month : thisMonth;
+  const month = asked < firstMonth ? firstMonth : asked;
+  const [rows, unlinked] = await Promise.all([payrollMonth(month), unlinkedWages(month)]);
   const hrefFor = (patch: Partial<AdminPayrollQuery>) =>
     adminPayrollHref({ ...query, month: query.month, ...patch });
   // Switched-off workers show apart, and only with something in the month or a balance.
@@ -85,7 +85,11 @@ async function Payroll({ searchParams }: PageProps<"/admin/finance/payroll">) {
         <div className="flex flex-wrap items-center gap-2">
           <MonthPicker
             month={month}
-            prevHref={hrefFor({ month: addMonthsTo(month, -1), worker: undefined })}
+            prevHref={
+              month > firstMonth
+                ? hrefFor({ month: addMonthsTo(month, -1), worker: undefined })
+                : null
+            }
             nextHref={
               month < thisMonth
                 ? hrefFor({ month: addMonthsTo(month, 1), worker: undefined })
@@ -164,6 +168,7 @@ async function Payroll({ searchParams }: PageProps<"/admin/finance/payroll">) {
         <Suspense key={query.worker}>
           <WorkerDrawer
             id={query.worker}
+            row={rows.find((row) => row.workerId === query.worker) ?? null}
             month={month}
             today={today}
             books={books}
@@ -285,12 +290,15 @@ async function PayrollTable({
 
 async function WorkerDrawer({
   id,
+  row,
   month,
   today,
   books,
   hrefFor,
 }: {
   id: string;
+  /** The worker's month, from the page's payroll. */
+  row: PayrollRow | null;
   month: string;
   today: string;
   books: FinanceBooks;
@@ -315,12 +323,7 @@ async function WorkerDrawer({
     );
   }
 
-  const [detail, rows, crews] = await Promise.all([
-    getWorkerDetail(id, month),
-    payrollMonth(month, id),
-    crewOptions(),
-  ]);
-  const row = rows[0];
+  const [detail, crews] = await Promise.all([getWorkerDetail(id, month), crewOptions()]);
   if (!detail || !row) {
     return (
       <Drawer title={t("worker.notFound")} closeHref={closeHref}>
@@ -358,7 +361,7 @@ async function WorkerDrawer({
             [t("worker.balance"), row.balanceIqd],
           ]}
           pay={
-            detail.worker.active && (
+            (detail.worker.active || row.balanceIqd > 0) && (
               <Button
                 href={adminExpensesHref({ expense: "new", worker: detail.worker.id })}
                 size="sm"
@@ -389,6 +392,7 @@ async function WorkerDrawer({
         <RateSection
           workerId={detail.worker.id}
           rates={detail.rates}
+          closedThrough={books.closedThrough}
           today={today}
           closeHref={workerHref(detail.worker.id)}
         />

@@ -3,8 +3,9 @@
 --
 -- admin_save_expense takes an optional worker (its 7th argument, so older
 -- calls keep working): only on a category of kind wages (ZL057
--- worker_not_allowed), a switched-on worker for a new link (ZL044
--- worker_inactive; an edit that keeps it is fine), P0002 worker_not_found.
+-- worker_not_allowed), any worker, switched on or off (no ZL044
+-- worker_inactive was dropped: a switched-off worker is still paid what
+-- they're owed), P0002 worker_not_found.
 -- A wage with no worker stays allowed (casual labour). The link is logged
 -- with the expense (worker_id in expense.create when set, and in
 -- expense.update when it changes). A category with live linked expenses
@@ -92,17 +93,19 @@ select throws_ok(
 select tests.clear_authentication();
 update public.workers set active = false where name in ('علي', 'موقوف');
 select tests.authenticate_as(tests.user_id('+9647504444444'));
-select throws_ok(
-  format($$ select public.admin_save_expense(null, current_date, %s, %L, 50000, null, %L) $$, tests.wages(), tests.cash(), tests.id('موقوف')),
-  'ZL044', 'worker_inactive', 'a switched-off worker takes no new wage'
+select public.admin_save_expense(null, current_date, tests.wages(), tests.cash(), 50000, null, tests.id('موقوف')) as settled \gset
+select is(
+  (select e.worker_id from public.expenses as e where e.id = :'settled'),
+  tests.id('موقوف'),
+  'a switched-off worker is still paid what they''re owed'
 );
 select lives_ok(
   format($$ select public.admin_save_expense(%L, %L, %s, %L, 45000, null, %L) $$, :'paid', tests.today(), tests.wages(), tests.cash(), tests.id('علي')),
   'an edit that keeps a switched-off worker goes through'
 );
-select throws_ok(
+select lives_ok(
   format($$ select public.admin_save_expense(%L, %L, %s, %L, 45000, null, %L) $$, :'paid', tests.today(), tests.wages(), tests.cash(), tests.id('موقوف')),
-  'ZL044', 'worker_inactive', 'but not one that moves the wage to a switched-off worker'
+  'and a wage moves to a switched-off worker'
 );
 select lives_ok(
   format($$ select public.admin_save_expense(%L, %L, %s, %L, 45000, null, null) $$, :'paid', tests.today(), tests.wages(), tests.cash()),
@@ -110,7 +113,7 @@ select lives_ok(
 );
 select is(
   tests.last_diff('expense.update'),
-  jsonb_build_object('worker_id', jsonb_build_object('from', tests.id('علي'), 'to', null)),
+  jsonb_build_object('worker_id', jsonb_build_object('from', tests.id('موقوف'), 'to', null)),
   'logged as the change'
 );
 
@@ -125,6 +128,7 @@ select throws_ok(
   'ZL057', 'worker_not_allowed', 'a category paying a worker stays a wages category'
 );
 select public.admin_void_expense(:'paid', 'غلط');
+select public.admin_void_expense(:'settled', 'غلط');
 select lives_ok(
   format($$ select public.admin_save_expense_category(%s, null, 'general', null) $$, tests.wages()),
   'once that wage is voided, the kind changes'

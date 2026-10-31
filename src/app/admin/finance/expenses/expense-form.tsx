@@ -217,7 +217,7 @@ export function ExpenseForm({
               >
                 <option value="">{t("expense.noWorker")}</option>
                 {workers
-                  .filter((w) => w.active || w.id === expense?.workerId)
+                  .filter((w) => w.active || w.id === expense?.workerId || w.id === payWorker?.id)
                   .map((worker) => (
                     <option key={worker.id} value={worker.id}>
                       {worker.name}

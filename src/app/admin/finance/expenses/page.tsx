@@ -37,7 +37,7 @@ import {
   parseAdminExpensesQuery,
 } from "@/lib/admin/finance-query";
 import { firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
-import { payrollMonth, workerOptions } from "@/lib/admin/payroll-queries";
+import { workerBalance, workerOptions } from "@/lib/admin/payroll-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { baghdadToday, formatDay } from "@/lib/dates";
 import { routes } from "@/lib/routes";
@@ -76,7 +76,9 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
     workerOptions(),
   ]);
   const workerNames = new Map(workers.map((worker) => [worker.id, worker.name]));
-  const hrefFor = (patch: Partial<AdminExpensesQuery>) => adminExpensesHref({ ...query, ...patch });
+  // A21's worker goes with the one drawer it opened, not with later links (code review).
+  const hrefFor = (patch: Partial<AdminExpensesQuery>) =>
+    adminExpensesHref({ ...query, worker: undefined, ...patch });
   const accountNames = new Map(
     accounts.map((account) => [account.id, accountName(account, (crew) => t("crewBox", { crew }))]),
   );
@@ -237,6 +239,7 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
             accounts={accounts}
             accountNames={accountNames}
             categories={categories}
+            workers={workers}
             payWorkerId={query.expense === "new" ? query.worker : undefined}
             today={today}
             closeHref={hrefFor({ expense: undefined, worker: undefined })}
@@ -316,6 +319,7 @@ async function ExpenseDrawer({
   accountNames,
   categories,
   payWorkerId,
+  workers,
   today,
   closeHref,
 }: {
@@ -325,19 +329,19 @@ async function ExpenseDrawer({
   categories: ExpenseCategory[];
   /** A new wage for this worker (A21's "ادفع له"). */
   payWorkerId: string | undefined;
+  workers: { id: string; name: string; active: boolean }[];
   today: string;
   closeHref: string;
 }) {
   const t = await getTranslations("Admin.finance");
   const isNew = id === "new";
-  const [expense, books, workers, owed] = await Promise.all([
+  const [expense, books, owedIqd] = await Promise.all([
     isNew ? null : getExpense(id),
     financeBooks(),
-    workerOptions(),
     // What the worker is owed at the end of this month.
-    payWorkerId ? payrollMonth(today.slice(0, 7), payWorkerId) : [],
+    payWorkerId ? workerBalance(payWorkerId, today.slice(0, 7)) : 0,
   ]);
-  const payWorker = payWorkerId ? { id: payWorkerId, owedIqd: owed[0]?.balanceIqd ?? 0 } : null;
+  const payWorker = payWorkerId ? { id: payWorkerId, owedIqd } : null;
 
   if (!isNew && !expense) {
     return (

@@ -134,7 +134,7 @@ select lives_ok(
 );
 select is(
   tests.last_diff('payroll_adjustment.update'),
-  jsonb_build_object('amount_iqd', jsonb_build_object('from', 2000, 'to', 3000)),
+  jsonb_build_object('worker_id', tests.id('علي'), 'amount_iqd', jsonb_build_object('from', 2000, 'to', 3000)),
   'logged with only what changed'
 );
 
@@ -160,7 +160,7 @@ select lives_ok(
 );
 select is(
   tests.last_diff('payroll_adjustment.void'),
-  jsonb_build_object('adjusted_on', tests.month(1) + 2, 'amount_iqd', 3000, 'reason', 'غلط'),
+  jsonb_build_object('worker_id', tests.id('علي'), 'adjusted_on', tests.month(1) + 2, 'amount_iqd', 3000, 'reason', 'غلط'),
   'logged as payroll_adjustment.void'
 );
 select throws_ok(

@@ -182,7 +182,7 @@ select is(
 );
 select is(
   tests.last_diff('worker_crew.update'),
-  jsonb_build_object('to_on', jsonb_build_object('from', null, 'to', tests.month(0) - 1)),
+  jsonb_build_object('worker_id', tests.id('علي'), 'to_on', jsonb_build_object('from', null, 'to', tests.month(0) - 1)),
   'the end is logged as worker_crew.update'
 );
 select throws_ok(

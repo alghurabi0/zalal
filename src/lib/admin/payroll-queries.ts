@@ -30,13 +30,12 @@ export type PayrollRow = {
 };
 
 /** Every worker's month ("2026-10"), switched-on workers first, by name. */
-export async function payrollMonth(month: string, workerId?: string): Promise<PayrollRow[]> {
+export async function payrollMonth(month: string): Promise<PayrollRow[]> {
   const supabase = await createClient();
   const [rows, workers, crews] = await Promise.all([
     supabase.rpc("admin_payroll", {
       p_from: `${month}-01`,
       p_to: `${month}-01`,
-      p_worker_id: workerId,
     }),
     supabase.from("workers").select("id, name, active"),
     supabase.from("crews").select("id, name"),
@@ -66,6 +65,18 @@ export async function payrollMonth(month: string, workerId?: string): Promise<Pa
       balanceIqd: Number(row.balance_iqd),
     }))
     .sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "ar"));
+}
+
+/** A worker's balance at the end of the month (above 0 owed), for A16's "ادفع له". */
+export async function workerBalance(workerId: string, month: string): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_payroll", {
+    p_from: `${month}-01`,
+    p_to: `${month}-01`,
+    p_worker_id: workerId,
+  });
+  if (error) throw new Error(`Payroll read failed: ${error.message}`);
+  return Number(data[0]?.balance_iqd ?? 0);
 }
 
 /** The month's live wage expenses that name no worker (casual labour). */

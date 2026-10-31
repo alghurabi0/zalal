@@ -74,15 +74,22 @@ export function MonthPicker({
   nextHref,
 }: {
   month: string;
-  prevHref: string;
+  /** Null at the first month there is (A21 stops at the books' start). */
+  prevHref: string | null;
   nextHref: string | null;
 }) {
   const t = useTranslations("Admin.finance");
   return (
     <div className="flex items-center gap-1">
-      <Button href={prevHref} variant="secondary" size="sm" aria-label={t("prevMonth")}>
-        <ChevronRight aria-hidden className="size-4" />
-      </Button>
+      {prevHref ? (
+        <Button href={prevHref} variant="secondary" size="sm" aria-label={t("prevMonth")}>
+          <ChevronRight aria-hidden className="size-4" />
+        </Button>
+      ) : (
+        <Button variant="secondary" size="sm" aria-label={t("prevMonth")} disabled>
+          <ChevronRight aria-hidden className="size-4" />
+        </Button>
+      )}
       <span className="flex min-h-11 items-center rounded-full border-2 border-navy bg-navy px-4 text-14 font-bold text-white">
         {formatMonthYear(`${month}-15T12:00:00Z`)}
       </span>

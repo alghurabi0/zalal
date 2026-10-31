@@ -141,7 +141,7 @@ select lives_ok(
 );
 select is(
   tests.last_diff('worker_rate.update'),
-  jsonb_build_object('amount_iqd', jsonb_build_object('from', 10000, 'to', 12000)),
+  jsonb_build_object('worker_id', tests.id('علي'), 'amount_iqd', jsonb_build_object('from', 10000, 'to', 12000)),
   'logged with only what changed'
 );
 select throws_ok(

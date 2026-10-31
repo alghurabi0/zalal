@@ -5,7 +5,8 @@
 -- 1. workers: internal records for the books, with no login (name, optional
 --    phone and note, an opening balance at the books' start, a switch).
 --    Never deleted; a switched-off worker takes no new record (ZL044
---    worker_inactive) and keeps their history.
+--    worker_inactive) and keeps their history, but is still paid what
+--    they're owed (a wage expense may name them).
 --
 -- 2. worker_crews: crew membership with its first and last day (to_on null
 --    while current). A worker is in at most one crew on a day (ZL058
@@ -57,6 +58,10 @@
 --    too (orders_guard_closed_month), since it is a visit for per-visit
 --    pay. The start day doesn't move past a ticked day or a live bonus or
 --    deduction (ZL046); rates and memberships may start before the books.
+--
+-- Locks: every payroll writer share-locks the finance_settings row first,
+-- then the worker (FOR UPDATE for memberships and days), then the record,
+-- so a month close queued between them can't deadlock.
 --
 -- Access: admins read every table; guests, customers and crews nothing (a
 -- crew not even its own workers). Written only by audited security definer
@@ -471,6 +476,9 @@ begin
     raise exception using errcode = '22023', message = 'invalid_amount';
   end if;
 
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   if p_id is not null then
     select * into v_old from public.workers as w where w.id = p_id for update;
     if not found then
@@ -557,6 +565,9 @@ begin
     raise exception using errcode = 'ZL043', message = 'date_in_future';
   end if;
 
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   -- Every membership writer locks the worker, then the membership (RLS audit:
   -- the other order deadlocks with admin_move_worker). A row's worker never
   -- changes, so it can be checked before the locks.
@@ -605,7 +616,9 @@ begin
     update public.worker_crews as m
     set crew_id = p_crew_id, from_on = p_from_on, to_on = p_to_on
     where m.id = p_id;
-    perform private.log_admin_action('worker_crew.update', 'worker_crews', p_id::text, v_diff);
+    perform private.log_admin_action(
+      'worker_crew.update', 'worker_crews', p_id::text, jsonb_build_object('worker_id', p_worker_id) || v_diff
+    );
   end if;
   return p_id;
 end;
@@ -636,6 +649,9 @@ begin
     raise exception using errcode = 'ZL043', message = 'date_in_future';
   end if;
 
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   select w.active into v_active from public.workers as w where w.id = p_worker_id for update;
   if not found then
     raise exception using errcode = 'P0002', message = 'worker_not_found';
@@ -662,7 +678,7 @@ begin
     update public.worker_crews as m set to_on = p_on - 1 where m.id = v_current.id;
     perform private.log_admin_action(
       'worker_crew.update', 'worker_crews', v_current.id::text,
-      jsonb_build_object('to_on', jsonb_build_object('from', null, 'to', p_on - 1))
+      jsonb_build_object('worker_id', p_worker_id, 'to_on', jsonb_build_object('from', null, 'to', p_on - 1))
     );
   elsif p_crew_id is null then
     raise exception using errcode = 'P0002', message = 'membership_not_found';
@@ -696,6 +712,9 @@ begin
   if (select auth.uid()) is null or not (select private.is_admin()) then
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   -- The worker first, then the membership, as every membership writer does.
   perform 1 from public.workers as w
   where w.id = (select m.worker_id from public.worker_crews as m where m.id = p_id)
@@ -755,6 +774,9 @@ begin
     perform private.finance_check_amount(v_amount);
   end if;
 
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   if p_id is not null then
     select * into v_old from public.worker_rates as r where r.id = p_id for update;
     if not found then
@@ -799,7 +821,9 @@ begin
       update public.worker_rates as r
       set effective_on = p_effective_on, pay_type = p_pay_type, amount_iqd = v_amount
       where r.id = p_id;
-      perform private.log_admin_action('worker_rate.update', 'worker_rates', p_id::text, v_diff);
+      perform private.log_admin_action(
+        'worker_rate.update', 'worker_rates', p_id::text, jsonb_build_object('worker_id', p_worker_id) || v_diff
+      );
     end if;
   exception when unique_violation then
     -- Another rate took the day a moment ago.
@@ -825,6 +849,9 @@ begin
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
   v_reason := private.void_reason(p_reason);
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   select * into v_old from public.worker_rates as r where r.id = p_id for update;
   if not found then
     raise exception using errcode = 'P0002', message = 'rate_not_found';
@@ -837,7 +864,10 @@ begin
   where r.id = p_id;
   perform private.log_admin_action(
     'worker_rate.void', 'worker_rates', p_id::text,
-    jsonb_build_object('effective_on', v_old.effective_on, 'amount_iqd', v_old.amount_iqd, 'reason', v_reason)
+    jsonb_build_object(
+      'worker_id', v_old.worker_id, 'effective_on', v_old.effective_on,
+      'amount_iqd', v_old.amount_iqd, 'reason', v_reason
+    )
   );
 end;
 $$;
@@ -912,7 +942,10 @@ begin
     update public.payroll_adjustments as a
     set adjusted_on = p_adjusted_on, kind = p_kind, amount_iqd = p_amount_iqd, reason = v_reason
     where a.id = p_id;
-    perform private.log_admin_action('payroll_adjustment.update', 'payroll_adjustments', p_id::text, v_diff);
+    perform private.log_admin_action(
+      'payroll_adjustment.update', 'payroll_adjustments', p_id::text,
+      jsonb_build_object('worker_id', p_worker_id) || v_diff
+    );
   end if;
   return p_id;
 end;
@@ -934,6 +967,9 @@ begin
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
   v_reason := private.void_reason(p_reason);
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   select * into v_old from public.payroll_adjustments as a where a.id = p_id for update;
   if not found then
     raise exception using errcode = 'P0002', message = 'adjustment_not_found';
@@ -946,7 +982,10 @@ begin
   where a.id = p_id;
   perform private.log_admin_action(
     'payroll_adjustment.void', 'payroll_adjustments', p_id::text,
-    jsonb_build_object('adjusted_on', v_old.adjusted_on, 'amount_iqd', v_old.amount_iqd, 'reason', v_reason)
+    jsonb_build_object(
+      'worker_id', v_old.worker_id, 'adjusted_on', v_old.adjusted_on,
+      'amount_iqd', v_old.amount_iqd, 'reason', v_reason
+    )
   );
 end;
 $$;
@@ -974,6 +1013,9 @@ begin
   if v_month is null then
     raise exception using errcode = '22023', message = 'invalid_date';
   end if;
+  -- The settings row first (share), then the worker: the order every finance
+  -- writer keeps, so a month close queued between them can't deadlock (code review).
+  perform 1 from public.finance_settings as s where s.id for share;
   v_days := array(select distinct d from unnest(coalesce(p_days, '{}')) as d order by d);
   foreach v_day in array v_days loop
     perform private.finance_check_day(v_day);
@@ -1066,7 +1108,9 @@ begin
     if (select c.kind from public.expense_categories as c where c.id = p_category_id) <> 'wages' then
       raise exception using errcode = 'ZL057', message = 'worker_not_allowed';
     end if;
-    perform private.payroll_check_worker(p_worker_id, v_old.worker_id is distinct from p_worker_id);
+    -- A switched-off worker is still paid what they're owed (code review): only
+    -- that the worker exists is checked.
+    perform private.payroll_check_worker(p_worker_id, false);
   end if;
 
   v_new := jsonb_build_object(

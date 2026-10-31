@@ -373,11 +373,14 @@ function MembershipRow({ membership }: { membership: Membership }) {
 export function RateSection({
   workerId,
   rates,
+  closedThrough,
   today,
   closeHref,
 }: {
   workerId: string;
   rates: WorkerRate[];
+  /** The last closed day: a rate from it or before stays (ZL054). */
+  closedThrough: string | null;
   today: string;
   /** The drawer itself: voiding refreshes it. */
   closeHref: string;
@@ -415,7 +418,7 @@ export function RateSection({
               </span>
               {rate.voidedAt ? (
                 rate.voidReason && <span className="text-12 text-muted">{rate.voidReason}</span>
-              ) : (
+              ) : closedThrough !== null && rate.effectiveOn <= closedThrough ? null : (
                 <VoidForm
                   title={t("worker.voidRate")}
                   hint={t("worker.voidRateHint")}
