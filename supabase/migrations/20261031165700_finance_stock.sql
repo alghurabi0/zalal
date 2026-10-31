@@ -25,9 +25,10 @@
 -- 4. The quantity at a day's end is the latest count on or before it plus
 --    the ins and less the outs after the count's day (stock_levels, a view
 --    of each item's days with records). It is never below zero at a day's
---    end: a save, edit or void that would make it so is refused (ZL065
---    stock_too_low). A count's correction is what it adds to or takes from
---    the quantity before it.
+--    end, nor before a count by the day's outs: a save, edit or void that
+--    would make it so is refused (ZL065 stock_too_low). An item never holds
+--    more than 1,000,000,000 (22023 invalid_quantity). A count's correction
+--    is what it adds to or takes from the quantity before it.
 --
 -- 5. An in may name the expense that paid for it (stock_moves.expense_id):
 --    a live expense in a general category dated on or before the in (ZL067
@@ -52,8 +53,9 @@
 --
 -- Lock order (supabase/CLAUDE.md): the settings row (share), then the item
 -- (FOR UPDATE, so its quantity check sees every record), then the record,
--- then the linked expense (FOR SHARE, so a void of it at the same moment
--- waits and then sees the record, or wins and the link is refused).
+-- then the linked expense and its category (FOR SHARE, so a void of the
+-- expense or a move of its category off general at the same moment waits
+-- and then sees the record, or wins and the link is refused).
 --
 -- Changed functions: admin_update_finance_settings (the start day doesn't
 -- move past a live stock record, ZL046).
@@ -200,6 +202,13 @@ select
   l.out_quantity,
   l.counted,
   l.quantity,
+  -- What the records made it at the day's end: the quantity, or before a
+  -- count, the day before plus the day's ins less its outs.
+  case
+    when l.counted is null then l.quantity
+    else coalesce(lag(l.quantity) over (partition by l.item_id order by l.day), 0)
+      + l.in_quantity - l.out_quantity
+  end as recorded,
   -- A count: the counted quantity less what the records made it.
   case
     when l.counted is null then 0
@@ -238,8 +247,21 @@ as $$
 declare
   v_after numeric;
 begin
-  if exists (select 1 from public.stock_levels as l where l.item_id = p_item.id and l.quantity < 0) then
+  -- Below zero at a day's end, or before a count by the day's outs (RLS
+  -- audit: a count must not hide an out of more than was there).
+  if exists (
+    select 1 from public.stock_levels as l
+    where l.item_id = p_item.id and (l.quantity < 0 or l.recorded < 0)
+  ) then
     raise exception using errcode = 'ZL065', message = 'stock_too_low';
+  end if;
+  -- An item never holds more than one record may (RLS audit: the reads
+  -- return numeric(12, 2)).
+  if exists (
+    select 1 from public.stock_levels as l
+    where l.item_id = p_item.id and greatest(l.quantity, l.recorded) > 1000000000
+  ) then
+    raise exception using errcode = '22023', message = 'invalid_quantity';
   end if;
   v_after := private.stock_quantity(p_item.id);
   if p_item.active and p_before > p_item.min_quantity and v_after <= p_item.min_quantity then
@@ -532,7 +554,9 @@ begin
     from public.expenses as e
     join public.expense_categories as c on c.id = e.category_id
     where e.id = p_expense_id
-    for share of e;
+    -- The category too (RLS audit): a move off general at the same moment
+    -- waits for this record and its trigger then sees it.
+    for share of e, c;
     if not found then
       raise exception using errcode = 'P0002', message = 'expense_not_found';
     end if;

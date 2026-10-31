@@ -2998,6 +2998,7 @@ export type Database = {
           item_id: string;
           out_quantity: number | null;
           quantity: number | null;
+          recorded: number | null;
         };
         ComputedFields: never;
         Relationships: [
