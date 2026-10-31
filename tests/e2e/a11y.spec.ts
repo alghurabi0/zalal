@@ -9,6 +9,7 @@ import { signUp } from "./helpers/auth";
 import { baghdadDate, createCertificate, createOrder, createSlot } from "./helpers/booking";
 import { createPartner } from "./helpers/partners";
 import { createWorker } from "./helpers/payroll";
+import { createStockItem } from "./helpers/stock";
 
 // Accessibility across every surface (Phase 6, task 4): axe (WCAG 2.2 A/AA
 // and best practices) on each route, touch targets of at least 44 px (24 px
@@ -179,6 +180,7 @@ test.describe("admin", () => {
     const { id: adminId } = await logInAsAdmin(page);
     const worker = await createWorker({ createdBy: adminId, crewId: crew.id });
     const partner = await createPartner();
+    const stockItem = await createStockItem();
     for (const url of [
       "/admin",
       `/admin?period=${baghdadDate(0).slice(0, 7)}`,
@@ -223,6 +225,12 @@ test.describe("admin", () => {
       `/admin/finance/partners?partner=${partner.id}`,
       "/admin/finance/partners?shares=1",
       "/admin/finance/partners?equipment=new",
+      "/admin/finance/stock",
+      "/admin/finance/stock?item=new",
+      `/admin/finance/stock?item=${stockItem.id}`,
+      "/admin/finance/stock?move=new&kind=in",
+      `/admin/finance/stock?move=new&kind=out&of=${stockItem.id}`,
+      "/admin/finance/stock?move=new&kind=count",
     ]) {
       await audit(page, url, { linkMin: 24 });
     }
