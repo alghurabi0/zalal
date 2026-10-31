@@ -29,7 +29,7 @@
 --   600,000 × (days in M − 10) ÷ days in M; this month through today.
 -- - كرار, per day 15,000: 3 days ticked = 45,000, paid 45,000: nothing owed.
 -- - موقوف: switched off, nothing; still listed.
--- A20's expenses for M are every live expense, wages linked or not.
+-- A20's expenses for M are what the workers earned in M plus wages paid to no worker (since task 5).
 begin;
 \ir _helpers.psql
 
@@ -217,9 +217,14 @@ select is(
 -- Reports and month close --------------------------------------------------------------------
 
 select is(
-  (select p.expenses_iqd from public.admin_profit_and_loss(tests.month(1), tests.month(1)) as p),
-  (50000 + 20000 + 45000)::bigint,
-  'A20 counts the wages paid, linked or not, as expenses'
+  (select row(p.wages_iqd, p.expenses_iqd, p.paid_out_iqd)::text
+   from public.admin_profit_and_loss(tests.month(1), tests.month(1)) as p),
+  row(
+    (select sum(x.earned_iqd) from public.admin_payroll(tests.month(1), tests.month(1)) as x)::bigint,
+    (select sum(x.earned_iqd) from public.admin_payroll(tests.month(1), tests.month(1)) as x)::bigint + 20000,
+    (50000 + 20000 + 45000)::bigint
+  )::text,
+  'A20 counts the wages earned plus casual labour paid (since task 5); its cash view every wage paid'
 );
 select tests.clear_authentication();
 update public.finance_settings as s set closed_through = tests.month(0) - 1 where s.id;
