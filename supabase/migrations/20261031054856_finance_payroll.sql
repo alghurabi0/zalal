@@ -557,12 +557,14 @@ begin
     raise exception using errcode = 'ZL043', message = 'date_in_future';
   end if;
 
+  -- Every membership writer locks the worker, then the membership (RLS audit:
+  -- the other order deadlocks with admin_move_worker). A row's worker never
+  -- changes, so it can be checked before the locks.
   if p_id is not null then
-    select * into v_old from public.worker_crews as m where m.id = p_id for update;
-    if not found then
+    if not exists (select 1 from public.worker_crews as m where m.id = p_id) then
       raise exception using errcode = 'P0002', message = 'membership_not_found';
     end if;
-    if p_worker_id is distinct from v_old.worker_id then
+    if not exists (select 1 from public.worker_crews as m where m.id = p_id and m.worker_id = p_worker_id) then
       raise exception using errcode = '22023', message = 'invalid_target';
     end if;
   end if;
@@ -571,6 +573,12 @@ begin
   select w.active into v_active from public.workers as w where w.id = p_worker_id for update;
   if not found then
     raise exception using errcode = 'P0002', message = 'worker_not_found';
+  end if;
+  if p_id is not null then
+    select * into v_old from public.worker_crews as m where m.id = p_id for update;
+    if not found then
+      raise exception using errcode = 'P0002', message = 'membership_not_found';
+    end if;
   end if;
   if p_id is null and not v_active then
     raise exception using errcode = 'ZL044', message = 'worker_inactive';
@@ -688,6 +696,10 @@ begin
   if (select auth.uid()) is null or not (select private.is_admin()) then
     raise exception using errcode = '42501', message = 'not_allowed';
   end if;
+  -- The worker first, then the membership, as every membership writer does.
+  perform 1 from public.workers as w
+  where w.id = (select m.worker_id from public.worker_crews as m where m.id = p_id)
+  for update;
   select * into v_old from public.worker_crews as m where m.id = p_id for update;
   if not found then
     raise exception using errcode = 'P0002', message = 'membership_not_found';
