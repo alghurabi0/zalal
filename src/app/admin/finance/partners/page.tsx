@@ -235,14 +235,14 @@ async function BalanceSheetCard({ sheet, today }: { sheet: BalanceSheet; today: 
   const t = await getTranslations("Admin.finance.partners");
   const difference = sheet.assetsIqd - sheet.liabilitiesIqd - sheet.equityIqd;
   const row = (label: string, amount: number, hint?: string) => (
-    <div className="flex flex-col gap-0.5 py-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <dt className="text-14">{label}</dt>
-        <dd>
-          <Money amount={amount} className="text-15 font-bold" />
-        </dd>
-      </div>
-      {hint && <p className="text-12 text-muted">{hint}</p>}
+    <div className="flex items-baseline justify-between gap-3 py-2">
+      <dt className="flex flex-col gap-0.5 text-14">
+        {label}
+        {hint && <span className="text-12 text-muted">{hint}</span>}
+      </dt>
+      <dd>
+        <Money amount={amount} className="text-15 font-bold" />
+      </dd>
     </div>
   );
   const total = (label: string, amount: number) => (

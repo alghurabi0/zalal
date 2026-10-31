@@ -70,7 +70,14 @@ test("an admin adds partners, their capital and shares, and spreads a purchase",
   await page.getByRole("link", { name: F.partners.sharesButton }).click();
   const shares = drawer(page).getByRole("form", { name: F.shares.title });
   const inputs = shares.getByRole("textbox");
-  for (let i = 0; i < (await inputs.count()); i++) await inputs.nth(i).fill("");
+  // Earlier runs' partners come prefilled with the shares in force: clear them
+  // all, again if the drawer was still hydrating.
+  await expect(async () => {
+    for (let i = 0; i < (await inputs.count()); i++) await inputs.nth(i).fill("");
+    await expect(shares.getByText(F.shares.total.replace("{total}", "0"))).toBeVisible({
+      timeout: 1000,
+    });
+  }).toPass();
   await shares.getByLabel(F.shares.shareOf.replace("{name}", first)).fill("60");
   await shares.getByLabel(F.shares.shareOf.replace("{name}", second)).fill("50");
   await shares.getByRole("button", { name: F.shares.save }).click();
