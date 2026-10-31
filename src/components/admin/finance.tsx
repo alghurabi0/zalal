@@ -8,7 +8,7 @@ import { formatMonthYear } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { routes } from "@/lib/routes";
 
-// Pieces the accounting screens share (spec §8.3 A15–A20).
+// Pieces the accounting screens share (spec §8.3 A15–A21).
 
 /**
  * An IQD amount, "45,000 د.ع". The number sits in a left-to-right isolate so
@@ -37,6 +37,7 @@ const TABS = [
   { key: "boxes", href: routes.adminFinance },
   { key: "expenses", href: routes.adminExpenses },
   { key: "revenue", href: routes.adminRevenue },
+  { key: "payroll", href: routes.adminPayroll },
   { key: "reports", href: routes.adminFinanceReports },
   { key: "settings", href: routes.adminFinanceSettings },
 ] as const;

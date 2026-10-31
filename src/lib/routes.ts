@@ -137,6 +137,11 @@ export const routes = {
    * and manual sales; `?month=`, `?customer=`, `?payment=`, `?sale=`.
    */
   adminRevenue: "/admin/finance/revenue",
+  /**
+   * Payroll (A21): each worker's month, earned against paid; `?month=`,
+   * `?worker=new|<id>` opens the worker's drawer.
+   */
+  adminPayroll: "/admin/finance/payroll",
   /** Accounts settings (A17): the start day, the boxes and the expense categories. */
   adminFinanceSettings: "/admin/finance/settings",
   /** Accounting overview (A19): boxes, the last 6 months, where the money went, crew cash. */

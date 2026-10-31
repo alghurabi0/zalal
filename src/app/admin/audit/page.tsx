@@ -16,7 +16,12 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/input";
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton";
 import { type AuditChange, auditChanges, type AuditAction, isAuditAction } from "@/lib/admin/audit";
-import { adminBoxesHref, adminRevenueHref, adminExpensesHref } from "@/lib/admin/finance-query";
+import {
+  adminBoxesHref,
+  adminExpensesHref,
+  adminPayrollHref,
+  adminRevenueHref,
+} from "@/lib/admin/finance-query";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
 import { CATEGORY_ICONS, type CategoryIcon } from "@/lib/articles/category-icons";
 import { ticketNumber } from "@/lib/certificates/format";
@@ -31,7 +36,7 @@ import {
 } from "@/lib/admin/staff-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import type { Json } from "@/lib/database.types";
-import { formatDay, formatDayTime } from "@/lib/dates";
+import { formatDay, formatDayTime, formatMonthYear } from "@/lib/dates";
 import { formatIQD } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { routes } from "@/lib/routes";
@@ -39,6 +44,10 @@ import {
   EXPENSE_CATEGORY_KINDS,
   type ExpenseCategoryKind,
   FINANCE_ACCOUNT_KINDS,
+  PAYROLL_ADJUSTMENT_KINDS,
+  type PayrollAdjustmentKind,
+  WORKER_PAY_TYPES,
+  type WorkerPayType,
   type FinanceAccountKind,
 } from "@/lib/schemas/finance";
 
@@ -369,6 +378,30 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
       );
     case "finance_discounts":
       return <>{t("entities.finance_discounts")}</>;
+    case "workers":
+    case "worker_crews":
+    case "worker_rates":
+    case "payroll_adjustments": {
+      // A worker's own row, or a record that names its worker.
+      const workerId =
+        entry.entity === "workers" ? entry.entityId : diffString(entry.diff, "worker_id");
+      const label =
+        (workerId && names.workers.get(workerId)) ??
+        diffString(entry.diff, "name") ??
+        t(
+          `entities.${entry.entity as "workers" | "worker_crews" | "worker_rates" | "payroll_adjustments"}`,
+        );
+      return workerId ? (
+        <Link
+          href={adminPayrollHref({ worker: workerId })}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <>{label}</>
+      );
+    }
     case "subscriptions":
       return (
         <Link
@@ -389,6 +422,14 @@ function isAccountKind(value: string): value is FinanceAccountKind {
 
 function isCategoryKind(value: string): value is ExpenseCategoryKind {
   return (EXPENSE_CATEGORY_KINDS as readonly string[]).includes(value);
+}
+
+function isPayType(value: string): value is WorkerPayType {
+  return (WORKER_PAY_TYPES as readonly string[]).includes(value);
+}
+
+function isAdjustmentKind(value: string): value is PayrollAdjustmentKind {
+  return (PAYROLL_ADJUSTMENT_KINDS as readonly string[]).includes(value);
 }
 
 function isCategoryIcon(value: string): value is CategoryIcon {
@@ -465,6 +506,15 @@ const KNOWN_FIELDS = [
   "service",
   "place",
   "crew_id",
+  "worker_id",
+  "from_on",
+  "to_on",
+  "effective_on",
+  "pay_type",
+  "adjusted_on",
+  "month",
+  "added",
+  "removed",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -568,6 +618,27 @@ async function Value({
       return <>{tFinance(`categoryKinds.${value}`)}</>;
     }
   }
+  if (field === "worker_id" && typeof value === "string") {
+    return <>{names.workers.get(value) ?? value.slice(0, 8)}</>;
+  }
+  if (field === "pay_type" && typeof value === "string" && isPayType(value)) {
+    return <>{tFinance(`payroll.payTypes.${value}`)}</>;
+  }
+  if (
+    field === "kind" &&
+    action?.startsWith("payroll_adjustment.") &&
+    typeof value === "string" &&
+    isAdjustmentKind(value)
+  ) {
+    return <>{tFinance(`worker.adjustmentKinds.${value}`)}</>;
+  }
+  if (field === "month" && typeof value === "string") {
+    return <>{formatMonthYear(`${value.slice(0, 7)}-15T12:00:00Z`)}</>;
+  }
+  if ((field === "added" || field === "removed") && Array.isArray(value)) {
+    const days = value.filter((day): day is string => typeof day === "string");
+    return <>{days.length ? days.map(formatDay).join("، ") : t("none")}</>;
+  }
   if (field === "crew_id" && typeof value === "string") {
     return <>{names.crews.get(value) ?? t("unknownCrew")}</>;
   }
@@ -586,7 +657,11 @@ async function Value({
       field === "start_on" ||
       field === "closed_through" ||
       field === "paid_on" ||
-      field === "sold_on") &&
+      field === "sold_on" ||
+      field === "from_on" ||
+      field === "to_on" ||
+      field === "effective_on" ||
+      field === "adjusted_on") &&
     typeof value === "string"
   ) {
     return <>{formatDay(value)}</>;

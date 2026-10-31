@@ -86,6 +86,10 @@ export const AUDIT_ENTITIES = [
   "finance_payments",
   "finance_discounts",
   "manual_sales",
+  "workers",
+  "worker_crews",
+  "worker_rates",
+  "payroll_adjustments",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -161,6 +165,10 @@ const FINANCE_ENTITIES = new Set<string>([
   "finance_payments",
   "finance_discounts",
   "manual_sales",
+  "workers",
+  "worker_crews",
+  "worker_rates",
+  "payroll_adjustments",
 ]);
 
 /** Crew ids a log row names: a crew row, an order's old and new crew, or a manual sale's. */
@@ -168,7 +176,7 @@ function crewIdsIn(entry: AuditEntry): string[] {
   if (entry.entity === "crews") return [entry.entityId];
   const diff = entry.diff;
   if (typeof diff !== "object" || diff === null || Array.isArray(diff)) return [];
-  if (entry.entity === "manual_sales") {
+  if (entry.entity === "manual_sales" || entry.entity === "worker_crews") {
     const crew = diff.crew_id;
     const values =
       typeof crew === "object" && crew !== null && !Array.isArray(crew)
@@ -211,6 +219,8 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   /** Money boxes by id: the name, or the crew of a crew box. */
   financeAccounts: Map<string, { name: string | null; crewName: string | null }>;
   expenseCategories: Map<number, string>;
+  /** Payroll's workers by id (A21). */
+  workers: Map<string, string>;
 }> {
   const supabase = await createClient();
   const idsOf = (entity: string) => [
@@ -234,6 +244,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     subscriptions,
     financeAccounts,
     expenseCategories,
+    workers,
   ] = await Promise.all([
     orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
     crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
@@ -247,6 +258,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
       : none,
     finance ? supabase.from("finance_accounts").select("id, name, crew:crews(name)") : none,
     finance ? supabase.from("expense_categories").select("id, name") : none,
+    finance ? supabase.from("workers").select("id, name") : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
   if (crews.error) throw new Error(`Audit crews read failed: ${crews.error.message}`);
@@ -264,6 +276,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   if (expenseCategories.error) {
     throw new Error(`Audit expense categories read failed: ${expenseCategories.error.message}`);
   }
+  if (workers.error) throw new Error(`Audit workers read failed: ${workers.error.message}`);
   return {
     orders: new Map(orders.data.map((o) => [o.id, o.number])),
     crews: new Map(crews.data.map((c) => [c.id, c.name])),
@@ -275,5 +288,6 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
       financeAccounts.data.map((a) => [a.id, { name: a.name, crewName: a.crew?.name ?? null }]),
     ),
     expenseCategories: new Map(expenseCategories.data.map((c) => [c.id, c.name])),
+    workers: new Map(workers.data.map((w) => [w.id, w.name])),
   };
 }

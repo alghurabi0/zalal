@@ -44,6 +44,8 @@ export const adminExpensesQuerySchema = z.object({
     .transform((value) => value === "1"),
   n: pageSizeSchema(ADMIN_EXPENSES_PAGE, ADMIN_ORDERS_MAX),
   expense: drawerSchema,
+  /** A new wage for this worker (A21's "ادفع له"): the drawer starts with them and what they're owed. */
+  worker: z.uuid().optional().catch(undefined),
 });
 
 export type AdminExpensesQuery = z.output<typeof adminExpensesQuerySchema>;
@@ -63,6 +65,7 @@ export function adminExpensesHref(query: Partial<AdminExpensesQuery>): string {
   if (query.voided) params.set("voided", "1");
   if (query.n && query.n !== ADMIN_EXPENSES_PAGE) params.set("n", String(query.n));
   if (query.expense) params.set("expense", query.expense);
+  if (query.worker) params.set("worker", query.worker);
   const search = params.toString();
   return search ? `${routes.adminExpenses}?${search}` : routes.adminExpenses;
 }
@@ -158,4 +161,27 @@ export function adminReportsHref(query: AdminReportsQuery, csv = false): string 
   const search = params.toString();
   const base = csv ? routes.adminFinanceReportsCsv : routes.adminFinanceReports;
   return search ? `${base}?${search}` : base;
+}
+
+export const adminPayrollQuerySchema = z.object({
+  /** The month of the payroll. */
+  month: monthSchema,
+  /** A worker's drawer: "new", or the worker's id. */
+  worker: drawerSchema,
+});
+
+export type AdminPayrollQuery = z.output<typeof adminPayrollQuerySchema>;
+
+export function parseAdminPayrollQuery(
+  params: Record<string, string | string[] | undefined>,
+): AdminPayrollQuery {
+  return adminPayrollQuerySchema.parse(firstValues(params));
+}
+
+export function adminPayrollHref(query: Partial<AdminPayrollQuery>): string {
+  const params = new URLSearchParams();
+  if (query.month) params.set("month", query.month);
+  if (query.worker) params.set("worker", query.worker);
+  const search = params.toString();
+  return search ? `${routes.adminPayroll}?${search}` : routes.adminPayroll;
 }

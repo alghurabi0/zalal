@@ -37,6 +37,7 @@ import {
   parseAdminExpensesQuery,
 } from "@/lib/admin/finance-query";
 import { firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
+import { payrollMonth, workerOptions } from "@/lib/admin/payroll-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { baghdadToday, formatDay } from "@/lib/dates";
 import { routes } from "@/lib/routes";
@@ -67,12 +68,14 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
   const today = baghdadToday();
   const thisMonth = today.slice(0, 7);
   const month = query.month && query.month <= thisMonth ? query.month : thisMonth;
-  const [accounts, categories, list, books] = await Promise.all([
+  const [accounts, categories, list, books, workers] = await Promise.all([
     financeAccounts(),
     expenseCategories(),
     listExpenses(query, month),
     financeBooks(),
+    workerOptions(),
   ]);
+  const workerNames = new Map(workers.map((worker) => [worker.id, worker.name]));
   const hrefFor = (patch: Partial<AdminExpensesQuery>) => adminExpensesHref({ ...query, ...patch });
   const accountNames = new Map(
     accounts.map((account) => [account.id, accountName(account, (crew) => t("crewBox", { crew }))]),
@@ -210,6 +213,7 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
             expenses={list.expenses}
             accountNames={accountNames}
             categoryNames={categoryNames}
+            workerNames={workerNames}
             hrefFor={hrefFor}
           />
           {list.more && (
@@ -233,8 +237,9 @@ async function Expenses({ searchParams }: PageProps<"/admin/finance/expenses">) 
             accounts={accounts}
             accountNames={accountNames}
             categories={categories}
+            payWorkerId={query.expense === "new" ? query.worker : undefined}
             today={today}
-            closeHref={hrefFor({ expense: undefined })}
+            closeHref={hrefFor({ expense: undefined, worker: undefined })}
           />
         </Suspense>
       )}
@@ -246,11 +251,14 @@ async function ExpenseTable({
   expenses,
   accountNames,
   categoryNames,
+  workerNames,
   hrefFor,
 }: {
   expenses: Expense[];
   accountNames: Map<string, string>;
   categoryNames: Map<number, string>;
+  /** A wage's worker (A21) shows under its category. */
+  workerNames: Map<string, string>;
   hrefFor: (patch: Partial<AdminExpensesQuery>) => string;
 }) {
   const t = await getTranslations("Admin.finance");
@@ -281,7 +289,14 @@ async function ExpenseTable({
                   <span className="sr-only"> {t("expenses.open")}</span>
                 </Link>
               </td>
-              <td className="px-3 py-3">{categoryNames.get(expense.categoryId)}</td>
+              <td className="px-3 py-3">
+                {categoryNames.get(expense.categoryId)}
+                {expense.workerId && (
+                  <span className="block text-13 text-body-2">
+                    {workerNames.get(expense.workerId)}
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-3">{expense.note ?? t("none")}</td>
               <td className="px-3 py-3">{accountNames.get(expense.accountId)}</td>
               <td className="px-3 py-3">
@@ -300,6 +315,7 @@ async function ExpenseDrawer({
   accounts,
   accountNames,
   categories,
+  payWorkerId,
   today,
   closeHref,
 }: {
@@ -307,12 +323,21 @@ async function ExpenseDrawer({
   accounts: FinanceAccount[];
   accountNames: Map<string, string>;
   categories: ExpenseCategory[];
+  /** A new wage for this worker (A21's "ادفع له"). */
+  payWorkerId: string | undefined;
   today: string;
   closeHref: string;
 }) {
   const t = await getTranslations("Admin.finance");
   const isNew = id === "new";
-  const [expense, books] = await Promise.all([isNew ? null : getExpense(id), financeBooks()]);
+  const [expense, books, workers, owed] = await Promise.all([
+    isNew ? null : getExpense(id),
+    financeBooks(),
+    workerOptions(),
+    // What the worker is owed at the end of this month.
+    payWorkerId ? payrollMonth(today.slice(0, 7), payWorkerId) : [],
+  ]);
+  const payWorker = payWorkerId ? { id: payWorkerId, owedIqd: owed[0]?.balanceIqd ?? 0 } : null;
 
   if (!isNew && !expense) {
     return (
@@ -333,6 +358,8 @@ async function ExpenseDrawer({
           active: account.active,
         }))}
         categories={categories}
+        workers={workers}
+        payWorker={payWorker}
         today={today}
         firstDay={firstOpenDay(books)}
         closed={expense !== null && isClosed(books, expense.spentOn)}
