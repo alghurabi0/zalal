@@ -53,10 +53,13 @@ function SavedLine({ shown, text }: { shown: boolean; text: string }) {
 /** The item's details; a new item opens its drawer once added. */
 export function StockItemForm({
   item,
+  deletable,
   month,
   closeHref,
 }: {
   item: StockItem | null;
+  /** No record names it, voided ones included. */
+  deletable: boolean;
   month: string | undefined;
   closeHref: string;
 }) {
@@ -177,7 +180,7 @@ export function StockItemForm({
           <ErrorLine error={edit.error} />
         </div>
       </form>
-      {item && item.lastMovedOn === null && (
+      {item && deletable && (
         <div className="flex flex-col gap-2 border-t border-divider pt-4">
           <p className="text-13 text-body-2">{t("stock.item.deleteHint")}</p>
           <div className="flex flex-wrap items-center gap-2">
@@ -288,10 +291,12 @@ export function StockMoveForm({
     );
   }
 
-  const expenseOptions =
+  // Only expenses on or before the record's day (the database refuses later ones).
+  const expenseOptions = (
     fixedExpense && !expenses.some((e) => e.id === fixedExpense.id)
       ? [fixedExpense, ...expenses]
-      : expenses;
+      : expenses
+  ).filter((e) => e.spentOn <= movedOn || e.id === expenseId);
 
   return (
     <div className="flex flex-col gap-6">

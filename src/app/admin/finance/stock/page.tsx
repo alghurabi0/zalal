@@ -28,6 +28,7 @@ import {
   type StockMove,
   stockItems,
   stockMonth,
+  stockItemHasRecords,
   stockMoves,
 } from "@/lib/admin/stock-queries";
 import { requireViewer } from "@/lib/auth/viewer";
@@ -70,8 +71,9 @@ async function Stock({ searchParams }: PageProps<"/admin/finance/stock">) {
     stockMonth(month),
     stockMoves(month),
   ]);
+  // The month shown, when one was asked for (a month outside the books shows the nearest).
   const hrefFor = (patch: Partial<AdminStockQuery>) =>
-    adminStockHref({ month: query.month, ...patch });
+    adminStockHref({ month: query.month ? month : undefined, ...patch });
   const active = items.filter((item) => item.active);
   const inactive = items.filter((item) => !item.active);
   const low = active.filter((item) => item.low);
@@ -444,13 +446,16 @@ async function ItemDrawer({
   if (id === "new") {
     return (
       <Drawer title={t("item.newTitle")} closeHref={closeHref}>
-        <StockItemForm item={null} month={monthParam} closeHref={closeHref} />
+        <StockItemForm item={null} deletable={false} month={monthParam} closeHref={closeHref} />
       </Drawer>
     );
   }
   if (!item) return <NotFound title={t("item.notFound")} closeHref={closeHref} />;
 
-  const moves = await stockMoves(month, item.id);
+  const [moves, hasRecords] = await Promise.all([
+    stockMoves(month, item.id),
+    stockItemHasRecords(item.id),
+  ]);
   return (
     <Drawer title={item.name} closeHref={closeHref}>
       <div className="flex flex-col gap-6">
@@ -495,6 +500,7 @@ async function ItemDrawer({
           <StockItemForm
             key={`${item.id}-${item.name}-${item.active}-${item.minQuantity}`}
             item={item}
+            deletable={!hasRecords}
             month={monthParam}
             closeHref={closeHref}
           />
@@ -558,13 +564,13 @@ async function MoveDrawer({
   const firstDay = firstOpenDay(books);
   // Expenses from the last 60 days an in may name (or the one A16 sent).
   const since = addDays(today, -60);
-  const [crews, expenses] = await Promise.all([
+  const [crews, expenses, fixedExpense] = await Promise.all([
     moveKind === "out" ? crewOptions() : Promise.resolve([]),
     moveKind === "in"
       ? linkableExpenses(since < books.startOn ? books.startOn : since, today)
       : Promise.resolve([]),
+    expenseId && isNew ? linkableExpense(expenseId) : Promise.resolve(null),
   ]);
-  const fixedExpense = expenseId && isNew ? await linkableExpense(expenseId) : null;
   const linked =
     move?.expense && !expenses.some((e) => e.id === move.expense?.id) ? [move.expense] : [];
 

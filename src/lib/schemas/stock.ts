@@ -21,7 +21,7 @@ const quantity = z
   .number()
   .min(0)
   .max(QUANTITY_MAX)
-  .refine((value) => Math.round(value * 100) === value * 100);
+  .refine((value) => Number(value.toFixed(2)) === value);
 
 const trimmed = (min: number, max: number) =>
   z
@@ -57,20 +57,16 @@ export type StockMoveInput = z.input<typeof stockMoveSchema>;
 
 /**
  * A quantity as typed: either digits, "." or the Arabic decimal mark
- * (U+066B), up to 2 decimals; null otherwise.
+ * (U+066B), up to 2 decimals, with commas only as thousands separators
+ * ("1,5" is refused, not read as 15); null otherwise.
  */
 export function parseQuantity(text: string): number | null {
-  const digits = toWesternDigits(text)
-    .replace(/[\s,\u066C]/g, "")
+  const digits = toWesternDigits(text.trim())
+    .replace(/\u066C/g, ",")
     .replace(/\u066B/g, ".");
-  if (!/^\d{1,10}(\.\d{1,2})?$/.test(digits)) return null;
-  const value = Number(digits);
+  if (!/^(\d{1,10}|\d{1,3}(,\d{3})+)(\.\d{1,2})?$/.test(digits)) return null;
+  const value = Number(digits.replace(/,/g, ""));
   return value <= QUANTITY_MAX ? value : null;
 }
 
-const grouped = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
-
-/** 2.5 → "2.5", 1200 → "1,200", in Western digits as the designs write them. */
-export function formatQuantity(value: number): string {
-  return grouped.format(value);
-}
+export { formatQuantity } from "@/lib/quantity";

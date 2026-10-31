@@ -13,14 +13,15 @@
 -- stock_item.create / .update. admin_delete_stock_item(id) deletes one no
 -- stock record uses, voided ones included (ZL045 item_in_use), logged as
 -- stock_item.delete. admin_stock_items() lists each item with its quantity
--- now and whether it is low (switched on and at or below its minimum).
+-- now and whether it is low (switched on, with a record, and at or below
+-- its minimum).
 begin;
 \ir _helpers.psql
 
 create function tests.today() returns date language sql stable
 as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 
-select plan(33);
+select plan(34);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -91,6 +92,10 @@ select is(
   tests.last_diff('stock_item.create'),
   jsonb_build_object('name', 'فرش', 'unit', 'قطعة', 'min_quantity', 2.5, 'note', 'فرش يدوية', 'active', true),
   'an admin adds an item, logged as stock_item.create'
+);
+select is(
+  (select low from public.admin_stock_items() where id = :'brush'), false,
+  'an item with no records is not low yet'
 );
 select throws_ok(
   $$ select public.admin_save_stock_item(null, 'ك', 'قطعة', 0, null, true) $$,

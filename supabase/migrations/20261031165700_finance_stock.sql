@@ -39,8 +39,8 @@
 --    expenses_guard_stock and expense_categories_guard_stock): void the
 --    stock record first.
 --
--- 6. Low stock: an item is low while it is switched on and its quantity now
---    is at or below its minimum. When a save, edit or void takes a
+-- 6. Low stock: an item is low while it is switched on, has a record, and
+--    its quantity now is at or below its minimum. When a save, edit or void takes a
 --    switched-on item from above its minimum to at or below it, every admin
 --    gets a stock_low notification (once per crossing; a new minimum alone
 --    sends none). A19 and A23 list low items.
@@ -728,7 +728,8 @@ $$;
 
 -- Reads ----------------------------------------------------------------------------------
 
--- Every item with its quantity now, whether it is low, and its last record's day.
+-- Every item with its quantity now, whether it is low (switched on, with a
+-- record, at or below its minimum), and its last record's day.
 create function public.admin_stock_items()
 returns table (
   id uuid,
@@ -758,7 +759,8 @@ begin
     i.note,
     i.active,
     coalesce(l.quantity, 0)::numeric(12, 2),
-    i.active and coalesce(l.quantity, 0) <= i.min_quantity,
+    -- An item with no records yet isn't low (code review): it was never stocked.
+    i.active and l.day is not null and l.quantity <= i.min_quantity,
     l.day
   from public.stock_items as i
   left join lateral (

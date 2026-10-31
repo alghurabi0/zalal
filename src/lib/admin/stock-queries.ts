@@ -236,3 +236,14 @@ export async function linkableExpense(id: string): Promise<LinkableExpense | nul
       }
     : null;
 }
+
+/** Whether any record names the item, voided ones included (it can't be deleted then). */
+export async function stockItemHasRecords(itemId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("stock_moves")
+    .select("id", { count: "exact", head: true })
+    .eq("item_id", itemId);
+  if (error) throw new Error(`Stock item records read failed: ${error.code}`);
+  return (count ?? 0) > 0;
+}

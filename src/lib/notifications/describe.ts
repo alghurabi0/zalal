@@ -1,6 +1,7 @@
 import { ticketNumber } from "@/lib/certificates/format";
 import type { Database } from "@/lib/database.types";
 import { formatDay, formatDayShort, serviceDayParts, slotParts } from "@/lib/dates";
+import { formatQuantity } from "@/lib/quantity";
 import { routes } from "@/lib/routes";
 
 import type messages from "../../../messages/ar.json";
@@ -70,9 +71,6 @@ const TOPICS = ["reschedule", "cancel", "price", "complaint"] as const;
 const TICKET_STATUSES = ["open", "in_progress", "closed"] as const;
 const TICKET_CATEGORIES = ["leak", "smell", "late", "staff", "payment", "other"] as const;
 const ADDRESS_LABELS = ["home", "family", "work"] as const;
-
-/** A stock quantity, up to 2 decimals in Western digits (as A23 shows it). */
-const QUANTITY = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 const UNKNOWN: Described = { item: "unknown", values: {} };
 
@@ -190,7 +188,7 @@ export function describeNotification(
       const unit = text(stock, "unit");
       const quantity = stock.quantity;
       if (!name || !unit || typeof quantity !== "number") return UNKNOWN;
-      return { item: type, values: { name, unit, quantity: QUANTITY.format(quantity) } };
+      return { item: type, values: { name, unit, quantity: formatQuantity(quantity) } };
     }
     case "cleaning_reminder": {
       const reminder = record(data);
