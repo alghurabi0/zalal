@@ -30,6 +30,7 @@ import {
   type BalanceSheet,
   equipment,
   type EquipmentItem,
+  findEquipment,
   getOpeningEquipment,
   liveDisposal,
   partnerBalances,
@@ -204,6 +205,7 @@ async function Partners({ searchParams }: PageProps<"/admin/finance/partners">) 
             partners={balances.partners
               .filter((r) => r.partner.active)
               .map((r) => ({ id: r.partner.id, name: r.partner.name }))}
+            names={Object.fromEntries(balances.partners.map((r) => [r.partner.id, r.partner.name]))}
             month={month}
             thisMonth={thisMonth}
             books={books}
@@ -215,7 +217,10 @@ async function Partners({ searchParams }: PageProps<"/admin/finance/partners">) 
         <Suspense key={query.equipment}>
           <EquipmentDrawer
             id={query.equipment}
-            item={items.find((item) => item.id === query.equipment) ?? null}
+            item={
+              items.find((item) => item.id === query.equipment) ??
+              (query.equipment === "new" ? null : await findEquipment(query.equipment))
+            }
             today={today}
             books={books}
             closeHref={hrefFor({ equipment: undefined })}
@@ -596,12 +601,14 @@ async function PartnerDrawer({
 
 async function SharesDrawer({
   partners,
+  names,
   month,
   thisMonth,
   books,
   closeHref,
 }: {
   partners: { id: string; name: string }[];
+  names: Record<string, string>;
   month: string;
   thisMonth: string;
   books: FinanceBooks;
@@ -620,6 +627,7 @@ async function SharesDrawer({
       <SharesForm
         key={sets.map((s) => s.month).join()}
         partners={partners}
+        names={names}
         sets={sets}
         months={months}
         initialMonth={initial}

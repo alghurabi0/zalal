@@ -55,6 +55,7 @@ export const ADMIN_EDIT_ERRORS = [
   "life_not_allowed",
   "shares_total",
   "equipment_disposed",
+  "partner_has_share",
   "invalid",
   "not_found",
   "failed",
@@ -97,6 +98,7 @@ const byCode: Record<string, AdminEditError> = {
   ZL060: "life_not_allowed",
   ZL061: "shares_total",
   ZL062: "equipment_disposed",
+  ZL063: "partner_has_share",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.

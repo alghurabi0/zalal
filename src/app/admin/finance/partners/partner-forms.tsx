@@ -421,13 +421,16 @@ export function MovementSection({
 /** A month's shares: a percentage for each partner, 100% in all, or none. */
 export function SharesForm({
   partners,
+  names,
   sets,
   months,
   initialMonth,
   closedThrough,
 }: {
-  /** Switched-on partners. */
+  /** Switched-on partners: those a set may give a share. */
   partners: Pick<Partner, "id" | "name">[];
+  /** Every partner's name, switched-off ones too, for the sets so far. */
+  names: Record<string, string>;
   sets: ShareSet[];
   /** The months a set may start ("2026-10"): the books' first open month through this one. */
   months: string[];
@@ -450,7 +453,7 @@ export function SharesForm({
   const [values, setValues] = useState<Record<string, string>>(valuesFor(initialMonth));
   const [tried, setTried] = useState(false);
   const [saved, setSaved] = useState(false);
-  const nameOf = new Map(partners.map((p) => [p.id, p.name]));
+  const nameOf = new Map(Object.entries(names));
 
   const parsed = partners.map((p) => {
     const text = (values[p.id] ?? "").trim();
@@ -460,6 +463,9 @@ export function SharesForm({
   const total = parsed.reduce((sum, p) => sum + (p.bp ?? 0), 0);
   const empty = parsed.every((p) => p.text === "" || p.bp === 0);
   const totalOk = empty || total === SHARES_TOTAL;
+  // An empty set removes the month's own; a month that only inherits one has nothing to remove.
+  const ownSet = sets.some((set) => set.month === month);
+  const nothingToRemove = empty && !ownSet;
   const closed = closedThrough !== null && `${month}-01` <= closedThrough;
 
   if (partners.length === 0) {
@@ -476,7 +482,7 @@ export function SharesForm({
           event.preventDefault();
           setTried(true);
           setSaved(false);
-          if (!allValid || !totalOk || closed) return;
+          if (!allValid || !totalOk || closed || nothingToRemove) return;
           const shares = parsed
             .filter((p) => p.bp !== null && p.bp > 0)
             .map((p) => ({ partnerId: p.partnerId, shareBp: p.bp ?? 0 }));
@@ -552,6 +558,9 @@ export function SharesForm({
           <span dir="ltr">{t("shares.total", { total: formatShare(total) })}</span>
           {tried && allValid && !totalOk && <> · {t("shares.totalWrong")}</>}
         </p>
+        {tried && nothingToRemove && (
+          <p className="text-14 font-bold text-danger">{t("shares.nothingToRemove")}</p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" size="sm" loading={edit.pending} disabled={closed}>
             {t("shares.save")}

@@ -147,7 +147,9 @@ export function ExpenseForm({
       : /^\d{1,3}$/.test(toWesternDigits(life.trim())) &&
         Number(toWesternDigits(life.trim())) >= 1 &&
         Number(toWesternDigits(life.trim())) <= LIFE_MAX);
-  const valid = lifeOk && expenseSchema.safeParse(input).success;
+  // A spread purchase stays in an equipment category: a wrong one is voided and entered again.
+  const lifeKept = !(expense?.usefulLifeMonths && !isEquipment);
+  const valid = lifeOk && lifeKept && expenseSchema.safeParse(input).success;
   const dayOk = spentOn >= firstDay && spentOn <= today;
 
   return (
@@ -192,7 +194,13 @@ export function ExpenseForm({
           <Field
             label={t("expense.category")}
             variant="compact"
-            error={tried && !categoryId ? t("pickCategory") : undefined}
+            error={
+              tried && !categoryId
+                ? t("pickCategory")
+                : !lifeKept
+                  ? t("expense.lifeKept")
+                  : undefined
+            }
           >
             {(control) => (
               <Select

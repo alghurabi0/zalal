@@ -1,5 +1,6 @@
 import "server-only";
 
+import { baghdadToday } from "@/lib/dates";
 import type { PartnerMovementKind } from "@/lib/schemas/finance";
 import { createClient } from "@/lib/supabase/server";
 
@@ -247,6 +248,23 @@ export async function equipment(month: string): Promise<EquipmentItem[]> {
           }
         : null,
   }));
+}
+
+/**
+ * An item the page's month doesn't list (an audit link to one disposed of in
+ * an earlier month): it as of its disposal month, or this month.
+ */
+export async function findEquipment(id: string): Promise<EquipmentItem | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("finance_equipment")
+    .select("disposed_on")
+    .eq("item_id", id)
+    .maybeSingle();
+  if (error) throw new Error(`Equipment read failed: ${error.message}`);
+  if (!data) return null;
+  const items = await equipment((data.disposed_on ?? baghdadToday()).slice(0, 7));
+  return items.find((item) => item.id === id) ?? null;
 }
 
 /** Opening equipment as entered (A22's drawer). */

@@ -174,8 +174,8 @@ select public.admin_save_partner_movement(
 );
 select is(
   tests.last_diff('partner_movement.update'),
-  jsonb_build_object('amount_iqd', jsonb_build_object('from', 30000, 'to', 25000)),
-  'an edit logs what changed'
+  jsonb_build_object('amount_iqd', jsonb_build_object('from', 30000, 'to', 25000), 'partner_id', tests.id('أبو علي')),
+  'an edit logs what changed, and its partner for the audit log''s link'
 );
 select throws_ok(
   format($$ select public.admin_void_partner_movement(%L, ' ') $$, :'pull'),

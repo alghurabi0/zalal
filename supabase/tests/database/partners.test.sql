@@ -19,7 +19,7 @@ as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 create function tests.month(n int) returns date language sql stable
 as $$ select (date_trunc('month', tests.today()) - make_interval(months => n))::date $$;
 
-select plan(24);
+select plan(26);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -116,6 +116,22 @@ select is(
 );
 select public.admin_save_partner(:'hasan', 'أبو حسن', '+9647701234567', 'شريك مؤسس', 5000000, false);
 select is(tests.log_count('partner.update'), 1, 'a save that changes nothing logs nothing');
+-- A partner holding a share this month stays switched on until new shares.
+select tests.clear_authentication();
+insert into public.partner_shares (starts_on, partner_id, share_bp, created_by)
+values (tests.month(1), tests.id('أبو علي'), 10000, tests.user_id('+9647504444444'));
+select tests.authenticate_as(tests.user_id('+9647504444444'));
+select throws_ok(
+  format($$ select public.admin_save_partner(%L, 'أبو علي', null, null, 0, false) $$, tests.id('أبو علي')),
+  'ZL063', 'partner_has_share', 'a partner with a share in force stays switched on'
+);
+select tests.clear_authentication();
+delete from public.partner_shares where true;
+select tests.authenticate_as(tests.user_id('+9647504444444'));
+select lives_ok(
+  format($$ select public.admin_save_partner(%L, 'أبو علي', null, null, 0, false) $$, tests.id('أبو علي')),
+  'and is switched off once the shares leave them out'
+);
 select throws_ok(
   $$ select public.admin_save_partner(gen_random_uuid(), 'شريك', null, null, 0, null) $$,
   'P0002', 'partner_not_found', 'a missing partner'

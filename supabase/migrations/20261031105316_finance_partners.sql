@@ -89,7 +89,8 @@
 -- admin_void_equipment_disposal.
 --
 -- New errors: ZL060 life_not_allowed, ZL061 shares_total, ZL062
--- equipment_disposed; ZL044 also covers partner_inactive; 22023
+-- equipment_disposed, ZL063 partner_has_share (switching off a partner who
+-- holds a share in the set in force or a later one); ZL044 also covers partner_inactive; 22023
 -- invalid_shares, invalid_life; P0002 partner_not_found,
 -- movement_not_found, equipment_not_found, disposal_not_found.
 --
@@ -97,9 +98,18 @@
 -- now lists. Depreciation, profit shares and the balance sheet are
 -- computed, never stored, so they can't drift from their records.
 --
--- Release: if any month is closed in production, reopen it before this
--- deploys (spec §13): accrued wages and spread purchases change the profit
--- of every month in the books.
+-- Release: the migration refuses to run while any month is closed; reopen
+-- them first (spec §13): accrued wages and spread purchases change the
+-- profit of every month in the books.
+
+-- Refused while a month is closed: the new methods change every month's profit.
+do $$
+begin
+  if exists (select 1 from public.finance_settings as s where s.id and s.closed_through is not null) then
+    raise exception 'finance_partners: reopen every closed month before this migration (spec §13)';
+  end if;
+end;
+$$;
 
 -- Types ----------------------------------------------------------------------------------
 
@@ -490,6 +500,19 @@ begin
     raise exception using errcode = 'ZL048', message = 'name_taken';
   end if;
 
+  -- A switched-off partner takes no share: not while they hold one in the
+  -- set in force this month or in a later one (code review). Set new shares first.
+  if coalesce(v_old.active, false) and not v_active and exists (
+    select 1 from public.partner_shares as s
+    where s.partner_id = p_id
+      and s.starts_on >= coalesce((
+        select max(x.starts_on) from public.partner_shares as x
+        where x.starts_on <= date_trunc('month', private.baghdad_today())::date
+      ), '-infinity'::date)
+  ) then
+    raise exception using errcode = 'ZL063', message = 'partner_has_share';
+  end if;
+
   v_new := jsonb_build_object(
     'name', p_name, 'phone', v_phone, 'note', v_note, 'opening_capital_iqd', v_opening, 'active', v_active
   );
@@ -688,7 +711,11 @@ begin
     update public.partner_movements as m
     set moved_on = p_moved_on, kind = p_kind, account_id = p_account_id, amount_iqd = p_amount_iqd, note = v_note
     where m.id = p_id;
-    perform private.log_admin_action('partner_movement.update', 'partner_movements', p_id::text, v_diff);
+    -- The partner too, so the audit log names and links it (code review).
+    perform private.log_admin_action(
+      'partner_movement.update', 'partner_movements', p_id::text,
+      v_diff || jsonb_build_object('partner_id', v_old.partner_id)
+    );
   end if;
   return p_id;
 end;
@@ -978,7 +1005,10 @@ begin
     update public.equipment_disposals as d
     set disposed_on = p_disposed_on, account_id = p_account_id, proceeds_iqd = v_proceeds, note = v_note
     where d.id = p_id;
-    perform private.log_admin_action('equipment_disposal.update', 'equipment_disposals', p_id::text, v_diff);
+    perform private.log_admin_action(
+      'equipment_disposal.update', 'equipment_disposals', p_id::text,
+      v_diff || jsonb_build_object('expense_id', v_old.expense_id, 'opening_equipment_id', v_old.opening_equipment_id)
+    );
   end if;
   return p_id;
 end;
@@ -1014,6 +1044,7 @@ begin
   perform private.log_admin_action(
     'equipment_disposal.void', 'equipment_disposals', p_id::text,
     jsonb_build_object(
+      'expense_id', v_old.expense_id, 'opening_equipment_id', v_old.opening_equipment_id,
       'disposed_on', v_old.disposed_on, 'proceeds_iqd', v_old.proceeds_iqd, 'reason', v_reason
     )
   );
