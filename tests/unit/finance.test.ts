@@ -370,10 +370,15 @@ describe("report lines", () => {
     salesIqd: 0,
     discountsIqd: 0,
     revenueIqd: 0,
+    spentIqd: 0,
+    wagesIqd: 0,
+    depreciationIqd: 0,
     expensesIqd: 0,
+    equipmentResultIqd: 0,
     profitIqd: 0,
     receivedIqd: 0,
     refundedIqd: 0,
+    paidOutIqd: 0,
     netCashIqd: 0,
     closed: false,
     ...patch,
@@ -383,24 +388,39 @@ describe("report lines", () => {
       ordersIqd: 40000,
       discountsIqd: 5000,
       revenueIqd: 35000,
+      spentIqd: 8000,
       expensesIqd: 8000,
       profitIqd: 27000,
       receivedIqd: 30000,
       refundedIqd: 10000,
+      paidOutIqd: 8000,
       netCashIqd: 12000,
     }),
-    month("2026-10", { salesIqd: 9000, revenueIqd: 9000, expensesIqd: 1000, profitIqd: 8000 }),
+    month("2026-10", {
+      salesIqd: 9000,
+      revenueIqd: 9000,
+      spentIqd: 1000,
+      wagesIqd: 2000,
+      depreciationIqd: 500,
+      expensesIqd: 3500,
+      equipmentResultIqd: -300,
+      profitIqd: 5200,
+      paidOutIqd: 61000,
+    }),
   ];
   const lines = reportLines(
     months,
     [
-      { month: "2026-09", categoryId: 1, totalIqd: 3000 },
-      { month: "2026-09", categoryId: 2, totalIqd: 5000 },
-      { month: "2026-10", categoryId: 1, totalIqd: 1000 },
+      { month: "2026-09", categoryId: 1, totalIqd: 3000, countedIqd: 3000 },
+      { month: "2026-09", categoryId: 2, totalIqd: 5000, countedIqd: 5000 },
+      { month: "2026-10", categoryId: 1, totalIqd: 1000, countedIqd: 1000 },
+      // A spread purchase: paid out, but its depreciation is the profit's line.
+      { month: "2026-10", categoryId: 3, totalIqd: 60000, countedIqd: 0 },
     ],
     new Map([
       [1, "وقود"],
       [2, "مواد"],
+      [3, "معدات"],
     ]),
   );
   const find = (label: string) =>
@@ -410,12 +430,25 @@ describe("report lines", () => {
 
   it("adds each line up across the months", () => {
     expect(find("orders")).toMatchObject({ values: [40000, 0], total: 40000 });
-    expect(find("profit")).toMatchObject({ values: [27000, 8000], total: 35000, weight: "total" });
+    expect(find("profit")).toMatchObject({ values: [27000, 5200], total: 32200, weight: "total" });
   });
   it("shows deductions below zero", () => {
     expect(find("discounts")?.values).toEqual([-5000, 0]);
     expect(find("refunded")?.values).toEqual([-10000, 0]);
-    expect(find("cashExpenses")?.values).toEqual([-8000, -1000]);
+    expect(find("cashExpenses")?.values).toEqual([-8000, -61000]);
+    expect(find("equipmentResult")?.values).toEqual([0, -300]);
+  });
+  it("counts wages as earned and equipment by its depreciation, not as paid", () => {
+    expect(find("wages")).toMatchObject({ values: [0, 2000], section: "expenses" });
+    expect(find("depreciation")).toMatchObject({ values: [0, 500], section: "expenses" });
+    expect(find("معدات")).toBeUndefined();
+  });
+  it("leaves out wages, depreciation and the equipment result when there are none", () => {
+    const plain = reportLines([months[0] as MonthReport], [], new Map());
+    const figures = plain.map((line) => ("figure" in line.label ? line.label.figure : ""));
+    expect(figures).not.toContain("wages");
+    expect(figures).not.toContain("depreciation");
+    expect(figures).not.toContain("equipmentResult");
   });
   it("lists the categories with expenses, the largest first", () => {
     const categories = lines.filter((line) => "category" in line.label);

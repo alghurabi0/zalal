@@ -497,6 +497,98 @@ export type Database = {
           },
         ];
       };
+      equipment_disposals: {
+        Row: {
+          account_id: string | null;
+          created_at: string;
+          created_by: string;
+          disposed_on: string;
+          expense_id: string | null;
+          id: string;
+          note: string | null;
+          opening_equipment_id: string | null;
+          proceeds_iqd: number;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_id?: string | null;
+          created_at?: string;
+          created_by: string;
+          disposed_on: string;
+          expense_id?: string | null;
+          id?: string;
+          note?: string | null;
+          opening_equipment_id?: string | null;
+          proceeds_iqd?: number;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          account_id?: string | null;
+          created_at?: string;
+          created_by?: string;
+          disposed_on?: string;
+          expense_id?: string | null;
+          id?: string;
+          note?: string | null;
+          opening_equipment_id?: string | null;
+          proceeds_iqd?: number;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "equipment_disposals_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "equipment_disposals_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_disposals_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_disposals_expense_id_fkey";
+            columns: ["expense_id"];
+            isOneToOne: false;
+            referencedRelation: "expenses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_disposals_opening_equipment_id_fkey";
+            columns: ["opening_equipment_id"];
+            isOneToOne: false;
+            referencedRelation: "opening_equipment";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "equipment_disposals_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       expense_categories: {
         Row: {
           active: boolean;
@@ -536,6 +628,7 @@ export type Database = {
           note: string | null;
           spent_on: string;
           updated_at: string;
+          useful_life_months: number | null;
           void_reason: string | null;
           voided_at: string | null;
           voided_by: string | null;
@@ -552,6 +645,7 @@ export type Database = {
           note?: string | null;
           spent_on: string;
           updated_at?: string;
+          useful_life_months?: number | null;
           void_reason?: string | null;
           voided_at?: string | null;
           voided_by?: string | null;
@@ -567,6 +661,7 @@ export type Database = {
           note?: string | null;
           spent_on?: string;
           updated_at?: string;
+          useful_life_months?: number | null;
           void_reason?: string | null;
           voided_at?: string | null;
           voided_by?: string | null;
@@ -1168,6 +1263,64 @@ export type Database = {
           },
         ];
       };
+      opening_equipment: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          months_left: number;
+          name: string;
+          note: string | null;
+          updated_at: string;
+          value_iqd: number;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          months_left: number;
+          name: string;
+          note?: string | null;
+          updated_at?: string;
+          value_iqd: number;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          months_left?: number;
+          name?: string;
+          note?: string | null;
+          updated_at?: string;
+          value_iqd?: number;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "opening_equipment_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "opening_equipment_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       order_event_notes: {
         Row: {
           created_at: string;
@@ -1540,6 +1693,168 @@ export type Database = {
           send_error?: string | null;
           sent_at?: string | null;
           verified_at?: string | null;
+        };
+        Relationships: [];
+      };
+      partner_movements: {
+        Row: {
+          account_id: string;
+          amount_iqd: number;
+          created_at: string;
+          created_by: string;
+          id: string;
+          kind: Database["public"]["Enums"]["partner_movement_kind"];
+          moved_on: string;
+          note: string | null;
+          partner_id: string;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_id: string;
+          amount_iqd: number;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["partner_movement_kind"];
+          moved_on: string;
+          note?: string | null;
+          partner_id: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          amount_iqd?: number;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["partner_movement_kind"];
+          moved_on?: string;
+          note?: string | null;
+          partner_id?: string;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "partner_movements_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "partner_movements_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "partner_movements_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "partner_movements_partner_id_fkey";
+            columns: ["partner_id"];
+            isOneToOne: false;
+            referencedRelation: "partners";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "partner_movements_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      partner_shares: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: number;
+          partner_id: string;
+          share_bp: number;
+          starts_on: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: never;
+          partner_id: string;
+          share_bp: number;
+          starts_on: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: never;
+          partner_id?: string;
+          share_bp?: number;
+          starts_on?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "partner_shares_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "partner_shares_partner_id_fkey";
+            columns: ["partner_id"];
+            isOneToOne: false;
+            referencedRelation: "partners";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      partners: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: string;
+          name: string;
+          note: string | null;
+          opening_capital_iqd: number;
+          phone: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          name: string;
+          note?: string | null;
+          opening_capital_iqd?: number;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          note?: string | null;
+          opening_capital_iqd?: number;
+          phone?: string | null;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -2484,6 +2799,50 @@ export type Database = {
         ComputedFields: never;
         Relationships: [];
       };
+      finance_depreciation: {
+        Row: {
+          amount_iqd: number | null;
+          item_id: string | null;
+          month: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [];
+      };
+      finance_equipment: {
+        Row: {
+          acquired_on: string | null;
+          category_id: number | null;
+          cost_iqd: number | null;
+          disposal_account_id: string | null;
+          disposal_id: string | null;
+          disposed_on: string | null;
+          expense_id: string | null;
+          item_id: string | null;
+          kind: string | null;
+          life_months: number | null;
+          name: string | null;
+          opening_equipment_id: string | null;
+          proceeds_iqd: number | null;
+          starts_month: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "equipment_disposals_account_id_fkey";
+            columns: ["disposal_account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_account_balances";
+            referencedColumns: ["account_id"];
+          },
+          {
+            foreignKeyName: "equipment_disposals_account_id_fkey";
+            columns: ["disposal_account_id"];
+            isOneToOne: false;
+            referencedRelation: "finance_accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       finance_receivables: {
         Row: {
           amount_iqd: number | null;
@@ -2580,6 +2939,27 @@ export type Database = {
         Args: { p_delta: number; p_reason: string; p_subscription_id: string };
         Returns: undefined;
       };
+      admin_balance_sheet: {
+        Args: { p_month: string };
+        Returns: {
+          advances_iqd: number;
+          as_of: string;
+          assets_iqd: number;
+          balanced: boolean;
+          boxes_iqd: number;
+          closed: boolean;
+          crew_cash_iqd: number;
+          customer_credit_iqd: number;
+          equipment_iqd: number;
+          equity_iqd: number;
+          liabilities_iqd: number;
+          opening_difference_iqd: number;
+          partners_iqd: number;
+          receivables_iqd: number;
+          unallocated_profit_iqd: number;
+          wages_owed_iqd: number;
+        }[];
+      };
       admin_block_date: { Args: { p_date: string; p_reason: string }; Returns: undefined };
       admin_chat_inbox: {
         Args: { p_limit?: number; p_search?: string };
@@ -2631,6 +3011,29 @@ export type Database = {
         Args: { p_reason: string; p_subscription_id: string };
         Returns: undefined;
       };
+      admin_equipment: {
+        Args: { p_month: string };
+        Returns: {
+          acquired_on: string;
+          book_value_iqd: number;
+          category_id: number;
+          cost_iqd: number;
+          depreciated_iqd: number;
+          disposal_account_id: string;
+          disposal_id: string;
+          disposed_on: string;
+          expense_id: string;
+          item_id: string;
+          kind: string;
+          life_months: number;
+          monthly_iqd: number;
+          name: string;
+          opening_equipment_id: string;
+          proceeds_iqd: number;
+          result_iqd: number;
+          starts_month: string;
+        }[];
+      };
       admin_expense_summary: {
         Args: {
           p_account_id?: string;
@@ -2649,6 +3052,7 @@ export type Database = {
         Args: { p_from: string; p_to: string };
         Returns: {
           category_id: number;
+          counted_iqd: number;
           month: string;
           total_iqd: number;
         }[];
@@ -2656,6 +3060,19 @@ export type Database = {
       admin_move_worker: {
         Args: { p_crew_id: string; p_on: string; p_worker_id: string };
         Returns: undefined;
+      };
+      admin_partner_balances: {
+        Args: { p_month: string };
+        Returns: {
+          balance_iqd: number;
+          capital_iqd: number;
+          opening_iqd: number;
+          partner_id: string;
+          profit_iqd: number;
+          profit_month_iqd: number;
+          share_bp: number;
+          withdrawn_iqd: number;
+        }[];
       };
       admin_payroll: {
         Args: { p_from: string; p_to: string; p_worker_id?: string };
@@ -2679,17 +3096,22 @@ export type Database = {
         Args: { p_from: string; p_to: string };
         Returns: {
           closed: boolean;
+          depreciation_iqd: number;
           discounts_iqd: number;
+          equipment_result_iqd: number;
           expenses_iqd: number;
           month: string;
           net_cash_iqd: number;
           orders_iqd: number;
+          paid_out_iqd: number;
           profit_iqd: number;
           received_iqd: number;
           refunded_iqd: number;
           revenue_iqd: number;
           sales_iqd: number;
+          spent_iqd: number;
           subscriptions_iqd: number;
+          wages_iqd: number;
         }[];
       };
       admin_rating_summary: {
@@ -2749,6 +3171,18 @@ export type Database = {
         };
         Returns: string;
       };
+      admin_save_equipment_disposal: {
+        Args: {
+          p_account_id?: string;
+          p_disposed_on?: string;
+          p_expense_id?: string;
+          p_id?: string;
+          p_note?: string;
+          p_opening_equipment_id?: string;
+          p_proceeds_iqd?: number;
+        };
+        Returns: string;
+      };
       admin_save_expense: {
         Args: {
           p_account_id?: string;
@@ -2757,6 +3191,7 @@ export type Database = {
           p_id?: string;
           p_note?: string;
           p_spent_on?: string;
+          p_useful_life_months?: number;
           p_worker_id?: string;
         };
         Returns: string;
@@ -2792,6 +3227,39 @@ export type Database = {
           p_place?: string;
           p_service?: string;
           p_sold_on?: string;
+        };
+        Returns: string;
+      };
+      admin_save_opening_equipment: {
+        Args: {
+          p_id?: string;
+          p_months_left?: number;
+          p_name?: string;
+          p_note?: string;
+          p_value_iqd?: number;
+        };
+        Returns: string;
+      };
+      admin_save_partner: {
+        Args: {
+          p_active?: boolean;
+          p_id?: string;
+          p_name?: string;
+          p_note?: string;
+          p_opening_capital_iqd?: number;
+          p_phone?: string;
+        };
+        Returns: string;
+      };
+      admin_save_partner_movement: {
+        Args: {
+          p_account_id?: string;
+          p_amount_iqd?: number;
+          p_id?: string;
+          p_kind?: Database["public"]["Enums"]["partner_movement_kind"];
+          p_moved_on?: string;
+          p_note?: string;
+          p_partner_id?: string;
         };
         Returns: string;
       };
@@ -2893,6 +3361,7 @@ export type Database = {
         Args: { p_order_id: string; p_use: boolean };
         Returns: undefined;
       };
+      admin_set_partner_shares: { Args: { p_month: string; p_shares: Json }; Returns: undefined };
       admin_set_subscription_paid: {
         Args: { p_paid: boolean; p_subscription_id: string };
         Returns: undefined;
@@ -2931,8 +3400,17 @@ export type Database = {
         Returns: undefined;
       };
       admin_void_discount: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_equipment_disposal: {
+        Args: { p_id: string; p_reason: string };
+        Returns: undefined;
+      };
       admin_void_expense: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_manual_sale: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_void_opening_equipment: {
+        Args: { p_id: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_void_partner_movement: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_payment: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_payroll_adjustment: {
         Args: { p_id: number; p_reason: string };
@@ -3168,6 +3646,7 @@ export type Database = {
         | "cancelled"
         | "no_show";
       otp_channel: "whatsapp" | "sms";
+      partner_movement_kind: "capital" | "withdrawal";
       payment_method: "cash";
       payroll_adjustment_kind: "bonus" | "deduction";
       rating_tag: "on_time" | "clean_work" | "respectful" | "clear_photos";
@@ -3340,6 +3819,7 @@ export const Constants = {
         "no_show",
       ],
       otp_channel: ["whatsapp", "sms"],
+      partner_movement_kind: ["capital", "withdrawal"],
       payment_method: ["cash"],
       payroll_adjustment_kind: ["bonus", "deduction"],
       rating_tag: ["on_time", "clean_work", "respectful", "clear_photos"],

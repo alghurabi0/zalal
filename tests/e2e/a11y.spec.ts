@@ -7,6 +7,7 @@ import { createCrew, createCustomer, logInAsAdmin, logInAsCrew } from "./helpers
 import { createArticle, createCategory } from "./helpers/articles";
 import { signUp } from "./helpers/auth";
 import { baghdadDate, createCertificate, createOrder, createSlot } from "./helpers/booking";
+import { createPartner } from "./helpers/partners";
 import { createWorker } from "./helpers/payroll";
 
 // Accessibility across every surface (Phase 6, task 4): axe (WCAG 2.2 A/AA
@@ -177,6 +178,7 @@ test.describe("admin", () => {
     const crew = await createCrew();
     const { id: adminId } = await logInAsAdmin(page);
     const worker = await createWorker({ createdBy: adminId, crewId: crew.id });
+    const partner = await createPartner();
     for (const url of [
       "/admin",
       `/admin?period=${baghdadDate(0).slice(0, 7)}`,
@@ -216,6 +218,11 @@ test.describe("admin", () => {
       "/admin/finance/payroll?worker=new",
       `/admin/finance/payroll?worker=${worker.id}`,
       `/admin/finance/expenses?expense=new&worker=${worker.id}`,
+      "/admin/finance/partners",
+      "/admin/finance/partners?partner=new",
+      `/admin/finance/partners?partner=${partner.id}`,
+      "/admin/finance/partners?shares=1",
+      "/admin/finance/partners?equipment=new",
     ]) {
       await audit(page, url, { linkMin: 24 });
     }

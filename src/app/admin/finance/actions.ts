@@ -9,6 +9,8 @@ import { normalizeIraqiMobile } from "@/lib/phone";
 import {
   type DiscountInput,
   discountSchema,
+  type EquipmentDisposalInput,
+  equipmentDisposalSchema,
   type ExpenseCategoryInput,
   expenseCategoryIdSchema,
   expenseCategorySchema,
@@ -24,6 +26,14 @@ import {
   monthCloseSchema,
   type MonthReopenInput,
   monthReopenSchema,
+  type OpeningEquipmentInput,
+  openingEquipmentSchema,
+  type PartnerInput,
+  type PartnerMovementInput,
+  partnerMovementSchema,
+  partnerSchema,
+  type PartnerSharesInput,
+  partnerSharesSchema,
   type PaymentInput,
   type PayrollAdjustmentInput,
   payrollAdjustmentSchema,
@@ -46,7 +56,7 @@ import {
 } from "@/lib/schemas/finance";
 import { createClient } from "@/lib/supabase/server";
 
-// The accounting actions (spec §8.3 A15–A20), as the admin: the audited
+// The accounting actions (spec §8.3 A15–A22), as the admin: the audited
 // admin RPCs check the role, the day, switched-off boxes and categories,
 // voided records, refunds and discounts, and write the audit log.
 
@@ -63,7 +73,8 @@ export async function saveExpense(input: ExpenseInput): Promise<AdminEditResult>
   const parsed = expenseSchema.safeParse(input);
   if (!parsed.success) return invalid;
   const supabase = await admin(routes.adminExpenses);
-  const { id, spentOn, categoryId, accountId, amountIqd, note, workerId } = parsed.data;
+  const { id, spentOn, categoryId, accountId, amountIqd, note, workerId, usefulLifeMonths } =
+    parsed.data;
   const { error } = await supabase.rpc("admin_save_expense", {
     p_id: id ?? undefined,
     p_spent_on: spentOn,
@@ -72,6 +83,7 @@ export async function saveExpense(input: ExpenseInput): Promise<AdminEditResult>
     p_amount_iqd: amountIqd,
     p_note: note === "" ? undefined : note,
     p_worker_id: workerId ?? undefined,
+    p_useful_life_months: usefulLifeMonths ?? undefined,
   });
   return error ? editFailure("admin_save_expense", error, report) : { status: "done" };
 }
@@ -387,4 +399,124 @@ export async function setWorkerDays(input: WorkerDaysInput): Promise<AdminEditRe
     p_days: parsed.data.days,
   });
   return error ? editFailure("admin_set_worker_days", error, report) : { status: "done" };
+}
+
+// Partners, equipment and the balance sheet (A22) ---------------------------------------------
+
+export async function savePartner(
+  input: PartnerInput,
+): Promise<AdminEditResult | { status: "done"; id: string }> {
+  // The form sends the phone as typed (07…); the database stores E.164.
+  const phone = input.phone.trim();
+  const parsed = partnerSchema.safeParse({
+    ...input,
+    phone: phone === "" ? "" : (normalizeIraqiMobile(phone) ?? phone),
+  });
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const d = parsed.data;
+  const { data, error } = await supabase.rpc("admin_save_partner", {
+    p_id: d.id ?? undefined,
+    p_name: d.name,
+    p_phone: d.phone === "" ? undefined : d.phone,
+    p_note: d.note === "" ? undefined : d.note,
+    p_opening_capital_iqd: d.openingCapitalIqd,
+    p_active: d.active,
+  });
+  if (error) return editFailure("admin_save_partner", error, report);
+  return { status: "done", id: data };
+}
+
+export async function setPartnerShares(input: PartnerSharesInput): Promise<AdminEditResult> {
+  const parsed = partnerSharesSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const { error } = await supabase.rpc("admin_set_partner_shares", {
+    p_month: `${parsed.data.month}-01`,
+    p_shares: Object.fromEntries(parsed.data.shares.map((s) => [s.partnerId, s.shareBp])),
+  });
+  return error ? editFailure("admin_set_partner_shares", error, report) : { status: "done" };
+}
+
+export async function savePartnerMovement(input: PartnerMovementInput): Promise<AdminEditResult> {
+  const parsed = partnerMovementSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const d = parsed.data;
+  const { error } = await supabase.rpc("admin_save_partner_movement", {
+    p_id: d.id ?? undefined,
+    p_partner_id: d.partnerId,
+    p_moved_on: d.movedOn,
+    p_kind: d.kind,
+    p_account_id: d.accountId,
+    p_amount_iqd: d.amountIqd,
+    p_note: d.note === "" ? undefined : d.note,
+  });
+  return error ? editFailure("admin_save_partner_movement", error, report) : { status: "done" };
+}
+
+export async function voidPartnerMovement(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const { error } = await supabase.rpc("admin_void_partner_movement", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_partner_movement", error, report) : { status: "done" };
+}
+
+export async function saveOpeningEquipment(input: OpeningEquipmentInput): Promise<AdminEditResult> {
+  const parsed = openingEquipmentSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const d = parsed.data;
+  const { error } = await supabase.rpc("admin_save_opening_equipment", {
+    p_id: d.id ?? undefined,
+    p_name: d.name,
+    p_value_iqd: d.valueIqd,
+    p_months_left: d.monthsLeft,
+    p_note: d.note === "" ? undefined : d.note,
+  });
+  return error ? editFailure("admin_save_opening_equipment", error, report) : { status: "done" };
+}
+
+export async function voidOpeningEquipment(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const { error } = await supabase.rpc("admin_void_opening_equipment", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_opening_equipment", error, report) : { status: "done" };
+}
+
+export async function saveEquipmentDisposal(
+  input: EquipmentDisposalInput,
+): Promise<AdminEditResult> {
+  const parsed = equipmentDisposalSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const d = parsed.data;
+  const { error } = await supabase.rpc("admin_save_equipment_disposal", {
+    p_expense_id: d.expenseId ?? undefined,
+    p_opening_equipment_id: d.openingEquipmentId ?? undefined,
+    p_disposed_on: d.disposedOn,
+    p_account_id: d.accountId ?? undefined,
+    p_proceeds_iqd: d.proceedsIqd,
+    p_note: d.note === "" ? undefined : d.note,
+  });
+  return error ? editFailure("admin_save_equipment_disposal", error, report) : { status: "done" };
+}
+
+export async function voidEquipmentDisposal(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminPartners);
+  const { error } = await supabase.rpc("admin_void_equipment_disposal", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_equipment_disposal", error, report) : { status: "done" };
 }

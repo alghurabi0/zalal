@@ -5,11 +5,10 @@
 --    inside the first closed month once any month is closed, so changing it
 --    (or adding a box with one) changes every box's balance at the end of
 --    the closed months. Settled with the owner on Oct 30, 2026 (spec §13
---    "Reports and month close"): opening balances stay editable, because no
---    report shows a box's balance at a past month's end, only now, so no
---    closed figure (revenue, discounts, expenses, payments, profit) moves.
---    These tests pin that decision; if a report ever shows past balances,
---    refuse opening balance changes while a month is closed instead.
+--    "Reports and month close"): opening balances stayed editable while no
+--    report showed a box's balance at a past month's end. The balance sheet
+--    (Phase 7, task 5, migration finance_partners) shows one, so since then
+--    they hold while a month is closed (ZL056), as that decision said.
 --
 -- 2. Not testable here (two transactions or the clock): a change started on
 --    a month's last day and committed after the month closed at midnight.
@@ -68,13 +67,13 @@ select public.admin_close_finance_month(tests.month(1));
 
 select is(
   tests.set_opening(:'box', 250000),
-  250000,
-  'a box''s opening balance still changes while a month is closed (no report shows past balances)'
+  100000,
+  'a box''s opening balance holds while a month is closed (the balance sheet shows past months)'
 );
 select is(
   tests.add_box('مصرف التدقيق', 500000),
-  500000,
-  'and a box is still added with an opening balance'
+  null::integer,
+  'and no box is added with an opening balance'
 );
 select lives_ok(
   format($$ select public.admin_save_finance_account(%L, null, 'صندوق المكتب', null, false) $$, :'box'),

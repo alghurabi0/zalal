@@ -12,18 +12,38 @@ export type MonthReport = {
   discountsIqd: number;
   /** Orders + subscriptions + sales − discounts. */
   revenueIqd: number;
+  /** Expenses counted as paid: neither a spread purchase nor a wage paid to a worker. */
+  spentIqd: number;
+  /** What the workers earned (payroll), since Phase 7, task 5. */
+  wagesIqd: number;
+  /** The month's depreciation of equipment. */
+  depreciationIqd: number;
+  /** spent + wages + depreciation. */
   expensesIqd: number;
-  /** Revenue − expenses. */
+  /** Equipment sold or written off: the price less what was left (below 0, a loss). */
+  equipmentResultIqd: number;
+  /** Revenue − expenses + the equipment result. */
   profitIqd: number;
   receivedIqd: number;
   refundedIqd: number;
-  /** Received − refunded − expenses. */
+  /** Every expense paid that month, purchases and wages included. */
+  paidOutIqd: number;
+  /** Received − refunded − paid out. */
   netCashIqd: number;
   closed: boolean;
 };
 
-/** A month's expenses in one category (`admin_expenses_by_category`). */
-export type CategoryTotal = { month: string; categoryId: number; totalIqd: number };
+/**
+ * A month's expenses in one category (`admin_expenses_by_category`): all
+ * that was spent, and the part the profit counts (no spread purchases, no
+ * wages paid to a worker).
+ */
+export type CategoryTotal = {
+  month: string;
+  categoryId: number;
+  totalIqd: number;
+  countedIqd: number;
+};
 
 export type ReportSection = "revenue" | "expenses" | "profit" | "cash";
 
@@ -34,7 +54,10 @@ export type ReportFigure =
   | "sales"
   | "discounts"
   | "revenue"
+  | "wages"
+  | "depreciation"
   | "expenses"
+  | "equipmentResult"
   | "profit"
   | "received"
   | "refunded"
@@ -67,9 +90,10 @@ function line(
 
 /**
  * The profit and loss (accrual: revenue by its day, less discounts and
- * expenses) with the expenses by category, then the cash section (money in
- * and out by day). Categories with nothing in the report's months are left
- * out, the largest first.
+ * expenses) with the expenses by category, the wages earned and the
+ * depreciation, then the cash section (money in and out by day). Categories,
+ * wages, depreciation and the equipment result with nothing in the report's
+ * months are left out, the categories largest first.
  */
 export function reportLines(
   months: MonthReport[],
@@ -81,9 +105,9 @@ export function reportLines(
   const perCategory = new Map<number, number[]>();
   for (const row of byCategory) {
     const i = index.get(row.month);
-    if (i === undefined || row.totalIqd === 0) continue;
+    if (i === undefined || row.countedIqd === 0) continue;
     const values = perCategory.get(row.categoryId) ?? months.map(() => 0);
-    values[i] = (values[i] ?? 0) + row.totalIqd;
+    values[i] = (values[i] ?? 0) + row.countedIqd;
     perCategory.set(row.categoryId, values);
   }
   const categories = [...perCategory.entries()]
@@ -91,6 +115,8 @@ export function reportLines(
       line("expenses", { category: categoryNames.get(id) ?? String(id) }, "item", values),
     )
     .sort((a, b) => b.total - a.total);
+  /** A line only when some month has something. */
+  const some = (built: ReportLine) => (built.values.some((v) => v !== 0) ? [built] : []);
 
   return [
     line(
@@ -124,11 +150,35 @@ export function reportLines(
       pick((m) => m.revenueIqd),
     ),
     ...categories,
+    ...some(
+      line(
+        "expenses",
+        { figure: "wages" },
+        "item",
+        pick((m) => m.wagesIqd),
+      ),
+    ),
+    ...some(
+      line(
+        "expenses",
+        { figure: "depreciation" },
+        "item",
+        pick((m) => m.depreciationIqd),
+      ),
+    ),
     line(
       "expenses",
       { figure: "expenses" },
       "subtotal",
       pick((m) => m.expensesIqd),
+    ),
+    ...some(
+      line(
+        "profit",
+        { figure: "equipmentResult" },
+        "item",
+        pick((m) => m.equipmentResultIqd),
+      ),
     ),
     line(
       "profit",
@@ -152,7 +202,7 @@ export function reportLines(
       "cash",
       { figure: "cashExpenses" },
       "item",
-      pick((m) => less(m.expensesIqd)),
+      pick((m) => less(m.paidOutIqd)),
     ),
     line(
       "cash",

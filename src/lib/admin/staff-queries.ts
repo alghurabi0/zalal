@@ -90,6 +90,11 @@ export const AUDIT_ENTITIES = [
   "worker_crews",
   "worker_rates",
   "payroll_adjustments",
+  "partners",
+  "partner_shares",
+  "partner_movements",
+  "opening_equipment",
+  "equipment_disposals",
 ] as const;
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 
@@ -169,6 +174,11 @@ const FINANCE_ENTITIES = new Set<string>([
   "worker_crews",
   "worker_rates",
   "payroll_adjustments",
+  "partners",
+  "partner_shares",
+  "partner_movements",
+  "opening_equipment",
+  "equipment_disposals",
 ]);
 
 /** Crew ids a log row names: a crew row, an order's old and new crew, or a manual sale's. */
@@ -221,6 +231,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
   expenseCategories: Map<number, string>;
   /** Payroll's workers by id (A21). */
   workers: Map<string, string>;
+  partners: Map<string, string>;
 }> {
   const supabase = await createClient();
   const idsOf = (entity: string) => [
@@ -245,6 +256,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     financeAccounts,
     expenseCategories,
     workers,
+    partners,
   ] = await Promise.all([
     orderIds.length ? supabase.from("orders").select("id, number").in("id", orderIds) : none,
     crewIds.length ? supabase.from("crews").select("id, name").in("id", crewIds) : none,
@@ -259,6 +271,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     finance ? supabase.from("finance_accounts").select("id, name, crew:crews(name)") : none,
     finance ? supabase.from("expense_categories").select("id, name") : none,
     finance ? supabase.from("workers").select("id, name") : none,
+    finance ? supabase.from("partners").select("id, name") : none,
   ]);
   if (orders.error) throw new Error(`Audit orders read failed: ${orders.error.message}`);
   if (crews.error) throw new Error(`Audit crews read failed: ${crews.error.message}`);
@@ -277,6 +290,7 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     throw new Error(`Audit expense categories read failed: ${expenseCategories.error.message}`);
   }
   if (workers.error) throw new Error(`Audit workers read failed: ${workers.error.message}`);
+  if (partners.error) throw new Error(`Audit partners read failed: ${partners.error.message}`);
   return {
     orders: new Map(orders.data.map((o) => [o.id, o.number])),
     crews: new Map(crews.data.map((c) => [c.id, c.name])),
@@ -289,5 +303,6 @@ export async function auditNames(entries: AuditEntry[]): Promise<{
     ),
     expenseCategories: new Map(expenseCategories.data.map((c) => [c.id, c.name])),
     workers: new Map(workers.data.map((w) => [w.id, w.name])),
+    partners: new Map(partners.data.map((p) => [p.id, p.name])),
   };
 }

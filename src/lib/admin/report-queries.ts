@@ -32,10 +32,15 @@ export async function profitAndLoss(from: string, to: string): Promise<MonthRepo
     salesIqd: Number(row.sales_iqd),
     discountsIqd: Number(row.discounts_iqd),
     revenueIqd: Number(row.revenue_iqd),
+    spentIqd: Number(row.spent_iqd),
+    wagesIqd: Number(row.wages_iqd),
+    depreciationIqd: Number(row.depreciation_iqd),
     expensesIqd: Number(row.expenses_iqd),
+    equipmentResultIqd: Number(row.equipment_result_iqd),
     profitIqd: Number(row.profit_iqd),
     receivedIqd: Number(row.received_iqd),
     refundedIqd: Number(row.refunded_iqd),
+    paidOutIqd: Number(row.paid_out_iqd),
     netCashIqd: Number(row.net_cash_iqd),
     closed: row.closed,
   }));
@@ -53,6 +58,7 @@ export async function expensesByCategory(from: string, to: string): Promise<Cate
     month: monthOf(row.month),
     categoryId: Number(row.category_id),
     totalIqd: Number(row.total_iqd),
+    countedIqd: Number(row.counted_iqd),
   }));
 }
 

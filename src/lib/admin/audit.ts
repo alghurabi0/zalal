@@ -78,6 +78,18 @@ export const AUDIT_ACTIONS = [
   "payroll_adjustment.update",
   "payroll_adjustment.void",
   "worker_days.update",
+  "partner.create",
+  "partner.update",
+  "partner.shares",
+  "partner_movement.create",
+  "partner_movement.update",
+  "partner_movement.void",
+  "opening_equipment.create",
+  "opening_equipment.update",
+  "opening_equipment.void",
+  "equipment_disposal.create",
+  "equipment_disposal.update",
+  "equipment_disposal.void",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
