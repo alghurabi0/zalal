@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { routes } from "@/lib/routes";
+import { STOCK_MOVE_KINDS } from "@/lib/schemas/stock";
 
 import { ADMIN_ORDERS_MAX, ADMIN_ORDERS_PAGE, pageSizeSchema } from "./orders-query";
 
@@ -213,4 +214,39 @@ export function adminPartnersHref(query: Partial<AdminPartnersQuery>): string {
   if (query.equipment) params.set("equipment", query.equipment);
   const search = params.toString();
   return search ? `${routes.adminPartners}?${search}` : routes.adminPartners;
+}
+
+export const adminStockQuerySchema = z.object({
+  /** The month whose records and totals show. */
+  month: monthSchema,
+  /** An item's drawer: "new", or the item's id. */
+  item: drawerSchema,
+  /** A record's drawer: "new", or the record's id. */
+  move: drawerSchema,
+  /** A new record's kind. */
+  kind: z.enum(STOCK_MOVE_KINDS).optional().catch(undefined),
+  /** A new in's expense (A16's "سجّل بالمخزن"). */
+  expense: z.uuid().optional().catch(undefined),
+  /** A new record's item (from the item's drawer). */
+  of: z.uuid().optional().catch(undefined),
+});
+
+export type AdminStockQuery = z.output<typeof adminStockQuerySchema>;
+
+export function parseAdminStockQuery(
+  params: Record<string, string | string[] | undefined>,
+): AdminStockQuery {
+  return adminStockQuerySchema.parse(firstValues(params));
+}
+
+export function adminStockHref(query: Partial<AdminStockQuery>): string {
+  const params = new URLSearchParams();
+  if (query.month) params.set("month", query.month);
+  if (query.item) params.set("item", query.item);
+  if (query.move) params.set("move", query.move);
+  if (query.kind) params.set("kind", query.kind);
+  if (query.expense) params.set("expense", query.expense);
+  if (query.of) params.set("of", query.of);
+  const search = params.toString();
+  return search ? `${routes.adminStock}?${search}` : routes.adminStock;
 }

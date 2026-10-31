@@ -1,4 +1,4 @@
-import { ListFilter, Plus, ReceiptText, SearchX } from "lucide-react";
+import { ListFilter, Package, Plus, ReceiptText, SearchX } from "lucide-react";
 import Form from "next/form";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -34,13 +34,17 @@ import {
   ADMIN_EXPENSES_PAGE,
   type AdminExpensesQuery,
   adminExpensesHref,
+  adminStockHref,
   parseAdminExpensesQuery,
 } from "@/lib/admin/finance-query";
 import { firstOpenDay, isClosed } from "@/lib/admin/finance-reports";
 import { workerBalance, workerOptions } from "@/lib/admin/payroll-queries";
+import { expenseStock } from "@/lib/admin/stock-queries";
 import { requireViewer } from "@/lib/auth/viewer";
+import { cn } from "@/lib/cn";
 import { baghdadToday, formatDay } from "@/lib/dates";
 import { routes } from "@/lib/routes";
+import { formatQuantity } from "@/lib/schemas/stock";
 
 import { ExpenseForm } from "./expense-form";
 
@@ -369,7 +373,57 @@ async function ExpenseDrawer({
         closed={expense !== null && isClosed(books, expense.spentOn)}
         closeHref={closeHref}
       />
+      {expense && categories.find((c) => c.id === expense.categoryId)?.kind === "general" && (
+        <ExpenseStock expenseId={expense.id} live={expense.voidedAt === null} />
+      )}
     </Drawer>
+  );
+}
+
+/** What a general expense brought into stock (A23), with "سجّل بالمخزن". */
+async function ExpenseStock({ expenseId, live }: { expenseId: string; live: boolean }) {
+  const t = await getTranslations("Admin.finance.stock");
+  const lines = await expenseStock(expenseId);
+  if (!live && lines.length === 0) return null;
+  return (
+    <section className="mt-6 flex flex-col gap-3 border-t border-divider pt-4">
+      <h3 className="text-16 font-extrabold">{t("expenseTitle")}</h3>
+      <p className="text-13 text-body-2">{t("expenseHint")}</p>
+      {lines.length === 0 ? (
+        <p className="text-14 text-body-2">{t("expenseNone")}</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-divider rounded-card border border-border bg-surface">
+          {lines.map((line) => (
+            <li key={line.id}>
+              <Link
+                href={adminStockHref({ move: line.id })}
+                className={cn(
+                  "flex min-h-11 flex-wrap items-center gap-x-2 px-3 py-2 text-14 underline-offset-2 hover:underline",
+                  line.voided && "text-muted line-through",
+                )}
+              >
+                <span className="font-bold">{line.itemName}</span>
+                <span dir="ltr">
+                  {formatQuantity(line.quantity)} <bdi>{line.unit}</bdi>
+                </span>
+                {line.voided && <span className="sr-only">{t("voided")}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {live && (
+        <Button
+          href={adminStockHref({ move: "new", kind: "in", expense: expenseId })}
+          size="sm"
+          variant="secondary"
+          className="self-start"
+        >
+          <Package aria-hidden className="size-4" />
+          {t("expenseAdd")}
+        </Button>
+      )}
+    </section>
   );
 }
 

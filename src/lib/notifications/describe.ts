@@ -71,6 +71,9 @@ const TICKET_STATUSES = ["open", "in_progress", "closed"] as const;
 const TICKET_CATEGORIES = ["leak", "smell", "late", "staff", "payment", "other"] as const;
 const ADDRESS_LABELS = ["home", "family", "work"] as const;
 
+/** A stock quantity, up to 2 decimals in Western digits (as A23 shows it). */
+const QUANTITY = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
 const UNKNOWN: Described = { item: "unknown", values: {} };
 
 function orderValues(value: unknown, t: WhenTranslator) {
@@ -180,6 +183,15 @@ export function describeNotification(
       if (type === "subscription_expiring") return { item: type, values: { label, date } };
       return visits === undefined ? UNKNOWN : { item: type, values: { label, date, visits } };
     }
+    case "stock_low": {
+      const stock = record(data);
+      if (!stock) return UNKNOWN;
+      const name = text(stock, "name");
+      const unit = text(stock, "unit");
+      const quantity = stock.quantity;
+      if (!name || !unit || typeof quantity !== "number") return UNKNOWN;
+      return { item: type, values: { name, unit, quantity: QUANTITY.format(quantity) } };
+    }
     case "cleaning_reminder": {
       const reminder = record(data);
       if (!reminder) return UNKNOWN;
@@ -244,6 +256,10 @@ export function notificationHref(notification: NotificationInput): string {
     }
     case "subscription_declined":
       return routes.chat;
+    case "stock_low": {
+      const item = idIn(notification.data, "item_id");
+      return item ? routes.adminStockItem(item) : routes.adminStock;
+    }
     case "subscription_requested": {
       const subscription = idIn(notification.data, "subscription_id");
       return subscription ? routes.adminSubscription(subscription) : routes.adminSubscriptions;

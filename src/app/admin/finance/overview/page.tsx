@@ -1,4 +1,4 @@
-import { HandCoins, Receipt } from "lucide-react";
+import { HandCoins, Receipt, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
@@ -14,15 +14,17 @@ import { addMonthsTo } from "@/lib/admin/calendar";
 import { expenseCategories, financeAccounts } from "@/lib/admin/finance-queries";
 import { adminBoxesHref, adminExpensesHref, adminReportsHref } from "@/lib/admin/finance-query";
 import { expensesByCategory, profitAndLoss } from "@/lib/admin/report-queries";
+import { stockItems } from "@/lib/admin/stock-queries";
 import { requireViewer } from "@/lib/auth/viewer";
 import { baghdadToday, formatMonthYear } from "@/lib/dates";
 import { routes } from "@/lib/routes";
+import { formatQuantity } from "@/lib/schemas/stock";
 
 /**
  * Accounting overview (A19, spec §8.3; Phase 7, task 3): the boxes and their
  * total, the last 6 months' revenue, expenses and profit, where this month's
- * money went by category, and the cash each crew holds. Low stock joins it
- * with the stock task (task 6).
+ * money went by category, the cash each crew holds, and low stock (task 6:
+ * items at or below their minimum, once any item is in stock).
  */
 export default async function FinanceOverviewPage() {
   const t = await getTranslations("Admin.finance.overview");
@@ -40,12 +42,15 @@ async function Overview() {
   await requireViewer(routes.adminFinanceOverview, "admin");
   const t = await getTranslations("Admin.finance");
   const thisMonth = baghdadToday().slice(0, 7);
-  const [accounts, months, spent, categories] = await Promise.all([
+  const [accounts, months, spent, categories, items] = await Promise.all([
     financeAccounts(),
     profitAndLoss(addMonthsTo(thisMonth, -5), thisMonth),
     expensesByCategory(thisMonth, thisMonth),
     expenseCategories(),
+    stockItems(),
   ]);
+  const stocked = items.filter((item) => item.active);
+  const low = stocked.filter((item) => item.low);
   const nameOf = (account: (typeof accounts)[number]) =>
     accountName(account, (crew) => t("crewBox", { crew }));
   const total = accounts.reduce((sum, account) => sum + account.balanceIqd, 0);
@@ -136,6 +141,49 @@ async function Overview() {
           </ul>
         )}
       </Card>
+
+      {stocked.length > 0 && (
+        <Card className="flex flex-col gap-3 p-5 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-18 font-extrabold">{t("stock.overviewTitle")}</h2>
+              <p className="text-13 text-muted">{t("stock.overviewHint")}</p>
+            </div>
+            <Button href={routes.adminStock} size="sm" variant="secondary">
+              {t("stock.overviewOpen")}
+            </Button>
+          </div>
+          {low.length === 0 ? (
+            <p className="rounded-chip bg-ok-bg px-3 py-2.5 text-14 font-bold text-ok-fg">
+              {t("stock.overviewEmpty")}
+            </p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-divider">
+              {low.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-center justify-between gap-3 text-15"
+                >
+                  <Link
+                    href={routes.adminStockItem(item.id)}
+                    className="flex min-h-11 items-center gap-2 font-bold text-teal underline-offset-2 hover:underline"
+                  >
+                    <TriangleAlert aria-hidden className="size-4 shrink-0 text-warn-fg" />
+                    {item.name}
+                  </Link>
+                  <span className="font-extrabold">
+                    {t("stock.overviewLine", {
+                      quantity: formatQuantity(item.quantity),
+                      minimum: formatQuantity(item.minQuantity),
+                      unit: item.unit,
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-3 p-5 lg:col-span-2">
         <div className="flex flex-wrap items-start justify-between gap-2">

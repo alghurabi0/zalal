@@ -1,6 +1,6 @@
 import { subscriptionReasonFor } from "@/lib/subscriptions/errors";
 
-// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A22 admin RPCs (codes in
+// Database errors from the A7, A8, A9, A10, A11, A13, A14 and A15–A23 admin RPCs (codes in
 // supabase/CLAUDE.md), as those screens show them.
 
 export const ADMIN_EDIT_ERRORS = [
@@ -56,6 +56,13 @@ export const ADMIN_EDIT_ERRORS = [
   "shares_total",
   "equipment_disposed",
   "partner_has_share",
+  "item_inactive",
+  "item_in_use",
+  "crew_inactive",
+  "expense_has_stock",
+  "stock_too_low",
+  "count_exists",
+  "expense_not_allowed",
   "invalid",
   "not_found",
   "failed",
@@ -99,6 +106,11 @@ const byCode: Record<string, AdminEditError> = {
   ZL061: "shares_total",
   ZL062: "equipment_disposed",
   ZL063: "partner_has_share",
+  ZL013: "crew_inactive",
+  ZL064: "expense_has_stock",
+  ZL065: "stock_too_low",
+  ZL066: "count_exists",
+  ZL067: "expense_not_allowed",
   P0002: "not_found",
   // A value the table's checks refuse: the form's Zod schema should have
   // caught it, but the database has the last word.
@@ -129,7 +141,12 @@ export function adminEditErrorFor(
   if (error.code === "ZL044") {
     if (error.message === "worker_inactive") return "worker_inactive";
     if (error.message === "partner_inactive") return "partner_inactive";
+    if (error.message === "item_inactive") return "item_inactive";
     return error.message === "category_inactive" ? "category_inactive" : "account_inactive";
+  }
+  // A stock item (A23) or an expense category (A17) still in use.
+  if (error.code === "ZL045") {
+    return error.message === "item_in_use" ? "item_in_use" : "expense_category_in_use";
   }
   // A20's month close: which way it was refused.
   if (error.code === "ZL055") {

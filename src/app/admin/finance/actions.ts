@@ -54,9 +54,15 @@ import {
   workerRateSchema,
   workerSchema,
 } from "@/lib/schemas/finance";
+import {
+  type StockItemInput,
+  stockItemSchema,
+  type StockMoveInput,
+  stockMoveSchema,
+} from "@/lib/schemas/stock";
 import { createClient } from "@/lib/supabase/server";
 
-// The accounting actions (spec §8.3 A15–A22), as the admin: the audited
+// The accounting actions (spec §8.3 A15–A23), as the admin: the audited
 // admin RPCs check the role, the day, switched-off boxes and categories,
 // voided records, refunds and discounts, and write the audit log.
 
@@ -519,4 +525,62 @@ export async function voidEquipmentDisposal(input: VoidInput): Promise<AdminEdit
     p_reason: parsed.data.reason,
   });
   return error ? editFailure("admin_void_equipment_disposal", error, report) : { status: "done" };
+}
+
+// Stock (A23) ---------------------------------------------------------------------------------
+
+export async function saveStockItem(
+  input: StockItemInput,
+): Promise<AdminEditResult | { status: "done"; id: string }> {
+  const parsed = stockItemSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminStock);
+  const d = parsed.data;
+  const { data, error } = await supabase.rpc("admin_save_stock_item", {
+    p_id: d.id ?? undefined,
+    p_name: d.name,
+    p_unit: d.unit,
+    p_min_quantity: d.minQuantity,
+    p_note: d.note === "" ? undefined : d.note,
+    p_active: d.active,
+  });
+  if (error) return editFailure("admin_save_stock_item", error, report);
+  return { status: "done", id: data };
+}
+
+export async function deleteStockItem(input: { id: string }): Promise<AdminEditResult> {
+  const parsed = voidSchema.shape.id.safeParse(input.id);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminStock);
+  const { error } = await supabase.rpc("admin_delete_stock_item", { p_id: parsed.data });
+  return error ? editFailure("admin_delete_stock_item", error, report) : { status: "done" };
+}
+
+export async function saveStockMove(input: StockMoveInput): Promise<AdminEditResult> {
+  const parsed = stockMoveSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminStock);
+  const d = parsed.data;
+  const { error } = await supabase.rpc("admin_save_stock_move", {
+    p_id: d.id ?? undefined,
+    p_item_id: d.itemId,
+    p_moved_on: d.movedOn,
+    p_kind: d.kind,
+    p_quantity: d.quantity,
+    p_crew_id: d.crewId ?? undefined,
+    p_expense_id: d.expenseId ?? undefined,
+    p_note: d.note === "" ? undefined : d.note,
+  });
+  return error ? editFailure("admin_save_stock_move", error, report) : { status: "done" };
+}
+
+export async function voidStockMove(input: VoidInput): Promise<AdminEditResult> {
+  const parsed = voidSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const supabase = await admin(routes.adminStock);
+  const { error } = await supabase.rpc("admin_void_stock_move", {
+    p_id: parsed.data.id,
+    p_reason: parsed.data.reason,
+  });
+  return error ? editFailure("admin_void_stock_move", error, report) : { status: "done" };
 }

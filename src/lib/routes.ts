@@ -148,6 +148,14 @@ export const routes = {
    * `?shares=1`, `?equipment=new|<id>` (an equipment item's drawer).
    */
   adminPartners: "/admin/finance/partners",
+  /**
+   * Stock (A23): each item's quantity and the month's records; `?month=`,
+   * `?item=new|<id>` (an item's drawer), `?move=new|<id>` (a record's drawer,
+   * a new one with `&kind=in|out|count` and `&expense=<id>`).
+   */
+  adminStock: "/admin/finance/stock",
+  /** A23 with an item's drawer open (the low-stock notification). */
+  adminStockItem: (id: string) => `/admin/finance/stock?item=${encodeURIComponent(id)}`,
   /** Accounts settings (A17): the start day, the boxes and the expense categories. */
   adminFinanceSettings: "/admin/finance/settings",
   /** Accounting overview (A19): boxes, the last 6 months, where the money went, crew cash. */

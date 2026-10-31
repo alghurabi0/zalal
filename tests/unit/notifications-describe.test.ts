@@ -133,6 +133,12 @@ describe("describeNotification", () => {
       "موعد التنظيف الجاي لخزان بيت الأهل يوم 8 تشرين الثاني.",
     ],
     [
+      "stock_low",
+      { item_id: "i-1", name: "كلور", unit: "كيلو", quantity: 1250.5 },
+      "كلور ناقص بالمخزن",
+      "باقي 1,250.5 كيلو",
+    ],
+    [
       "subscription_requested",
       { subscription_id: "s-1", label: "home", district: "حي الحسين" },
       "طلب اشتراك جديد",
@@ -229,6 +235,15 @@ describe("notificationHref", () => {
     expect(notificationHref(input("subscription_requested", { data }))).toBe(
       "/admin/subscriptions?subscription=00000000-0000-4000-8000-0000000000aa",
     );
+  });
+
+  it("opens the item's drawer on A23 for low stock", () => {
+    expect(
+      notificationHref(
+        input("stock_low", { data: { item_id: "00000000-0000-4000-8000-0000000000cc" } }),
+      ),
+    ).toBe("/admin/finance/stock?item=00000000-0000-4000-8000-0000000000cc");
+    expect(notificationHref(input("stock_low"))).toBe("/admin/finance/stock");
   });
 
   it("opens the admin's conversation for a customer's message", () => {

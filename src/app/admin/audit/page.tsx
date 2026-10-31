@@ -22,6 +22,7 @@ import {
   adminPartnersHref,
   adminPayrollHref,
   adminRevenueHref,
+  adminStockHref,
 } from "@/lib/admin/finance-query";
 import { ORDER_STATUSES } from "@/lib/admin/orders-query";
 import { CATEGORY_ICONS, type CategoryIcon } from "@/lib/articles/category-icons";
@@ -54,6 +55,7 @@ import {
   type WorkerPayType,
   type FinanceAccountKind,
 } from "@/lib/schemas/finance";
+import { formatQuantity, STOCK_MOVE_KINDS, type StockMoveKind } from "@/lib/schemas/stock";
 
 const querySchema = z.object({
   entity: z.enum(AUDIT_ENTITIES).optional().catch(undefined),
@@ -436,6 +438,32 @@ async function Target({ entry, names }: { entry: AuditEntry; names: Names }) {
           {formatMonthYear(`${entry.entityId.slice(0, 7)}-15T12:00:00Z`)}
         </Link>
       );
+    case "stock_items":
+    case "stock_moves": {
+      // An item's own row, or a record that names its item.
+      const itemId =
+        entry.entity === "stock_items" ? entry.entityId : diffString(entry.diff, "item_id");
+      const label =
+        (itemId && names.stockItems.get(itemId)) ??
+        diffString(entry.diff, "name") ??
+        t(`entities.${entry.entity as "stock_items" | "stock_moves"}`);
+      const href =
+        entry.entity === "stock_moves"
+          ? adminStockHref({ move: entry.entityId })
+          : entry.action === "stock_item.delete"
+            ? null
+            : adminStockHref({ item: entry.entityId });
+      return href ? (
+        <Link
+          href={href}
+          className="inline-flex min-h-11 items-center font-bold text-teal underline-offset-2 hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <>{label}</>
+      );
+    }
     case "opening_equipment":
     case "equipment_disposals": {
       // The item: opening equipment, or what a disposal names.
@@ -486,6 +514,10 @@ function isPayType(value: string): value is WorkerPayType {
 
 function isMovementKind(value: string): value is PartnerMovementKind {
   return (PARTNER_MOVEMENT_KINDS as readonly string[]).includes(value);
+}
+
+function isStockMoveKind(value: string): value is StockMoveKind {
+  return (STOCK_MOVE_KINDS as readonly string[]).includes(value);
 }
 
 function isAdjustmentKind(value: string): value is PayrollAdjustmentKind {
@@ -585,6 +617,10 @@ const KNOWN_FIELDS = [
   "opening_equipment_id",
   "disposed_on",
   "proceeds_iqd",
+  "unit",
+  "min_quantity",
+  "item_id",
+  "quantity",
 ] as const;
 
 /** Long values (Terms, Privacy) are cut in the table. */
@@ -693,6 +729,20 @@ async function Value({
     if (action?.startsWith("expense_category.") && isCategoryKind(value)) {
       return <>{tFinance(`categoryKinds.${value}`)}</>;
     }
+  }
+  if (field === "item_id" && typeof value === "string") {
+    return <>{names.stockItems.get(value) ?? value.slice(0, 8)}</>;
+  }
+  if (
+    field === "kind" &&
+    action?.startsWith("stock_move.") &&
+    typeof value === "string" &&
+    isStockMoveKind(value)
+  ) {
+    return <>{tFinance(`stock.kinds.${value}`)}</>;
+  }
+  if ((field === "quantity" || field === "min_quantity") && typeof value === "number") {
+    return <bdi dir="ltr">{formatQuantity(value)}</bdi>;
   }
   if (field === "partner_id" && typeof value === "string") {
     return <>{names.partners.get(value) ?? value.slice(0, 8)}</>;

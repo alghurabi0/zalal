@@ -90,6 +90,12 @@ export const AUDIT_ACTIONS = [
   "equipment_disposal.create",
   "equipment_disposal.update",
   "equipment_disposal.void",
+  "stock_item.create",
+  "stock_item.update",
+  "stock_item.delete",
+  "stock_move.create",
+  "stock_move.update",
+  "stock_move.void",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
