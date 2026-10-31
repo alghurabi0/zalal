@@ -34,7 +34,7 @@ as $$ select (now() at time zone 'Asia/Baghdad')::date $$;
 create function tests.month(n int) returns date language sql stable
 as $$ select (date_trunc('month', tests.today()) - make_interval(months => n))::date $$;
 
-select plan(62);
+select plan(63);
 
 select tests.create_user('+9647801111111');            -- customer A
 select tests.create_user('+9647802222222');            -- customer B
@@ -186,6 +186,13 @@ select lives_ok(
     tests.id('old'), tests.month(2) + 1, tests.category('معدات اختبار'), tests.id('قاصة المعدات')
   ),
   'a purchase from before keeps no life when edited'
+);
+select throws_ok(
+  format(
+    $$ select public.admin_save_expense(%L, %L, %L, %L, 100000, 'مولدة', null, null) $$,
+    :'generator', tests.month(1) + 1, tests.category('معدات اختبار'), tests.id('قاصة المعدات')
+  ),
+  '22023', 'invalid_life', 'a spread purchase keeps a life'
 );
 select throws_ok(
   format($$ select public.admin_save_expense_category(%L, null, 'general', null) $$, tests.category('معدات اختبار')),

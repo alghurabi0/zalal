@@ -32,7 +32,8 @@
 --    invalid_life, 1–240 months). Purchases saved before this migration
 --    keep none and stay whole expenses in their month; an admin may give
 --    one a life while its month is open. A category with live spread
---    purchases stays an equipment one (ZL060). Editing a purchase can't
+--    purchases stays an equipment one (ZL060), and a spread purchase keeps
+--    a life (22023 invalid_life). Editing a purchase can't
 --    reach a closed month: its first month of depreciation is its own.
 --
 -- 5. opening_equipment: what the company owned at the books' start, with its
@@ -575,6 +576,10 @@ begin
       raise exception using errcode = '22023', message = 'invalid_shares';
     end if;
     v_share := (v_entry.value::text)::integer;
+    -- One partner spelled two ways (case, braces) is one partner (RLS audit).
+    if v_new ? v_partner::text then
+      raise exception using errcode = '22023', message = 'invalid_shares';
+    end if;
     select p.active into v_active from public.partners as p where p.id = v_partner for share;
     if not found then
       raise exception using errcode = 'P0002', message = 'partner_not_found';
@@ -1077,6 +1082,11 @@ begin
     -- A switched-off worker is still paid what they're owed (code review): only
     -- that the worker exists is checked.
     perform private.payroll_check_worker(p_worker_id, false);
+  end if;
+  -- A spread purchase stays spread, so its category stays an equipment one
+  -- (RLS audit); a wrong one is voided and entered again.
+  if p_useful_life_months is null and v_old.useful_life_months is not null then
+    raise exception using errcode = '22023', message = 'invalid_life';
   end if;
   if p_useful_life_months is not null and v_kind <> 'equipment' then
     raise exception using errcode = 'ZL060', message = 'life_not_allowed';
