@@ -17,9 +17,10 @@
 --    ended on the closed month's last day may run on (only open days move).
 --
 -- Not testable here (two transactions): admin_save_worker_crew on an
--- existing row locks the membership, then the worker; admin_move_worker
--- locks the worker, then the current membership. Run together for one
--- worker they deadlock (40P01) and one fails; see the audit report.
+-- existing row locked the membership, then the worker, while
+-- admin_move_worker locks the worker, then the current membership; run
+-- together for one worker they deadlocked (40P01). Fixed before merge:
+-- every membership writer now locks the worker first.
 begin;
 \ir _helpers.psql
 
