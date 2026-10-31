@@ -2265,6 +2265,128 @@ export type Database = {
         };
         Relationships: [];
       };
+      stock_items: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: string;
+          min_quantity: number;
+          name: string;
+          note: string | null;
+          unit: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          min_quantity?: number;
+          name: string;
+          note?: string | null;
+          unit: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          min_quantity?: number;
+          name?: string;
+          note?: string | null;
+          unit?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stock_moves: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          crew_id: string | null;
+          expense_id: string | null;
+          id: string;
+          item_id: string;
+          kind: Database["public"]["Enums"]["stock_move_kind"];
+          moved_on: string;
+          note: string | null;
+          quantity: number;
+          updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          crew_id?: string | null;
+          expense_id?: string | null;
+          id?: string;
+          item_id: string;
+          kind: Database["public"]["Enums"]["stock_move_kind"];
+          moved_on: string;
+          note?: string | null;
+          quantity: number;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          crew_id?: string | null;
+          expense_id?: string | null;
+          id?: string;
+          item_id?: string;
+          kind?: Database["public"]["Enums"]["stock_move_kind"];
+          moved_on?: string;
+          note?: string | null;
+          quantity?: number;
+          updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stock_moves_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_moves_crew_id_fkey";
+            columns: ["crew_id"];
+            isOneToOne: false;
+            referencedRelation: "crews";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_moves_expense_id_fkey";
+            columns: ["expense_id"];
+            isOneToOne: false;
+            referencedRelation: "expenses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_moves_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "stock_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_moves_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       subscription_notes: {
         Row: {
           author_id: string;
@@ -2867,6 +2989,27 @@ export type Database = {
         ComputedFields: never;
         Relationships: [];
       };
+      stock_levels: {
+        Row: {
+          correction: number | null;
+          counted: number | null;
+          day: string;
+          in_quantity: number | null;
+          item_id: string;
+          out_quantity: number | null;
+          quantity: number | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "stock_moves_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "stock_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       subscription_overview: {
         Row: {
           activated_at: string | null;
@@ -3006,6 +3149,7 @@ export type Database = {
       admin_delete_article: { Args: { p_id: string }; Returns: string };
       admin_delete_category: { Args: { p_id: number }; Returns: undefined };
       admin_delete_expense_category: { Args: { p_id: number }; Returns: undefined };
+      admin_delete_stock_item: { Args: { p_id: string }; Returns: undefined };
       admin_delete_worker_crew: { Args: { p_id: number }; Returns: undefined };
       admin_end_subscription: {
         Args: { p_reason: string; p_subscription_id: string };
@@ -3291,6 +3435,30 @@ export type Database = {
         Args: { p_active: boolean; p_area: Json; p_id: number; p_name: string };
         Returns: Record<string, unknown>;
       };
+      admin_save_stock_item: {
+        Args: {
+          p_active?: boolean;
+          p_id?: string;
+          p_min_quantity?: number;
+          p_name?: string;
+          p_note?: string;
+          p_unit?: string;
+        };
+        Returns: string;
+      };
+      admin_save_stock_move: {
+        Args: {
+          p_crew_id?: string;
+          p_expense_id?: string;
+          p_id?: string;
+          p_item_id?: string;
+          p_kind?: Database["public"]["Enums"]["stock_move_kind"];
+          p_moved_on?: string;
+          p_note?: string;
+          p_quantity?: number;
+        };
+        Returns: string;
+      };
       admin_save_transfer: {
         Args: {
           p_amount_iqd?: number;
@@ -3387,6 +3555,31 @@ export type Database = {
           taken: number;
         }[];
       };
+      admin_stock_items: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          active: boolean;
+          id: string;
+          last_moved_on: string;
+          low: boolean;
+          min_quantity: number;
+          name: string;
+          note: string;
+          quantity: number;
+          unit: string;
+        }[];
+      };
+      admin_stock_month: {
+        Args: { p_month: string };
+        Returns: {
+          closing_quantity: number;
+          correction_quantity: number;
+          in_quantity: number;
+          item_id: string;
+          opening_quantity: number;
+          out_quantity: number;
+        }[];
+      };
       admin_unblock_date: { Args: { p_date: string }; Returns: undefined };
       admin_update_crew: {
         Args: { p_active: boolean; p_crew_id: string; p_name: string };
@@ -3416,6 +3609,7 @@ export type Database = {
         Args: { p_id: number; p_reason: string };
         Returns: undefined;
       };
+      admin_void_stock_move: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_transfer: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       admin_void_worker_rate: { Args: { p_id: number; p_reason: string }; Returns: undefined };
       admin_worker_crew_days: { Args: { p_month: string; p_worker_id: string }; Returns: string[] };
@@ -3633,7 +3827,8 @@ export type Database = {
         | "subscription_expiring"
         | "subscription_requested"
         | "order_postponed"
-        | "customer_postponed";
+        | "customer_postponed"
+        | "stock_low";
       order_media_kind: "customer" | "before" | "after" | "clip";
       order_status:
         | "pending_confirmation"
@@ -3651,6 +3846,7 @@ export type Database = {
       payroll_adjustment_kind: "bonus" | "deduction";
       rating_tag: "on_time" | "clean_work" | "respectful" | "clear_photos";
       reminder_kind: "week" | "due";
+      stock_move_kind: "in" | "out" | "count";
       subscription_status: "requested" | "active" | "declined" | "cancelled";
       tank_size: "s" | "m" | "l";
       tank_type: "roof" | "ground";
@@ -3805,6 +4001,7 @@ export const Constants = {
         "subscription_requested",
         "order_postponed",
         "customer_postponed",
+        "stock_low",
       ],
       order_media_kind: ["customer", "before", "after", "clip"],
       order_status: [
@@ -3824,6 +4021,7 @@ export const Constants = {
       payroll_adjustment_kind: ["bonus", "deduction"],
       rating_tag: ["on_time", "clean_work", "respectful", "clear_photos"],
       reminder_kind: ["week", "due"],
+      stock_move_kind: ["in", "out", "count"],
       subscription_status: ["requested", "active", "declined", "cancelled"],
       tank_size: ["s", "m", "l"],
       tank_type: ["roof", "ground"],
